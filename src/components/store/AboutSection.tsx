@@ -10,7 +10,7 @@ export function AboutSection({ total }: Props) {
     ["Estoque no Brasil", "Nada de espera internacional ou taxação na alfândega."],
     ["Curadoria de verdade", `${total} produtos, não 5 mil. Cada um entrou por um motivo.`],
     ["Original e lacrado", "Importação direta com nota. Sem recondicionado."],
-    ["4,98 de 5", "Nota das clientes que compraram na Shopee."],
+    ["4,98 de 5", "Nota média das clientes Iseul."],
   ] as const;
 
   return (
@@ -24,8 +24,8 @@ export function AboutSection({ total }: Props) {
             Iseul quer dizer orvalho.
           </h2>
           <p className="mt-4 text-iseul-muted">
-            A operação começou na Shopee, com curadoria real e nota 4,98 das clientes. Agora a mesma
-            seleção numa loja própria, mais rápida e com checkout direto.
+            Curadoria real de K-Beauty, produto a produto. Estoque no Brasil, envio em até 24h e
+            checkout direto na loja.
           </p>
           <Link
             href="#catalogo"

@@ -6,7 +6,7 @@ import { m, useReducedMotion } from "framer-motion";
 import { useCart } from "@/context/cart-context";
 import { formatCurrency, discountPercent, stars } from "@/lib/utils";
 import { getHotProductIds } from "@/lib/products";
-import { EASE_OUT, imageZoom } from "@/lib/motion";
+import { EASE_OUT, imageZoom, popIn } from "@/lib/motion";
 import type { Product } from "@/types";
 
 export function ProductCard({
@@ -39,21 +39,24 @@ export function ProductCard({
   return (
     <m.article
       layout
-      initial={reduce ? false : "hidden"}
-      animate="show"
+      initial={false}
+      whileInView={reduce ? undefined : "show"}
+      viewport={{ once: true, margin: "-40px" }}
       variants={{
-        hidden: { opacity: 0, y: 20 },
+        hidden: popIn.hidden,
         show: {
-          opacity: 1,
-          y: 0,
+          ...popIn.show,
           transition: {
-            duration: 0.55,
-            ease: EASE_OUT,
-            delay: Math.min(index * 0.04, 0.32),
+            ...(typeof popIn.show.transition === "object" ? popIn.show.transition : {}),
+            delay: Math.min(index * 0.05, 0.35),
           },
         },
       }}
-      whileHover={reduce ? undefined : { y: -4 }}
+      whileHover={
+        reduce
+          ? undefined
+          : { y: -6, boxShadow: "0 16px 40px rgba(28,26,22,.08)" }
+      }
       transition={{ duration: 0.35, ease: EASE_OUT }}
       className="group flex flex-col overflow-hidden rounded-iseul border border-iseul-line bg-iseul-card hover:border-[#D8D0C4] hover:shadow-card"
     >
@@ -120,7 +123,7 @@ export function ProductCard({
                 {formatCurrency(product.compare_at_price)}
               </div>
             )}
-            <div className="font-serif text-[22px] leading-none">{formatCurrency(product.price)}</div>
+            <div className="font-serif text-lg sm:text-[22px] leading-none">{formatCurrency(product.price)}</div>
           </div>
           <m.button
             type="button"

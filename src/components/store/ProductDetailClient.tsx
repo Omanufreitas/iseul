@@ -22,12 +22,14 @@ export function ProductDetailClient({ product }: { product: Product }) {
   }
 
   return (
-    <button
-      type="button"
-      onClick={handleAdd}
-      className="mt-6 w-full rounded-full bg-iseul-ink py-4 text-sm font-medium text-iseul-paper hover:bg-iseul-accent transition-colors sm:w-auto sm:px-10"
-    >
-      Adicionar à sacola
-    </button>
+    <div id="product-add-btn">
+      <button
+        type="button"
+        onClick={handleAdd}
+        className="mt-6 w-full rounded-full bg-iseul-ink py-4 text-sm font-medium text-iseul-paper hover:bg-iseul-accent transition-colors sm:w-auto sm:px-10"
+      >
+        Adicionar à sacola
+      </button>
+    </div>
   );
 }

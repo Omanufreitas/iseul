@@ -1,7 +1,7 @@
 "use client";
 
 import { m, useReducedMotion } from "framer-motion";
-import { fadeUp } from "@/lib/motion";
+import { fadeUpBlur, popIn } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
 type RevealProps = {
@@ -23,14 +23,14 @@ export function Reveal({ children, className, delay = 0, as = "div" }: RevealPro
   return (
     <Tag
       className={cn(className)}
-      initial="hidden"
+      initial={false}
       whileInView="show"
       viewport={{ once: true, margin: "-60px" }}
       variants={{
-        hidden: fadeUp.hidden,
+        hidden: fadeUpBlur.hidden,
         show: {
-          ...fadeUp.show,
-          transition: { ...fadeUp.show.transition, delay },
+          ...fadeUpBlur.show,
+          transition: { ...fadeUpBlur.show.transition, delay },
         },
       }}
     >
@@ -53,7 +53,7 @@ export function Stagger({ children, className, stagger = 0.07 }: StaggerProps) {
   return (
     <m.div
       className={className}
-      initial="hidden"
+      initial={false}
       whileInView="show"
       viewport={{ once: true, margin: "-40px" }}
       variants={{
@@ -77,7 +77,12 @@ export function StaggerItem({
   if (reduce) return <div className={className}>{children}</div>;
 
   return (
-    <m.div className={className} variants={fadeUp}>
+    <m.div
+      className={className}
+      variants={popIn}
+      whileHover={reduce ? undefined : { y: -5, scale: 1.015 }}
+      transition={{ duration: 0.3 }}
+    >
       {children}
     </m.div>
   );

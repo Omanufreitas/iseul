@@ -26,6 +26,9 @@ export async function listProducts(options?: {
 }): Promise<Product[]> {
   if (isMockCatalogEnabled()) {
     let list = getMockProducts();
+    if (!options?.includeInactive) {
+      list = list.filter((p) => p.active);
+    }
     if (options?.category && options.category !== "all") {
       list = list.filter((p) => p.category_slug === options.category);
     }
@@ -59,7 +62,10 @@ function sortProducts(products: Product[], sort: string): Product[] {
 }
 
 export async function getProductBySlug(slug: string): Promise<Product | null> {
-  if (isMockCatalogEnabled()) return getMockProductBySlug(slug);
+  if (isMockCatalogEnabled()) {
+    const p = getMockProductBySlug(slug);
+    return p?.active ? p : null;
+  }
 
   const supabase = createServerStoreClient();
   const { data } = await supabase.from("products").select("*").eq("slug", slug).eq("active", true).maybeSingle();

@@ -100,7 +100,7 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
     <div className="mx-auto grid max-w-store gap-10 px-6 py-12 lg:grid-cols-[1.2fr_.8fr]">
       <form onSubmit={handleSubmit} className="space-y-8">
         <div>
-          <h1 className="font-serif text-4xl">Checkout</h1>
+          <h1 className="font-serif text-3xl md:text-4xl">Checkout</h1>
           <p className="mt-2 text-sm text-iseul-muted">Pagamento seguro via Mercado Pago</p>
         </div>
 
@@ -205,8 +205,10 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
         <ul className="mt-4 space-y-3">
           {items.map((i) => (
             <li key={i.productId} className="flex justify-between gap-3 text-sm">
-              <span className="text-iseul-muted">{i.quantity}× {i.name}</span>
-              <span>{formatCurrency(i.price * i.quantity)}</span>
+              <span className="min-w-0 flex-1 truncate text-iseul-muted">
+                {i.quantity}× {i.name}
+              </span>
+              <span className="shrink-0">{formatCurrency(i.price * i.quantity)}</span>
             </li>
           ))}
         </ul>

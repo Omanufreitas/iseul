@@ -10,7 +10,7 @@ import {
   verifyPassword,
 } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/client";
-import { isSupabaseConfigured } from "@/lib/config";
+import { getDemoAdminCredentials, isSupabaseConfigured } from "@/lib/config";
 
 export async function loginAdmin(formData: FormData): Promise<{ error: string } | void> {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
@@ -21,11 +21,12 @@ export async function loginAdmin(formData: FormData): Promise<{ error: string } 
   }
 
   if (!isSupabaseConfigured()) {
-    if (email === "admin@iseul.com.br" && password === "iseul2026") {
+    const demo = getDemoAdminCredentials();
+    if (email === demo.email && password === demo.password) {
       const token = await createSessionToken({
         adminId: "demo-admin",
         email,
-        name: "Admin Demo",
+        name: demo.name,
       });
       (await cookies()).set(SESSION_COOKIE, token, {
         httpOnly: true,
@@ -36,7 +37,7 @@ export async function loginAdmin(formData: FormData): Promise<{ error: string } 
       });
       redirect("/admin");
     }
-    return { error: "Configure Supabase ou use admin@iseul.com.br / iseul2026 no modo demo." };
+    return { error: `Credenciais inválidas. Modo demo: ${demo.email}` };
   }
 
   const admin = createAdminClient();

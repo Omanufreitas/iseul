@@ -6,7 +6,7 @@ import { CartProvider } from "@/context/cart-context";
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
-    <LazyMotion features={domAnimation} strict>
+    <LazyMotion features={domAnimation}>
       <CartProvider>
         {children}
         <Toaster position="bottom-center" richColors closeButton />

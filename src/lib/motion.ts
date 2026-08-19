@@ -1,12 +1,54 @@
 /** Curvas e variantes de motion — estilo orvalho: suave, sem bounce agressivo */
 export const EASE_OUT = [0.22, 1, 0.36, 1] as const;
 export const EASE_IN_OUT = [0.45, 0, 0.15, 1] as const;
+/** Contagem numérica — progressão mais linear e legível */
+export const EASE_COUNT = [0.33, 0, 0.2, 1] as const;
+export const SPRING_SNAPPY = { type: "spring" as const, stiffness: 420, damping: 32 };
 
 export const fadeUp = {
-  hidden: { opacity: 0, y: 20 },
+  hidden: { opacity: 0, y: 24 },
   show: {
     opacity: 1,
     y: 0,
+    transition: { duration: 0.6, ease: EASE_OUT },
+  },
+};
+
+export const fadeUpBlur = {
+  hidden: { opacity: 0, y: 28, filter: "blur(10px)" },
+  show: {
+    opacity: 1,
+    y: 0,
+    filter: "blur(0px)",
+    transition: { duration: 0.7, ease: EASE_OUT },
+  },
+};
+
+export const popIn = {
+  hidden: { opacity: 0, y: 16, scale: 0.92 },
+  show: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: SPRING_SNAPPY,
+  },
+};
+
+export const slideDown = {
+  hidden: { opacity: 0, y: -12 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.45, ease: EASE_OUT },
+  },
+};
+
+export const wordReveal = {
+  hidden: { opacity: 0, y: "110%", rotateX: -40 },
+  show: {
+    opacity: 1,
+    y: "0%",
+    rotateX: 0,
     transition: { duration: 0.55, ease: EASE_OUT },
   },
 };

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Instrument_Serif } from "next/font/google";
 import { AppProviders } from "@/components/providers/AppProviders";
+import { ScrollManager } from "@/components/providers/ScrollManager";
 import "./globals.css";
 
 const inter = Inter({
@@ -24,7 +25,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="pt-BR">
       <body className={`${inter.variable} ${instrument.variable} font-sans antialiased`}>
-        <AppProviders>{children}</AppProviders>
+        <AppProviders>
+          <ScrollManager />
+          {children}
+        </AppProviders>
       </body>
     </html>
   );

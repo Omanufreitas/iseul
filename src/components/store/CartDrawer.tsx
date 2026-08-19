@@ -89,7 +89,7 @@ export function CartDrawer({ settings }: { settings: StoreSettings }) {
                         <div className="text-[10px] font-semibold uppercase tracking-widest text-iseul-accent2">
                           {item.brand}
                         </div>
-                        <div className="text-[13.5px] leading-snug">{item.name}</div>
+                        <div className="truncate text-[13.5px] leading-snug">{item.name}</div>
                         <div className="mt-2 flex items-center gap-2">
                           <span className="inline-flex items-center rounded-full border border-iseul-line text-sm">
                             <button
@@ -117,7 +117,7 @@ export function CartDrawer({ settings }: { settings: StoreSettings }) {
                           </button>
                         </div>
                       </div>
-                      <div className="font-serif text-base">
+                      <div className="shrink-0 text-right font-serif text-base">
                         {formatCurrency(item.price * item.quantity)}
                       </div>
                     </m.div>

@@ -43,3 +43,12 @@ export function isMockCatalogEnabled(): boolean {
   if (process.env.NEXT_PUBLIC_USE_MOCK_CATALOG === "true") return true;
   return !isSupabaseConfigured();
 }
+
+/** Credenciais do admin em modo demo (sem Supabase) */
+export function getDemoAdminCredentials() {
+  return {
+    email: (process.env.DEMO_ADMIN_EMAIL ?? "manu.oficial93@gmail.com").trim().toLowerCase(),
+    password: process.env.DEMO_ADMIN_PASSWORD ?? "123456",
+    name: process.env.DEMO_ADMIN_NAME ?? "Manu",
+  };
+}

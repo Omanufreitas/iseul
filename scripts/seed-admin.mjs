@@ -14,7 +14,7 @@ config({ path: path.join(__dirname, "..", ".env.local") });
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const email = process.env.ADMIN_EMAIL ?? "admin@iseul.com.br";
+const email = process.env.ADMIN_EMAIL ?? "manu.oficial93@gmail.com";
 const password = process.env.ADMIN_PASSWORD;
 
 if (!url || !key) {
@@ -30,7 +30,7 @@ const supabase = createClient(url, key);
 const hash = await bcrypt.hash(password, 12);
 
 const { error } = await supabase.from("admin_users").upsert(
-  { email, password_hash: hash, name: "Admin Iseul" },
+  { email, password_hash: hash, name: process.env.ADMIN_NAME ?? "Manu" },
   { onConflict: "email" }
 );
 

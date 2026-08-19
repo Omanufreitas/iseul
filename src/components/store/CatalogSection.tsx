@@ -51,7 +51,7 @@ export function CatalogSection({ products }: { products: Product[] }) {
           </p>
         </Reveal>
 
-        <div className="mb-6 flex flex-wrap items-center gap-2">
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
           <LayoutGroup id="catalog-chips">
             <div className="flex flex-wrap gap-2">
               {chips.map((c) => {
@@ -65,7 +65,7 @@ export function CatalogSection({ products }: { products: Product[] }) {
                     key={c.slug}
                     type="button"
                     onClick={() => setFilter(c.slug)}
-                    className={`relative rounded-full border px-4 py-2 text-[13px] transition-colors duration-200 ${
+                    className={`relative rounded-full border px-4 py-2 text-[13px] transition-all duration-200 ${
                       active
                         ? "border-iseul-ink text-iseul-paper"
                         : "border-iseul-line bg-iseul-card text-iseul-muted hover:border-iseul-accent2 hover:text-iseul-ink"
@@ -87,11 +87,10 @@ export function CatalogSection({ products }: { products: Product[] }) {
               })}
             </div>
           </LayoutGroup>
-          <span className="flex-1" />
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value as SortKey)}
-            className="rounded-full border border-iseul-line bg-iseul-card px-3.5 py-2 text-[13px] text-iseul-muted transition-shadow duration-200 focus:outline-none focus:ring-2 focus:ring-iseul-accent2/40"
+            className="w-full rounded-full border border-iseul-line bg-iseul-card px-3.5 py-2 text-[13px] text-iseul-muted transition-shadow duration-200 focus:outline-none focus:ring-2 focus:ring-iseul-accent2/40 sm:ml-auto sm:w-auto"
           >
             <option value="sold">Mais vendidos</option>
             <option value="new">Novidades</option>
@@ -145,11 +144,11 @@ export function RoutineSection() {
           </div>
           <h2 className="mt-1.5 font-serif text-3xl md:text-4xl">Quatro passos. Nessa ordem.</h2>
         </Reveal>
-        <Stagger className="grid gap-5 md:grid-cols-4">
+        <Stagger className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {steps.map((s) => (
             <StaggerItem
               key={s.n}
-              className="pl-1 transition-colors duration-300"
+              className="rounded-iseul border border-transparent bg-iseul-paper/40 p-4 transition-colors duration-300 hover:border-iseul-line hover:bg-iseul-paper"
             >
               <div className="font-serif text-[15px] text-iseul-accent2">{s.n}</div>
               <h3 className="mt-1.5 text-[15px] font-semibold">{s.title}</h3>

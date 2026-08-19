@@ -6,7 +6,9 @@ export const SESSION_COOKIE = "iseul_admin_session";
 const SESSION_DURATION_SECONDS = 60 * 60 * 24 * 7;
 
 function secretKey() {
-  const secret = process.env.AUTH_SECRET;
+  const secret =
+    process.env.AUTH_SECRET ??
+    (process.env.NODE_ENV !== "production" ? "iseul-dev-local-secret" : undefined);
   if (!secret) throw new Error("AUTH_SECRET não configurado");
   return new TextEncoder().encode(secret);
 }
