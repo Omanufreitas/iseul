@@ -1,0 +1,101 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { AnnounceBar, StoreFooter, StoreHeader } from "@/components/store/HeaderFooter";
+import { CartDrawer } from "@/components/store/CartDrawer";
+import { ProductDetailClient } from "@/components/store/ProductDetailClient";
+import { ProductDetailMotion } from "@/components/store/ProductDetailMotion";
+import { getProductBySlug, getStoreSettings } from "@/lib/catalog";
+import { formatCurrency, discountPercent, stars } from "@/lib/utils";
+
+type Props = { params: Promise<{ slug: string }> };
+
+export default async function ProductPage({ params }: Props) {
+  const { slug } = await params;
+  const [product, settings] = await Promise.all([
+    getProductBySlug(slug),
+    getStoreSettings(),
+  ]);
+
+  if (!product) notFound();
+
+  const discount = discountPercent(product.price, product.compare_at_price);
+
+  return (
+    <>
+      <AnnounceBar text={settings.announcement} />
+      <StoreHeader settings={settings} />
+      <CartDrawer settings={settings} />
+
+      <div className="mx-auto max-w-store px-6 py-12">
+        <Link href="/#catalogo" className="text-sm text-iseul-muted hover:text-iseul-ink">
+          Voltar ao catálogo
+        </Link>
+
+        <ProductDetailMotion>
+        <div className="mt-8 grid gap-10 md:grid-cols-2">
+          <div className="aspect-square overflow-hidden rounded-iseul border border-iseul-line bg-iseul-paper2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={product.image_url}
+              alt={product.name}
+              className="h-full w-full object-cover"
+            />
+          </div>
+
+          <div>
+            <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-iseul-muted">
+              {product.brand}, {product.category_label}
+            </div>
+            <h1 className="mt-2 font-serif text-3xl leading-tight md:text-4xl">{product.name}</h1>
+            <div className="mt-3 flex items-center gap-2 text-sm text-iseul-muted">
+              {product.rating ? (
+                <>
+                  <span className="text-iseul-gold">{stars(product.rating)}</span>
+                  <span>
+                    {product.review_count} avaliação(ões), {product.sold_count} vendido(s)
+                  </span>
+                </>
+              ) : (
+                <span>Recém-chegado ao catálogo</span>
+              )}
+            </div>
+            <p className="mt-4 text-[15px] text-iseul-muted">{product.pitch}</p>
+            <div className="mt-6">
+              {discount > 0 && product.compare_at_price && (
+                <div className="text-sm text-iseul-muted line-through">
+                  {formatCurrency(product.compare_at_price)}
+                </div>
+              )}
+              <div className="font-serif text-4xl">{formatCurrency(product.price)}</div>
+              <p className="mt-2 text-sm text-iseul-muted">
+                ou 3x de {formatCurrency(product.price / 3)} sem juros. Frete grátis acima de{" "}
+                {formatCurrency(settings.free_shipping_threshold)}
+              </p>
+            </div>
+
+            <ProductDetailClient product={product} />
+
+            <div className="mt-8 rounded-iseul border border-iseul-line bg-iseul-card p-5 text-sm text-iseul-muted">
+              <b className="text-iseul-ink">Descrição completa</b>
+              <p className="mt-2 leading-relaxed">{product.full_name}</p>
+            </div>
+
+            {product.shopee_url && (
+              <a
+                href={product.shopee_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-4 inline-block text-sm text-iseul-accent underline"
+              >
+                Ver anúncio original na Shopee
+              </a>
+            )}
+          </div>
+        </div>
+        </ProductDetailMotion>
+      </div>
+
+      <StoreFooter settings={settings} />
+    </>
+  );
+}

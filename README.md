@@ -1,36 +1,75 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Iseul — Loja K-Beauty
 
-## Getting Started
+Loja própria da operação Iseul (migrada da Shopee), com frontend e painel admin.
 
-First, run the development server:
+## Stack
+
+- **Next.js 15** + TypeScript + Tailwind
+- **Supabase** (produtos, pedidos, clientes, admin)
+- **Mercado Pago** (checkout Pro — mesmo padrão Bazika / EB_MED / Zepfit)
+
+## Desenvolvimento local
 
 ```bash
+cd iseul
+cp .env.example .env.local
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Sem Supabase configurado, a loja roda em **modo demo** com os 57 produtos de `data/products.seed.json` (exportados do `brendon_3.json`).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **Loja:** http://localhost:3000
+- **Admin demo:** http://localhost:3000/admin/login → `admin@iseul.com.br` / `iseul2026`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Supabase
 
-## Learn More
+1. Crie um projeto Supabase (ex.: `iseul`)
+2. Rode a migration: `supabase/migrations/20260819120000_init.sql`
+3. Preencha `.env.local` com URL, anon key e service role key
+4. Seed dos produtos:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+node scripts/seed-products.mjs
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+5. Crie o admin:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+ADMIN_PASSWORD='sua-senha' node scripts/seed-admin.mjs
+```
 
-## Deploy on Vercel
+## Mercado Pago
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Variáveis (igual aos outros projetos):
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+MERCADOPAGO_ACCESS_TOKEN=
+MERCADOPAGO_PUBLIC_KEY=
+MERCADOPAGO_WEBHOOK_SECRET=
+NEXT_PUBLIC_APP_URL=https://seu-dominio.com.br
+```
+
+Webhook: `https://seu-dominio.com.br/api/webhooks/mercadopago?source_news=webhooks`
+
+## Estrutura
+
+```
+iseul/
+├── data/products.seed.json    # 57 produtos (Shopee → Iseul)
+├── supabase/migrations/       # Schema
+├── scripts/                   # Seed produtos + admin
+└── src/
+    ├── app/                   # Loja + admin + API webhook
+    ├── components/store/      # UI da loja (visual bredon_1.html)
+    ├── components/admin/      # Painel admin
+    ├── actions/               # Checkout + CRUD admin
+    └── lib/                   # MP, Supabase, auth
+```
+
+## Admin
+
+- Dashboard com KPIs
+- CRUD de produtos (campos espelhando Shopee: nome, marca, categoria, preço, pitch, imagens, estoque)
+- Lista de pedidos
+- Configurações da loja (barra de anúncio, frete grátis, desconto PIX)
