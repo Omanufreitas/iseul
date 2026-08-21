@@ -54,3 +54,6 @@ export const DEFAULT_STORE_SETTINGS = {
 };
 
 export const RESERVATION_MINUTES = 30;
+
+export const INSTAGRAM_URL = "https://instagram.com/iseul.br";
+export const INSTAGRAM_HANDLE = "@iseul.br";

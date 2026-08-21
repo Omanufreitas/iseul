@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { m, useReducedMotion } from "framer-motion";
 import { useClientReady } from "@/hooks/use-client-ready";
+import { INSTAGRAM_HANDLE, INSTAGRAM_URL } from "@/lib/constants";
 import { slideDown } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import type { StoreSettings } from "@/types";
@@ -30,6 +31,60 @@ function IseulLogo({ dark = false }: { dark?: boolean }) {
         fill={ink}
       />
     </svg>
+  );
+}
+
+function InstagramIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
+      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+      <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
+    </svg>
+  );
+}
+
+function InstagramLink({ compact = false }: { compact?: boolean }) {
+  const reduce = useReducedMotion();
+
+  return (
+    <m.a
+      href={INSTAGRAM_URL}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={`Instagram ${INSTAGRAM_HANDLE}`}
+      whileHover={reduce ? undefined : { scale: 1.04, y: -1 }}
+      whileTap={reduce ? undefined : { scale: 0.97 }}
+      className={cn(
+        "group relative inline-flex items-center justify-center overflow-hidden rounded-full border border-iseul-line bg-iseul-card text-iseul-ink transition-colors duration-300",
+        "before:pointer-events-none before:absolute before:inset-0 before:rounded-full before:bg-[radial-gradient(circle_at_30%_20%,#fdf497_0%,#fd5949_42%,#d6249f_68%,#285AEB_100%)] before:opacity-0 before:transition-opacity before:duration-300 group-hover:before:opacity-100",
+        compact ? "h-10 w-10" : "gap-2 px-3.5 py-2 text-[13px] font-medium"
+      )}
+    >
+      <span
+        className={cn(
+          "relative z-10 flex items-center justify-center rounded-full bg-iseul-card transition-colors duration-300 group-hover:bg-[color-mix(in_srgb,#FAF8F4_92%,transparent)]",
+          compact ? "h-[calc(100%-2px)] w-[calc(100%-2px)]" : "gap-2 px-2 py-1"
+        )}
+      >
+        <InstagramIcon className="h-[15px] w-[15px] text-iseul-accent transition-colors duration-300 group-hover:text-[#C13584]" />
+        {!compact && (
+          <span className="hidden text-iseul-muted transition-colors duration-300 group-hover:text-iseul-ink md:inline">
+            {INSTAGRAM_HANDLE}
+          </span>
+        )}
+      </span>
+    </m.a>
   );
 }
 
@@ -61,15 +116,23 @@ export function LandingHeader() {
         <Link href="/#topo" className="w-[132px] shrink-0" aria-label="Iseul, página inicial">
           <IseulLogo />
         </Link>
-        <nav className="ml-auto hidden items-center gap-[22px] text-sm text-iseul-muted sm:flex">
-          {NAV_LINKS.map((link) => (
-            <m.div key={link.href} whileHover={reduce ? undefined : { y: -1 }} transition={{ duration: 0.2 }}>
-              <Link href={link.href} className="transition-colors hover:text-iseul-ink">
-                {link.label}
-              </Link>
-            </m.div>
-          ))}
-        </nav>
+        <div className="ml-auto flex items-center gap-3 sm:gap-5">
+          <nav className="hidden items-center gap-[22px] text-sm text-iseul-muted sm:flex">
+            {NAV_LINKS.map((link) => (
+              <m.div key={link.href} whileHover={reduce ? undefined : { y: -1 }} transition={{ duration: 0.2 }}>
+                <Link href={link.href} className="transition-colors hover:text-iseul-ink">
+                  {link.label}
+                </Link>
+              </m.div>
+            ))}
+          </nav>
+          <span className="hidden sm:inline-flex">
+            <InstagramLink />
+          </span>
+          <span className="sm:hidden">
+            <InstagramLink compact />
+          </span>
+        </div>
       </div>
     </m.header>
   );

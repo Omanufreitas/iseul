@@ -17,7 +17,7 @@ export function SelectionSection() {
   const reduce = useReducedMotion();
 
   return (
-    <section id="selecao" className="scroll-mt-20 py-[70px]">
+    <section id="selecao" className="scroll-mt-[88px] py-[70px]">
       <div className="mx-auto max-w-store px-[22px]">
         <Reveal className="mb-[38px] max-w-[52ch]">
           <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-iseul-accent2">

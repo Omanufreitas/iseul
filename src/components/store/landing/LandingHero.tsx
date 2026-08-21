@@ -81,7 +81,7 @@ export function LandingHero() {
           <m.div variants={fadeUp} className="mt-8 flex flex-wrap gap-2.5">
             <m.div whileHover={reduce ? undefined : { scale: 1.03, y: -2 }} whileTap={reduce ? undefined : { scale: 0.98 }}>
               <Link
-                href="#avisar"
+                href="#selecao"
                 className="inline-flex items-center rounded-full bg-iseul-ink px-[26px] py-3.5 text-[15px] font-medium text-iseul-paper shadow-[0_10px_28px_rgba(28,26,22,.14)] transition-colors duration-300 hover:bg-iseul-accent"
               >
                 Quero saber quando abrir
