@@ -10,6 +10,7 @@ import {
   verifyPassword,
 } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/client";
+import { isOwnerAdmin } from "@/lib/admin-access";
 import { getDemoAdminCredentials, isSupabaseConfigured } from "@/lib/config";
 
 export async function loginAdmin(formData: FormData): Promise<{ error: string } | void> {
@@ -37,7 +38,7 @@ export async function loginAdmin(formData: FormData): Promise<{ error: string } 
       });
       redirect("/admin");
     }
-    return { error: `Credenciais inválidas. Modo demo: ${demo.email}` };
+    return { error: "Credenciais inválidas." };
   }
 
   const admin = createAdminClient();
@@ -76,5 +77,11 @@ export async function logoutAdmin() {
 export async function requireAdmin() {
   const session = await getAdminSession();
   if (!session) redirect("/admin/login");
+  return session;
+}
+
+export async function requireOwnerAdmin() {
+  const session = await requireAdmin();
+  if (!isOwnerAdmin(session)) redirect("/admin");
   return session;
 }

@@ -2,11 +2,13 @@
 
 Loja própria da operação Iseul (migrada da Shopee), com frontend e painel admin.
 
+**Status do projeto, pendências e histórico:** ver [`NOTAS.md`](./NOTAS.md) (atualizar sempre que houver mudanças).
+
 ## Stack
 
 - **Next.js 15** + TypeScript + Tailwind
 - **Supabase** (produtos, pedidos, clientes, admin)
-- **Mercado Pago** (checkout Pro — mesmo padrão Bazika / EB_MED / Zepfit)
+- **Asaas** (checkout PIX + cartão)
 
 ## Desenvolvimento local
 
@@ -17,10 +19,10 @@ npm install
 npm run dev
 ```
 
-Sem Supabase configurado, a loja roda em **modo demo** com os 57 produtos de `data/products.seed.json` (exportados do `brendon_3.json`).
+Configure `.env.local` com Supabase (URL, anon key, service role) e `AUTH_SECRET`. Sem Supabase, a loja usa o catálogo local em `data/products.seed.json`.
 
 - **Loja:** http://localhost:3000
-- **Admin demo:** http://localhost:3000/admin/login → `admin@iseul.com.br` / `iseul2026`
+- **Admin:** http://localhost:3000/admin/login
 
 ## Supabase
 

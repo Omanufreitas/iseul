@@ -6,14 +6,28 @@ import { useEffect, useState } from "react";
 import { logoutAdmin } from "@/actions/admin/auth";
 import { cn } from "@/lib/utils";
 
-const links = [
+const baseLinks = [
   { href: "/admin", label: "Dashboard" },
+  { href: "/admin/inscritos", label: "Inscritos" },
   { href: "/admin/produtos", label: "Produtos" },
   { href: "/admin/pedidos", label: "Pedidos" },
   { href: "/admin/config", label: "Configurações" },
 ];
 
-export function AdminShell({ children, userName }: { children: React.ReactNode; userName: string }) {
+const ownerLinks = [{ href: "/admin/usuarios", label: "Usuários" }];
+
+export function AdminShell({
+  children,
+  userName,
+  userEmail,
+  isOwner,
+}: {
+  children: React.ReactNode;
+  userName: string;
+  userEmail: string;
+  isOwner: boolean;
+}) {
+  const links = isOwner ? [...baseLinks, ...ownerLinks] : baseLinks;
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -58,7 +72,9 @@ export function AdminShell({ children, userName }: { children: React.ReactNode; 
             <Link href="/" className="hidden text-neutral-500 hover:text-neutral-900 sm:inline">
               Ver loja
             </Link>
-            <span className="hidden max-w-[120px] truncate text-neutral-400 sm:inline">{userName}</span>
+            <span className="hidden max-w-[180px] truncate text-neutral-400 sm:inline">
+              {userName}
+            </span>
             <form action={logoutAdmin}>
               <button type="submit" className="text-neutral-500 hover:text-neutral-900">
                 Sair
@@ -117,6 +133,7 @@ export function AdminShell({ children, userName }: { children: React.ReactNode; 
                 Ver loja
               </Link>
               <p className="truncate py-2 text-neutral-400">{userName}</p>
+              <p className="truncate pb-2 text-xs text-neutral-400">{userEmail}</p>
             </div>
           </nav>
         </>

@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/client";
-import { isMockCatalogEnabled, isSupabaseConfigured } from "@/lib/config";
+import { isSupabaseConfigured } from "@/lib/config";
 import { formatCurrency } from "@/lib/utils";
 
 async function listOrders() {
-  if (isMockCatalogEnabled() || !isSupabaseConfigured()) return [];
+  if (!isSupabaseConfigured()) return [];
   const admin = createAdminClient();
   const { data } = await admin
     .from("orders")
@@ -25,9 +25,7 @@ export default async function AdminOrdersPage() {
       <p className="text-sm text-neutral-500">Últimos 100 pedidos</p>
 
       {orders.length === 0 ? (
-        <p className="mt-8 text-neutral-500">
-          Nenhum pedido ainda{isMockCatalogEnabled() ? " (modo demo sem Supabase)" : ""}.
-        </p>
+        <p className="mt-8 text-neutral-500">Nenhum pedido ainda.</p>
       ) : (
         <>
           <div className="mt-6 space-y-3 md:hidden">

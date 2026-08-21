@@ -11,10 +11,9 @@ import type { Product } from "@/types";
 
 type Props = {
   products: Product[];
-  demoMode: boolean;
 };
 
-export function ProductsAdminPanel({ products, demoMode }: Props) {
+export function ProductsAdminPanel({ products }: Props) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
@@ -68,13 +67,6 @@ export function ProductsAdminPanel({ products, demoMode }: Props) {
 
   return (
     <div className="space-y-6">
-      {demoMode && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          Modo local: alterações são salvas em <code className="text-xs">data/products.local.json</code>.
-          Conecte o Supabase em produção para persistência definitiva.
-        </div>
-      )}
-
       <div className="grid gap-3 sm:grid-cols-4">
         {[
           { label: "Total", value: stats.total },

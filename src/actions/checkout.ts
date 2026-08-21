@@ -3,7 +3,7 @@
 import { headers } from "next/headers";
 import { createCheckoutSchema } from "@/lib/validations";
 import { createAdminClient } from "@/lib/supabase/client";
-import { createStoreCheckoutPreference } from "@/lib/mercadopago";
+import { createStoreAsaasCheckout } from "@/lib/asaas";
 import { normalizeStoreOrigin } from "@/lib/store-url";
 import { getProductById } from "@/lib/catalog";
 import { isMockCatalogEnabled, isSupabaseConfigured } from "@/lib/config";
@@ -26,7 +26,7 @@ export async function createCheckoutOrder(raw: unknown) {
   if (isMockCatalogEnabled() || !isSupabaseConfigured()) {
     return {
       error:
-        "Checkout indisponível no modo demo. Configure Supabase e Mercado Pago no .env.local.",
+        "Checkout indisponível. Configure Supabase e Asaas.",
     };
   }
 
@@ -127,7 +127,7 @@ export async function createCheckoutOrder(raw: unknown) {
       customer_id: customerId,
       status: "aguardando_pagamento",
       payment_status: "pendente",
-      payment_method: "mercadopago",
+      payment_method: "asaas",
       subtotal,
       shipping: shipping_price,
       discount: 0,
@@ -173,14 +173,14 @@ export async function createCheckoutOrder(raw: unknown) {
     });
   }
 
-  const mpItems = prepared.map((oi) => ({
+  const asaasItems = prepared.map((oi) => ({
     title: oi.product_name,
     quantity: oi.quantity,
     unit_price: oi.unit_price,
   }));
 
   const requestOrigin = await getCheckoutRequestOrigin();
-  const mp = await createStoreCheckoutPreference(
+  const checkout = await createStoreAsaasCheckout(
     order.id,
     {
       email: address.email,
@@ -194,15 +194,20 @@ export async function createCheckoutOrder(raw: unknown) {
       city: address.city,
       state: address.state,
     },
-    mpItems,
+    asaasItems,
     shipping_price,
     requestOrigin
   );
 
-  if (!mp.ok) {
+  if (!checkout.ok) {
     await admin.from("orders").delete().eq("id", order.id);
-    return { error: mp.error };
+    return { error: checkout.error };
   }
 
-  return { success: true, orderId: order.id, paymentUrl: mp.initPoint };
+  await admin
+    .from("orders")
+    .update({ asaas_checkout_id: checkout.checkoutId })
+    .eq("id", order.id);
+
+  return { success: true, orderId: order.id, paymentUrl: checkout.initPoint };
 }

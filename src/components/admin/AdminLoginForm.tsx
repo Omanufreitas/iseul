@@ -3,8 +3,6 @@
 import { useState, useTransition } from "react";
 import { loginAdmin } from "@/actions/admin/auth";
 
-const DEMO_EMAIL = "manu.oficial93@gmail.com";
-
 export function AdminLoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -33,9 +31,9 @@ export function AdminLoginForm() {
               name="email"
               type="email"
               required
-              defaultValue={DEMO_EMAIL}
+              autoComplete="email"
               className="w-full rounded-lg border border-iseul-line px-3 py-2.5"
-              placeholder={DEMO_EMAIL}
+              placeholder="seu@email.com"
             />
           </label>
           <label className="block text-sm">
@@ -44,7 +42,7 @@ export function AdminLoginForm() {
               name="password"
               type="password"
               required
-              defaultValue="123456"
+              autoComplete="current-password"
               className="w-full rounded-lg border border-iseul-line px-3 py-2.5"
             />
           </label>
@@ -59,9 +57,6 @@ export function AdminLoginForm() {
             {pending ? "Entrando..." : "Entrar"}
           </button>
         </form>
-        <p className="mt-6 text-center text-xs text-iseul-muted">
-          Modo demo (sem Supabase): {DEMO_EMAIL}
-        </p>
       </div>
     </div>
   );

@@ -1,11 +1,9 @@
 import Link from "next/link";
 import { ProductsAdminPanel } from "@/components/admin/ProductsAdminPanel";
 import { listAllProductsAdmin } from "@/lib/catalog";
-import { isMockCatalogEnabled } from "@/lib/config";
 
 export default async function AdminProductsPage() {
   const products = await listAllProductsAdmin();
-  const demoMode = isMockCatalogEnabled();
 
   return (
     <div>
@@ -23,7 +21,7 @@ export default async function AdminProductsPage() {
       </div>
 
       <div className="mt-6">
-        <ProductsAdminPanel products={products} demoMode={demoMode} />
+        <ProductsAdminPanel products={products} />
       </div>
     </div>
   );

@@ -21,9 +21,17 @@ export function isSupabaseConfigured(): boolean {
   );
 }
 
+export function isAsaasConfigured(): boolean {
+  return !!process.env.ASAAS_API_KEY?.trim();
+}
+
+/** @deprecated Mercado Pago removido — use isAsaasConfigured */
 export function isMercadoPagoConfigured(): boolean {
-  const token = process.env.MERCADOPAGO_ACCESS_TOKEN?.trim();
-  return !!token && token.length > 10;
+  return false;
+}
+
+export function isCheckoutConfigured(): boolean {
+  return isAsaasConfigured();
 }
 
 export function getFreeShippingThreshold(): number {
@@ -44,7 +52,7 @@ export function isMockCatalogEnabled(): boolean {
   return !isSupabaseConfigured();
 }
 
-/** Credenciais do admin em modo demo (sem Supabase) */
+/** Credenciais de fallback quando Supabase não está configurado */
 export function getDemoAdminCredentials() {
   return {
     email: (process.env.DEMO_ADMIN_EMAIL ?? "manu.oficial93@gmail.com").trim().toLowerCase(),

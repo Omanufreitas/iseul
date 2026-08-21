@@ -27,6 +27,10 @@ export const createCheckoutSchema = z.object({
   shipping_price: z.number().min(0),
 });
 
+export const waitlistEmailSchema = z.object({
+  email: z.string().trim().email("E-mail inválido"),
+});
+
 export const productFormSchema = z.object({
   name: z.string().min(2),
   full_name: z.string().optional(),

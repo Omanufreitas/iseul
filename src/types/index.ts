@@ -53,6 +53,8 @@ export type Order = {
   payment_status: PaymentStatus;
   payment_method: string;
   mercadopago_payment_id: string | null;
+  asaas_payment_id: string | null;
+  asaas_checkout_id: string | null;
   subtotal: number;
   shipping: number;
   discount: number;

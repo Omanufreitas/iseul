@@ -137,9 +137,15 @@ export default async function AdminOrderDetailPage({ params }: Props) {
                 <dt className="text-neutral-500">Status atual</dt>
                 <dd>{STATUS_LABELS[order.status]}</dd>
               </div>
+              {order.asaas_payment_id && (
+                <div className="flex justify-between gap-4">
+                  <dt className="text-neutral-500">ID Asaas</dt>
+                  <dd className="break-all text-right font-mono text-xs">{order.asaas_payment_id}</dd>
+                </div>
+              )}
               {order.mercadopago_payment_id && (
                 <div className="flex justify-between gap-4">
-                  <dt className="text-neutral-500">ID Mercado Pago</dt>
+                  <dt className="text-neutral-500">ID Mercado Pago (legado)</dt>
                   <dd className="break-all text-right font-mono text-xs">{order.mercadopago_payment_id}</dd>
                 </div>
               )}

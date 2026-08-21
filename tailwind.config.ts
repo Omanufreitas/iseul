@@ -26,6 +26,7 @@ const config: Config = {
       fontFamily: {
         sans: ["var(--font-inter)", "system-ui", "sans-serif"],
         serif: ["var(--font-instrument)", "Georgia", "serif"],
+        handwriting: ["var(--font-caveat)", "cursive"],
       },
       borderRadius: {
         iseul: "14px",

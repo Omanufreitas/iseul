@@ -1,0 +1,225 @@
+"use client";
+
+import { Calendar, ChevronDown } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { cn } from "@/lib/utils";
+import { addDays, endOfDay, startOfDay, toDateInputValue } from "@/lib/dashboard-dates";
+
+export type DatePreset = {
+  id: string;
+  label: string;
+  getRange: () => { from: string; to: string };
+};
+
+export const DATE_PRESETS: DatePreset[] = [
+  {
+    id: "7d",
+    label: "7 dias",
+    getRange: () => {
+      const to = endOfDay(new Date());
+      return { from: toDateInputValue(addDays(to, -6)), to: toDateInputValue(to) };
+    },
+  },
+  {
+    id: "30d",
+    label: "30 dias",
+    getRange: () => {
+      const to = endOfDay(new Date());
+      return { from: toDateInputValue(addDays(to, -29)), to: toDateInputValue(to) };
+    },
+  },
+  {
+    id: "90d",
+    label: "90 dias",
+    getRange: () => {
+      const to = endOfDay(new Date());
+      return { from: toDateInputValue(addDays(to, -89)), to: toDateInputValue(to) };
+    },
+  },
+  {
+    id: "month",
+    label: "Este mês",
+    getRange: () => {
+      const now = new Date();
+      const from = startOfDay(new Date(now.getFullYear(), now.getMonth(), 1));
+      return { from: toDateInputValue(from), to: toDateInputValue(endOfDay(now)) };
+    },
+  },
+  {
+    id: "last-month",
+    label: "Mês passado",
+    getRange: () => {
+      const now = new Date();
+      const from = startOfDay(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+      const to = endOfDay(new Date(now.getFullYear(), now.getMonth(), 0));
+      return { from: toDateInputValue(from), to: toDateInputValue(to) };
+    },
+  },
+  {
+    id: "year",
+    label: "Este ano",
+    getRange: () => {
+      const now = new Date();
+      const from = startOfDay(new Date(now.getFullYear(), 0, 1));
+      return { from: toDateInputValue(from), to: toDateInputValue(endOfDay(now)) };
+    },
+  },
+  {
+    id: "all",
+    label: "Tudo",
+    getRange: () => ({ from: "2020-01-01", to: toDateInputValue(endOfDay(new Date())) }),
+  },
+];
+
+type Props = {
+  from: string;
+  to: string;
+  onApply: (from: string, to: string) => void;
+  disabled?: boolean;
+};
+
+function formatRangeLabel(from: string, to: string) {
+  const f = new Date(`${from}T12:00:00`).toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "short",
+    year: from.slice(0, 4) !== to.slice(0, 4) ? "numeric" : undefined,
+  });
+  const t = new Date(`${to}T12:00:00`).toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+  return `${f} — ${t}`;
+}
+
+export function DateRangePicker({ from, to, onApply, disabled }: Props) {
+  const [open, setOpen] = useState(false);
+  const [draftFrom, setDraftFrom] = useState(from);
+  const [draftTo, setDraftTo] = useState(to);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setDraftFrom(from);
+    setDraftTo(to);
+  }, [from, to]);
+
+  useEffect(() => {
+    if (!open) return;
+    function onClick(e: MouseEvent) {
+      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, [open]);
+
+  function applyCustom() {
+    if (!draftFrom || !draftTo) return;
+    let f = draftFrom;
+    let t = draftTo;
+    if (f > t) [f, t] = [t, f];
+    onApply(f, t);
+    setOpen(false);
+  }
+
+  function applyPreset(preset: DatePreset) {
+    const range = preset.getRange();
+    onApply(range.from, range.to);
+    setOpen(false);
+  }
+
+  const activePreset = DATE_PRESETS.find((p) => {
+    const r = p.getRange();
+    return r.from === from && r.to === to;
+  });
+
+  return (
+    <div className="relative" ref={panelRef}>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setOpen((v) => !v)}
+        className={cn(
+          "flex items-center gap-2 rounded-xl border border-iseul-line bg-white px-4 py-2.5 text-sm font-medium shadow-sm transition",
+          "hover:border-iseul-accent2 hover:shadow-md disabled:opacity-60",
+          open && "border-iseul-accent ring-2 ring-iseul-dew"
+        )}
+      >
+        <Calendar className="h-4 w-4 text-iseul-accent" />
+        <span className="hidden sm:inline">{activePreset?.label ?? "Personalizado"}</span>
+        <span className="text-neutral-500 sm:hidden">Período</span>
+        <span className="hidden text-neutral-400 md:inline">·</span>
+        <span className="hidden text-neutral-600 md:inline">{formatRangeLabel(from, to)}</span>
+        <ChevronDown className={cn("h-4 w-4 text-neutral-400 transition", open && "rotate-180")} />
+      </button>
+
+      {open && (
+        <div className="absolute right-0 z-50 mt-2 w-[min(100vw-2rem,420px)] overflow-hidden rounded-2xl border border-iseul-line bg-white shadow-card">
+          <div className="border-b bg-gradient-to-r from-iseul-dew/80 to-white px-4 py-3">
+            <p className="text-xs font-medium uppercase tracking-wider text-iseul-muted">
+              Período
+            </p>
+            <p className="mt-0.5 text-sm text-iseul-ink">{formatRangeLabel(from, to)}</p>
+          </div>
+
+          <div className="p-4">
+            <p className="mb-2 text-xs font-medium text-neutral-500">Atalhos</p>
+            <div className="flex flex-wrap gap-2">
+              {DATE_PRESETS.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => applyPreset(p)}
+                  className={cn(
+                    "rounded-full px-3 py-1.5 text-xs font-medium transition",
+                    activePreset?.id === p.id
+                      ? "bg-iseul-accent text-white shadow-sm"
+                      : "bg-neutral-100 text-neutral-700 hover:bg-iseul-dew"
+                  )}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-5 border-t pt-4">
+              <p className="mb-3 text-xs font-medium text-neutral-500">Período personalizado</p>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block text-xs">
+                  <span className="mb-1 block text-neutral-500">De</span>
+                  <input
+                    type="date"
+                    value={draftFrom}
+                    max={draftTo || undefined}
+                    onChange={(e) => setDraftFrom(e.target.value)}
+                    className="w-full rounded-lg border border-iseul-line px-3 py-2 text-sm focus:border-iseul-accent focus:outline-none focus:ring-2 focus:ring-iseul-dew"
+                  />
+                </label>
+                <label className="block text-xs">
+                  <span className="mb-1 block text-neutral-500">Até</span>
+                  <input
+                    type="date"
+                    value={draftTo}
+                    min={draftFrom || undefined}
+                    max={toDateInputValue(new Date())}
+                    onChange={(e) => setDraftTo(e.target.value)}
+                    className="w-full rounded-lg border border-iseul-line px-3 py-2 text-sm focus:border-iseul-accent focus:outline-none focus:ring-2 focus:ring-iseul-dew"
+                  />
+                </label>
+              </div>
+              <button
+                type="button"
+                onClick={applyCustom}
+                disabled={!draftFrom || !draftTo}
+                className="mt-3 w-full rounded-xl bg-iseul-accent py-2.5 text-sm font-medium text-white transition hover:bg-iseul-accent/90 disabled:opacity-50"
+              >
+                Aplicar período
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

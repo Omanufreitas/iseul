@@ -25,6 +25,8 @@ export async function getOrderById(id: string): Promise<AdminOrderDetail | null>
       payment_status: order.payment_status,
       payment_method: order.payment_method,
       mercadopago_payment_id: order.mercadopago_payment_id,
+      asaas_payment_id: order.asaas_payment_id ?? null,
+      asaas_checkout_id: order.asaas_checkout_id ?? null,
       subtotal: Number(order.subtotal),
       shipping: Number(order.shipping),
       discount: Number(order.discount),

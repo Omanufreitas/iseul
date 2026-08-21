@@ -101,7 +101,7 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
       <form onSubmit={handleSubmit} className="space-y-8">
         <div>
           <h1 className="font-serif text-3xl md:text-4xl">Checkout</h1>
-          <p className="mt-2 text-sm text-iseul-muted">Pagamento seguro via Mercado Pago</p>
+          <p className="mt-2 text-sm text-iseul-muted">Pagamento seguro via Asaas (PIX ou cartão)</p>
         </div>
 
         <fieldset className="space-y-4 rounded-iseul border border-iseul-line bg-iseul-card p-6">
@@ -196,7 +196,7 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
           disabled={pending}
           className="w-full rounded-full bg-iseul-ink py-4 text-sm font-medium text-iseul-paper hover:bg-iseul-accent disabled:opacity-60"
         >
-          {pending ? "Redirecionando..." : "Ir para pagamento (Mercado Pago)"}
+          {pending ? "Redirecionando..." : "Ir para pagamento"}
         </button>
       </form>
 

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Instrument_Serif } from "next/font/google";
+import { Caveat, Inter, Instrument_Serif } from "next/font/google";
 import { AppProviders } from "@/components/providers/AppProviders";
 import { ScrollManager } from "@/components/providers/ScrollManager";
 import "./globals.css";
@@ -15,16 +15,24 @@ const instrument = Instrument_Serif({
   variable: "--font-instrument",
 });
 
+const caveat = Caveat({
+  subsets: ["latin"],
+  weight: ["500", "600"],
+  variable: "--font-caveat",
+});
+
 export const metadata: Metadata = {
-  title: "Iseul | K-Beauty curada",
+  title: "Iseul em breve",
   description:
-    "Iseul (이슬, orvalho). Skincare coreano original, com curadoria. Envio do Brasil em até 24h.",
+    "Iseul. Skincare coreano escolhido produto a produto, com estoque no Brasil e envio em 24h úteis. A seleção abre em breve.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR">
-      <body className={`${inter.variable} ${instrument.variable} font-sans antialiased`}>
+      <body
+        className={`${inter.variable} ${instrument.variable} ${caveat.variable} font-sans antialiased`}
+      >
         <AppProviders>
           <ScrollManager />
           {children}

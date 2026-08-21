@@ -1,34 +1,34 @@
-import { AnnounceBar, StoreFooter, StoreHeader } from "@/components/store/HeaderFooter";
-import { CartDrawer } from "@/components/store/CartDrawer";
-import { CatalogSection, RoutineSection } from "@/components/store/CatalogSection";
-import { HomeHero } from "@/components/store/HomeHero";
-import { TrustBar } from "@/components/store/TrustBar";
-import { AboutSection } from "@/components/store/AboutSection";
-import { MobileCatalogCta } from "@/components/store/MobileCatalogCta";
-import { listProducts, getStoreSettings, countProducts } from "@/lib/catalog";
+import {
+  LandingFooter,
+  LandingHeader,
+} from "@/components/store/landing/LandingHeaderFooter";
+import { LandingHero } from "@/components/store/landing/LandingHero";
+import { LandingAnnounceBar, LandingPageMotion } from "@/components/store/landing/LandingPageMotion";
+import { LandingTrustBar } from "@/components/store/landing/LandingTrustBar";
+import { SelectionSection } from "@/components/store/landing/SelectionSection";
+import { LandingRoutineSection } from "@/components/store/landing/LandingRoutineSection";
+import { LandingAboutSection } from "@/components/store/landing/LandingAboutSection";
+import { LandingContactSection } from "@/components/store/landing/LandingContactSection";
+import { getStoreSettings } from "@/lib/catalog";
 
 export default async function HomePage() {
-  const [products, settings, total] = await Promise.all([
-    listProducts(),
-    getStoreSettings(),
-    countProducts(),
-  ]);
+  const settings = await getStoreSettings();
 
   return (
-    <>
-      <AnnounceBar text={settings.announcement} />
-      <StoreHeader settings={settings} />
-      <CartDrawer settings={settings} />
+    <LandingPageMotion>
+      <LandingAnnounceBar text="Frete grátis acima de R$199 · Estoque no Brasil, envio em 24h úteis · Produtos originais e lacrados" />
+      <LandingHeader />
 
-      <HomeHero />
-      <TrustBar settings={settings} total={total} />
-      <CatalogSection products={products} />
-      <RoutineSection />
-      <AboutSection total={total} />
-      <StoreFooter settings={settings} />
+      <main id="topo">
+        <LandingHero />
+        <LandingTrustBar settings={settings} />
+        <SelectionSection />
+        <LandingRoutineSection />
+        <LandingAboutSection />
+        <LandingContactSection />
+      </main>
 
-      <div className="h-[calc(4.75rem+env(safe-area-inset-bottom))] md:hidden" aria-hidden />
-      <MobileCatalogCta />
-    </>
+      <LandingFooter settings={settings} />
+    </LandingPageMotion>
   );
 }
