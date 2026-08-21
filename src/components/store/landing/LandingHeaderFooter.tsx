@@ -177,11 +177,21 @@ export function LandingFooter({ settings }: { settings: StoreSettings }) {
             </Link>
           </div>
         </div>
-        <div className="mt-9 flex flex-wrap justify-between gap-3.5 border-t border-white/10 pt-5 text-xs text-[#8E877B]">
+        <div className="mt-9 flex flex-wrap items-center justify-between gap-3.5 border-t border-white/10 pt-5 text-xs text-[#8E877B]">
           <span>
             © {new Date().getFullYear()} {settings.store_name}. Todos os direitos reservados.
           </span>
-          <span>Preços em BRL</span>
+          <span>
+            Preços em BRL · Desenvolvido por{" "}
+            <a
+              href="https://thraxis.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="transition-colors hover:text-white"
+            >
+              Thraxis
+            </a>
+          </span>
         </div>
       </div>
     </footer>

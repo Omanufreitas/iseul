@@ -225,11 +225,21 @@ export function StoreFooter({ settings }: { settings: StoreSettings }) {
             <p className="py-1">WhatsApp e e-mail no checkout</p>
           </div>
         </div>
-        <div className="mt-10 flex flex-wrap justify-between gap-4 border-t border-white/10 pt-5 text-xs text-[#8E877B]">
+        <div className="mt-10 flex flex-wrap items-center justify-between gap-4 border-t border-white/10 pt-5 text-xs text-[#8E877B]">
           <span>
             © {new Date().getFullYear()} {settings.store_name}. Todos os direitos reservados.
           </span>
-          <span>CNPJ a definir. Preços em BRL.</span>
+          <span>
+            CNPJ a definir. Preços em BRL. · Desenvolvido por{" "}
+            <a
+              href="https://thraxis.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="transition-colors hover:text-iseul-paper"
+            >
+              Thraxis
+            </a>
+          </span>
         </div>
       </div>
     </footer>
