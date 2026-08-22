@@ -10,7 +10,7 @@ export function WaitlistForm() {
 
   if (state.ok) {
     return (
-      <p className="mt-3 text-sm font-medium text-iseul-accent" role="status">
+      <p className="ok on mt-3.5 text-sm font-medium text-iseul-sage" role="status">
         {state.message}
       </p>
     );
@@ -18,7 +18,7 @@ export function WaitlistForm() {
 
   return (
     <>
-      <form action={action} className="flex max-w-[440px] flex-wrap gap-2">
+      <form action={action} className="campo mx-auto mt-[26px] flex max-w-[430px] flex-wrap gap-2">
         <label htmlFor="waitlist-email" className="sr-only">
           Seu e-mail
         </label>
@@ -30,12 +30,12 @@ export function WaitlistForm() {
           autoComplete="email"
           placeholder="seu@email.com"
           disabled={pending}
-          className="min-w-[190px] flex-1 rounded-full border border-iseul-line bg-iseul-card px-[18px] py-3.5 text-[15px] text-iseul-ink focus:border-iseul-accent2 focus:outline-none disabled:opacity-60"
+          className="min-w-[190px] flex-1 rounded-full border border-iseul-line bg-iseul-paper px-5 py-[13px] text-[15px] text-iseul-ink focus:border-iseul-sage focus:outline-none disabled:opacity-60"
         />
         <button
           type="submit"
           disabled={pending}
-          className="rounded-full bg-iseul-ink px-6 py-3.5 text-[15px] font-medium text-iseul-paper disabled:opacity-60"
+          className="rounded-full bg-iseul-ink px-[26px] py-[13px] font-medium text-iseul-paper disabled:opacity-60"
         >
           {pending ? "Salvando…" : "Avisar"}
         </button>

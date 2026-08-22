@@ -11,16 +11,19 @@ const config: Config = {
       colors: {
         iseul: {
           paper: "#FAF8F4",
-          paper2: "#F2EEE7",
-          card: "#FFFFFF",
+          areia: "#F0EAE0",
+          card: "#FAF8F4",
           ink: "#1C1A16",
           muted: "#6E675C",
-          line: "#E4DED4",
-          accent: "#3F5C4E",
+          line: "#E2DBD0",
+          pine: "#375145",
+          sage: "#8FA89A",
+          accent: "#375145",
           accent2: "#8FA89A",
-          dew: "#E6EFE9",
+          dew: "#E4EFE9",
+          grafite: "#4A453D",
+          sobre: "#EDE7DD",
           sale: "#9A3F32",
-          gold: "#C9A227",
         },
       },
       fontFamily: {
@@ -28,14 +31,8 @@ const config: Config = {
         serif: ["var(--font-instrument)", "Georgia", "serif"],
         handwriting: ["var(--font-caveat)", "cursive"],
       },
-      borderRadius: {
-        iseul: "14px",
-      },
-      boxShadow: {
-        card: "0 1px 2px rgba(28,26,22,.04), 0 8px 30px rgba(28,26,22,.06)",
-      },
       maxWidth: {
-        store: "1180px",
+        store: "960px",
       },
     },
   },

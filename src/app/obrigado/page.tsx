@@ -28,8 +28,8 @@ export default async function ObrigadoPage({ searchParams }: Props) {
         </div>
         <h1 className="font-serif text-4xl">Pedido registrado</h1>
         <p className="mt-4 text-iseul-muted">
-          Obrigada pela compra! Você receberá a confirmação e o código de rastreio no e-mail e
-          WhatsApp informados.
+          Obrigada pela compra! Você receberá a confirmação e o código de rastreio no e-mail
+          informado.
         </p>
         {order && (
           <p className="mt-6 font-mono text-sm tracking-wider text-iseul-accent">

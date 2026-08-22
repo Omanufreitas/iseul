@@ -1,27 +1,19 @@
-"use client";
-
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { m, useReducedMotion } from "framer-motion";
-import { useClientReady } from "@/hooks/use-client-ready";
+import { CONTACT_EMAIL, LEGAL_LINE, SITE_URL } from "@/lib/site";
 import { INSTAGRAM_HANDLE, INSTAGRAM_URL } from "@/lib/constants";
-import { slideDown } from "@/lib/motion";
-import { cn } from "@/lib/utils";
-import type { StoreSettings } from "@/types";
-
-const NAV_LINKS = [
-  { href: "/#selecao", label: "A seleção" },
-  { href: "/#rotina", label: "A rotina" },
-  { href: "/#sobre", label: "Sobre" },
-  { href: "/#contato", label: "Contato" },
-] as const;
 
 function IseulLogo({ dark = false }: { dark?: boolean }) {
   const ink = dark ? "#FAF8F4" : "#1C1A16";
-  const drop = dark ? "#FAF8F4" : "#3F5C4E";
+  const drop = dark ? "#FAF8F4" : "#375145";
 
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 152" role="img" aria-label="Iseul" className="h-8 w-auto">
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 390 152"
+      role="img"
+      aria-label="Iseul"
+      className="block w-full"
+    >
       <path
         d="M59.88,35.56 Q63.12,30.00 66.36,35.56 L89.74,75.65 A30.82,30.82 0 1 1 36.50,75.65 Z"
         fill={drop}
@@ -34,165 +26,126 @@ function IseulLogo({ dark = false }: { dark?: boolean }) {
   );
 }
 
-function InstagramIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden
-    >
-      <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
-      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
-      <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
-    </svg>
-  );
-}
+const NAV_LINKS = [
+  { href: "/#selecao", label: "A seleção" },
+  { href: "/#rotina", label: "A rotina" },
+  { href: "/#sobre", label: "Sobre" },
+  { href: "/trocas", label: "Políticas" },
+  { href: "/#avisar", label: "Avise-me" },
+] as const;
 
-function InstagramLink({ compact = false }: { compact?: boolean }) {
-  const reduce = useReducedMotion();
-
+export function LandingAnnounceBar({ text }: { text: string }) {
   return (
-    <m.a
-      href={INSTAGRAM_URL}
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-label={`Instagram ${INSTAGRAM_HANDLE}`}
-      whileHover={reduce ? undefined : { scale: 1.04, y: -1 }}
-      whileTap={reduce ? undefined : { scale: 0.97 }}
-      className={cn(
-        "group relative inline-flex items-center justify-center overflow-hidden rounded-full border border-iseul-line bg-iseul-card text-iseul-ink transition-colors duration-300",
-        "before:pointer-events-none before:absolute before:inset-0 before:rounded-full before:bg-[radial-gradient(circle_at_30%_20%,#fdf497_0%,#fd5949_42%,#d6249f_68%,#285AEB_100%)] before:opacity-0 before:transition-opacity before:duration-300 group-hover:before:opacity-100",
-        compact ? "h-10 w-10" : "gap-2 px-3.5 py-2 text-[13px] font-medium"
-      )}
-    >
-      <span
-        className={cn(
-          "relative z-10 flex items-center justify-center rounded-full bg-iseul-card transition-colors duration-300 group-hover:bg-[color-mix(in_srgb,#FAF8F4_92%,transparent)]",
-          compact ? "h-[calc(100%-2px)] w-[calc(100%-2px)]" : "gap-2 px-2 py-1"
-        )}
-      >
-        <InstagramIcon className="h-[15px] w-[15px] text-iseul-accent transition-colors duration-300 group-hover:text-[#C13584]" />
-        {!compact && (
-          <span className="hidden text-iseul-muted transition-colors duration-300 group-hover:text-iseul-ink md:inline">
-            {INSTAGRAM_HANDLE}
-          </span>
-        )}
-      </span>
-    </m.a>
+    <div className="relative z-[3] bg-iseul-pine px-4 py-[9px] text-center text-xs tracking-[0.06em] text-[#E9F0EC]">
+      {text}
+    </div>
   );
 }
 
 export function LandingHeader() {
-  const [scrolled, setScrolled] = useState(false);
-  const reduce = useReducedMotion();
-  const ready = useClientReady();
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
   return (
-    <m.header
-      initial={false}
-      animate={ready && !reduce ? "show" : false}
-      variants={slideDown}
-      className={cn(
-        "sticky top-0 z-40 border-b backdrop-blur-[14px] transition-shadow duration-300",
-        scrolled
-          ? "border-iseul-line bg-[color-mix(in_srgb,#FAF8F4_94%,transparent)] shadow-[0_4px_24px_rgba(28,26,22,.06)]"
-          : "border-iseul-line/80 bg-[color-mix(in_srgb,#FAF8F4_88%,transparent)]"
-      )}
-    >
-      <div className="mx-auto flex h-[70px] max-w-store items-center gap-6 px-[22px]">
-        <Link href="/#topo" className="w-[132px] shrink-0" aria-label="Iseul, página inicial">
+    <header className="sticky top-0 z-40 border-b border-iseul-line bg-[color-mix(in_srgb,#FAF8F4_90%,transparent)] backdrop-blur-[12px]">
+      <div className="wrap flex h-16 items-center gap-[22px]">
+        <Link href="/#topo" className="marca block w-[118px]" aria-label="Iseul, página inicial">
           <IseulLogo />
         </Link>
-        <div className="ml-auto flex items-center gap-3 sm:gap-5">
-          <nav className="hidden items-center gap-[22px] text-sm text-iseul-muted sm:flex">
-            {NAV_LINKS.map((link) => (
-              <m.div key={link.href} whileHover={reduce ? undefined : { y: -1 }} transition={{ duration: 0.2 }}>
-                <Link href={link.href} className="transition-colors hover:text-iseul-ink">
-                  {link.label}
-                </Link>
-              </m.div>
-            ))}
-          </nav>
-          <span className="hidden sm:inline-flex">
-            <InstagramLink />
-          </span>
-          <span className="sm:hidden">
-            <InstagramLink compact />
-          </span>
-        </div>
+        <nav className="ml-auto flex max-w-[62vw] flex-wrap justify-end gap-x-6 gap-y-1 text-[13.5px] max-[660px]:max-w-none max-[660px]:gap-x-[15px] max-[660px]:text-[12.5px]">
+          {NAV_LINKS.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="text-iseul-muted no-underline transition-colors hover:text-iseul-ink"
+            >
+              {link.label}
+            </Link>
+          ))}
+        </nav>
       </div>
-    </m.header>
+    </header>
   );
 }
 
-export function LandingFooter({ settings }: { settings: StoreSettings }) {
+export function LandingFooter() {
   return (
-    <footer className="bg-iseul-ink py-14 text-sm text-[#CFC8BC]">
-      <div className="mx-auto max-w-store px-[22px]">
-        <div className="grid gap-8 md:grid-cols-[1.5fr_1fr_1fr]">
-          <div>
-            <div className="mb-3 w-[140px]">
-              <IseulLogo dark />
-            </div>
-            <p className="max-w-xs text-[12.5px] text-[#8E877B]">
-              Skincare coreano com curadoria, estoque no Brasil e envio rápido.
-            </p>
+    <footer className="bg-iseul-ink py-11 text-[13.5px] text-[#B9B2A6]">
+      <div className="wrap">
+        <div className="fg flex flex-wrap justify-between gap-7">
+          <div className="marca block w-[124px]">
+            <IseulLogo dark />
           </div>
-          <div>
-            <h5 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-iseul-paper">
-              Loja
-            </h5>
-            <Link href="/#selecao" className="block py-1 transition-colors hover:text-white">
-              A seleção
+          <nav className="flex flex-wrap gap-[22px]">
+            <Link href="/trocas" className="text-[13px] text-[#B9B2A6] no-underline hover:text-white">
+              Trocas e devoluções
             </Link>
-            <Link href="/#rotina" className="block py-1 transition-colors hover:text-white">
-              A rotina
+            <Link
+              href="/privacidade"
+              className="text-[13px] text-[#B9B2A6] no-underline hover:text-white"
+            >
+              Privacidade
             </Link>
-            <Link href="/#sobre" className="block py-1 transition-colors hover:text-white">
-              Sobre
+            <Link href="/entrega" className="text-[13px] text-[#B9B2A6] no-underline hover:text-white">
+              Entrega
             </Link>
-          </div>
-          <div>
-            <h5 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-iseul-paper">
-              Ajuda
-            </h5>
-            <p className="py-1 text-[#CFC8BC]">Trocas e devoluções</p>
-            <p className="py-1 text-[#CFC8BC]">Política de privacidade</p>
-            <p className="py-1 text-[#CFC8BC]">Prazo e forma de entrega</p>
-            <Link href="/#contato" className="block py-1 transition-colors hover:text-white">
-              Fale com a gente
+            <Link href="/#contato" className="text-[13px] text-[#B9B2A6] no-underline hover:text-white">
+              Contato
             </Link>
-          </div>
+          </nav>
         </div>
-        <div className="mt-9 flex flex-wrap items-center justify-between gap-3.5 border-t border-white/10 pt-5 text-xs text-[#8E877B]">
+        <div className="fbot mt-[26px] flex flex-wrap justify-between gap-3 border-t border-white/10 pt-4 text-[11.5px] text-[#847D72]">
+          <span>{LEGAL_LINE}</span>
           <span>
-            © {new Date().getFullYear()} {settings.store_name}. Todos os direitos reservados.
-          </span>
-          <span>
-            Preços em BRL · Desenvolvido por{" "}
+            © {new Date().getFullYear()} Iseul ·{" "}
             <a
-              href="https://thraxis.app"
+              href={INSTAGRAM_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="transition-colors hover:text-white"
+              className="text-[#847D72] no-underline hover:text-white"
             >
-              Thraxis
+              {INSTAGRAM_HANDLE}
             </a>
           </span>
         </div>
+      </div>
+    </footer>
+  );
+}
+
+export function PolicyHeader() {
+  return (
+    <>
+      <LandingAnnounceBar text="Frete grátis acima de R$199 · Estoque no Brasil, envio em 24h úteis · Originais e lacrados" />
+      <header className="sticky top-0 z-40 border-b border-iseul-line bg-[color-mix(in_srgb,#FAF8F4_90%,transparent)] backdrop-blur-[12px]">
+        <div className="wrap flex h-16 items-center gap-[22px]">
+          <Link href="/" className="marca block w-[118px]" aria-label="Iseul, página inicial">
+            <IseulLogo />
+          </Link>
+          <nav className="ml-auto flex gap-6 text-[13.5px]">
+            <Link href="/" className="text-iseul-muted no-underline hover:text-iseul-ink">
+              Voltar ao site
+            </Link>
+            <a
+              href={`mailto:${CONTACT_EMAIL}`}
+              className="text-iseul-muted no-underline hover:text-iseul-ink"
+            >
+              {CONTACT_EMAIL}
+            </a>
+          </nav>
+        </div>
+      </header>
+    </>
+  );
+}
+
+export function PolicyFooter() {
+  return (
+    <footer className="bg-iseul-ink py-8 text-[13px] text-[#B9B2A6]">
+      <div className="wrap">
+        <p className="text-[11.5px] text-[#847D72]">{LEGAL_LINE}</p>
+        <p className="mt-3 text-[11.5px] text-[#847D72]">
+          <Link href="/" className="text-[#847D72] hover:text-white">
+            {SITE_URL.replace("https://", "")}
+          </Link>
+        </p>
       </div>
     </footer>
   );

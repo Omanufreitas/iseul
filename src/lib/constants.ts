@@ -50,7 +50,7 @@ export const DEFAULT_STORE_SETTINGS = {
   free_shipping_threshold: 199,
   pix_discount_percent: 5,
   trust_rating: 4.98,
-  trust_rating_label: "Avaliação das clientes",
+  trust_rating_label: "Nota média na nossa loja da Shopee",
 };
 
 export const RESERVATION_MINUTES = 30;

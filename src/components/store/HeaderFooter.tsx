@@ -197,7 +197,7 @@ export function StoreFooter({ settings }: { settings: StoreSettings }) {
               </span>
             </div>
             <p className="max-w-xs text-[#8E877B]">
-              Skincare coreano original, com curadoria. Envio do Brasil em até 24h.
+              Skincare coreano original, escolhido produto a produto. Envio do Brasil em até 24h.
             </p>
           </div>
           <div>
@@ -222,7 +222,11 @@ export function StoreFooter({ settings }: { settings: StoreSettings }) {
             <h5 className="mb-3 text-xs font-semibold uppercase tracking-widest text-iseul-paper">
               Contato
             </h5>
-            <p className="py-1">WhatsApp e e-mail no checkout</p>
+            <p className="py-1">
+              <a href="mailto:contato@iseul.com.br" className="transition-colors hover:text-iseul-paper">
+                contato@iseul.com.br
+              </a>
+            </p>
           </div>
         </div>
         <div className="mt-10 flex flex-wrap items-center justify-between gap-4 border-t border-white/10 pt-5 text-xs text-[#8E877B]">
@@ -230,7 +234,7 @@ export function StoreFooter({ settings }: { settings: StoreSettings }) {
             © {new Date().getFullYear()} {settings.store_name}. Todos os direitos reservados.
           </span>
           <span>
-            CNPJ a definir. Preços em BRL. · Desenvolvido por{" "}
+            CNPJ 63.829.102/0001-34. Preços em BRL. · Desenvolvido por{" "}
             <a
               href="https://thraxis.app"
               target="_blank"

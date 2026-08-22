@@ -84,7 +84,7 @@ export function HomeHero() {
           </m.div>
           <m.div variants={fadeUpBlur}>
             <p className="mt-5 max-w-lg text-[17px] text-iseul-muted">
-              Skincare coreano original, curado produto a produto. Estoque no Brasil, envio em até
+              Skincare coreano original, escolhido produto a produto. Estoque no Brasil, envio em até
               24h, sem surpresa na alfândega.
             </p>
           </m.div>

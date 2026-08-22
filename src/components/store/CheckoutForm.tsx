@@ -132,7 +132,7 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
               />
             </label>
             <label className="block text-sm">
-              <span className="mb-1 block text-iseul-muted">WhatsApp</span>
+              <span className="mb-1 block text-iseul-muted">Telefone</span>
               <input
                 required
                 className="w-full rounded-lg border border-iseul-line bg-iseul-paper px-3 py-2.5"
