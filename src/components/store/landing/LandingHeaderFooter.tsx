@@ -83,9 +83,6 @@ export function LandingFooter() {
             >
               Privacidade
             </Link>
-            <Link href="/entrega" className="text-[13px] text-[#B9B2A6] no-underline hover:text-white">
-              Entrega
-            </Link>
             <Link href="/#contato" className="text-[13px] text-[#B9B2A6] no-underline hover:text-white">
               Contato
             </Link>
