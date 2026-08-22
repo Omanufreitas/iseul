@@ -2,7 +2,6 @@ User-agent: *
 Allow: /
 Disallow: /admin
 Disallow: /checkout
-Disallow: /entrega
 Disallow: /api/
 
 Sitemap: https://iseul.com.br/sitemap.xml

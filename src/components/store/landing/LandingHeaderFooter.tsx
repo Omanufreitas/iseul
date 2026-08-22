@@ -83,6 +83,9 @@ export function LandingFooter() {
             >
               Privacidade
             </Link>
+            <Link href="/entrega" className="text-[13px] text-[#B9B2A6] no-underline hover:text-white">
+              Entrega
+            </Link>
             <Link href="/#contato" className="text-[13px] text-[#B9B2A6] no-underline hover:text-white">
               Contato
             </Link>
@@ -90,16 +93,29 @@ export function LandingFooter() {
         </div>
         <div className="fbot mt-[26px] flex flex-wrap justify-between gap-3 border-t border-white/10 pt-4 text-[11.5px] text-[#847D72]">
           <span>{LEGAL_LINE}</span>
-          <span>
-            © {new Date().getFullYear()} Iseul ·{" "}
-            <a
-              href={INSTAGRAM_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[#847D72] no-underline hover:text-white"
-            >
-              {INSTAGRAM_HANDLE}
-            </a>
+          <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span>
+              © {new Date().getFullYear()} Iseul ·{" "}
+              <a
+                href={INSTAGRAM_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#847D72] no-underline hover:text-white"
+              >
+                {INSTAGRAM_HANDLE}
+              </a>
+            </span>
+            <span>
+              Desenvolvido por{" "}
+              <a
+                href="https://thraxis.app"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#847D72] no-underline hover:text-white"
+              >
+                thraxis.app
+              </a>
+            </span>
           </span>
         </div>
       </div>
@@ -142,6 +158,16 @@ export function PolicyFooter() {
           <Link href="/" className="text-[#847D72] hover:text-white">
             {SITE_URL.replace("https://", "")}
           </Link>
+          {" · "}
+          Desenvolvido por{" "}
+          <a
+            href="https://thraxis.app"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#847D72] no-underline hover:text-white"
+          >
+            thraxis.app
+          </a>
         </p>
       </div>
     </footer>
