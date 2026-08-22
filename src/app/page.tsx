@@ -1,8 +1,5 @@
-import {
-  LandingAnnounceBar,
-  LandingFooter,
-  LandingHeader,
-} from "@/components/store/landing/LandingHeaderFooter";
+import { LandingFooter, LandingHeader } from "@/components/store/landing/LandingHeaderFooter";
+import { LandingAnnounceBar, LandingPageMotion } from "@/components/store/landing/LandingPageMotion";
 import { LandingHero } from "@/components/store/landing/LandingHero";
 import { LandingTrustBar } from "@/components/store/landing/LandingTrustBar";
 import { SelectionSection } from "@/components/store/landing/SelectionSection";
@@ -25,7 +22,7 @@ export default function HomePage() {
   };
 
   return (
-    <>
+    <LandingPageMotion>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
@@ -46,6 +43,6 @@ export default function HomePage() {
       </main>
 
       <LandingFooter />
-    </>
+    </LandingPageMotion>
   );
 }

@@ -1,6 +1,10 @@
+"use client";
+
+import { m, useReducedMotion } from "framer-motion";
+import { Reveal, Stagger, StaggerItem } from "@/components/motion/Reveal";
 import { CardCondensation } from "@/components/store/landing/CardCondensation";
 import { IseulDropIcon } from "@/components/store/landing/IseulDropIcon";
-import { Reveal } from "@/components/store/landing/ScrollReveal";
+import { EASE_OUT } from "@/lib/motion";
 
 const CATEGORIES = [
   { title: "Limpeza", subtitle: "primeiro passo" },
@@ -10,6 +14,8 @@ const CATEGORIES = [
 ] as const;
 
 export function SelectionSection() {
+  const reduce = useReducedMotion();
+
   return (
     <section id="selecao" className="landing-section">
       <div className="wrap">
@@ -24,28 +30,51 @@ export function SelectionSection() {
           </p>
         </Reveal>
 
-        <div className="grade grid grid-cols-4 gap-3.5 max-[820px]:grid-cols-2 max-[460px]:grid-cols-1">
+        <Stagger className="grade grid grid-cols-4 gap-3.5 max-[820px]:grid-cols-2 max-[460px]:grid-cols-1">
           {CATEGORIES.map((cat, i) => (
-            <Reveal
-              key={cat.title}
-              delay={i * 70}
-              as="article"
-              className="card group relative overflow-hidden rounded-[2px] border border-iseul-line bg-[linear-gradient(168deg,var(--dew),transparent_62%),var(--paper)] px-[22px] pb-6 pt-[26px] text-center transition-[transform,border-color] duration-[250ms] hover:-translate-y-[3px] hover:border-iseul-sage"
-            >
-              <CardCondensation />
-              <span className="gota mx-auto mb-[22px] block w-[22px] opacity-85">
-                <IseulDropIcon className="block w-full text-iseul-sage" />
-              </span>
-              <h3 className="m-0 font-serif text-2xl font-normal">{cat.title}</h3>
-              <span className="tag mb-5 mt-[5px] block text-[10px] uppercase tracking-[0.16em] text-iseul-muted">
-                {cat.subtitle}
-              </span>
-              <span className="soon block font-handwriting text-[21px] font-semibold text-iseul-grafite">
-                em breve
-              </span>
-            </Reveal>
+            <StaggerItem key={cat.title}>
+              <article className="card group relative overflow-hidden rounded-[2px] border border-iseul-line bg-[linear-gradient(168deg,var(--dew),transparent_62%),var(--paper)] px-[22px] pb-6 pt-[26px] text-center transition-[transform,border-color] duration-[250ms] hover:-translate-y-[3px] hover:border-iseul-sage">
+                <CardCondensation />
+                <m.div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 opacity-70"
+                  animate={
+                    reduce
+                      ? undefined
+                      : {
+                          opacity: [0.5, 0.75, 0.5],
+                        }
+                  }
+                  transition={
+                    reduce ? undefined : { duration: 5 + i * 0.4, repeat: Infinity, ease: "easeInOut" }
+                  }
+                />
+                <m.span
+                  className="gota relative mx-auto mb-[22px] block w-[22px] opacity-85"
+                  animate={reduce ? undefined : { y: [0, -3, 0] }}
+                  transition={
+                    reduce ? undefined : { duration: 3.2 + i * 0.3, repeat: Infinity, ease: "easeInOut" }
+                  }
+                >
+                  <IseulDropIcon className="block w-full text-iseul-sage transition-transform duration-300 group-hover:scale-110" />
+                </m.span>
+                <h3 className="relative m-0 font-serif text-2xl font-normal">{cat.title}</h3>
+                <span className="tag relative mb-5 mt-[5px] block text-[10px] uppercase tracking-[0.16em] text-iseul-muted">
+                  {cat.subtitle}
+                </span>
+                <m.span
+                  initial={{ opacity: 0, rotate: -6, y: 8 }}
+                  whileInView={{ opacity: 1, rotate: 0, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: 0.12 + i * 0.08, ease: EASE_OUT }}
+                  className="soon relative block font-handwriting text-[21px] font-semibold text-iseul-grafite"
+                >
+                  em breve
+                </m.span>
+              </article>
+            </StaggerItem>
           ))}
-        </div>
+        </Stagger>
       </div>
     </section>
   );

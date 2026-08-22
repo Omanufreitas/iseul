@@ -15,7 +15,13 @@ type Props = {
 };
 
 function formatValue(v: number, decimals: number, prefix: string, suffix: string) {
-  const n = decimals > 0 ? v.toFixed(decimals) : String(Math.round(v));
+  const n =
+    decimals > 0
+      ? v.toLocaleString("pt-BR", {
+          minimumFractionDigits: decimals,
+          maximumFractionDigits: decimals,
+        })
+      : String(Math.round(v));
   return `${prefix}${n}${suffix}`;
 }
 
