@@ -38,12 +38,6 @@ export function LandingTrustBar() {
         <span className="v block font-serif text-2xl leading-[1.15] tabular-nums">Brasil</span>
       ),
     },
-    {
-      label: "para desistir",
-      render: () => (
-        <span className="v block font-serif text-2xl leading-[1.15] tabular-nums">7 dias</span>
-      ),
-    },
   ] as const;
 
   return (
