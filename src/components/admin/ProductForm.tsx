@@ -41,16 +41,19 @@ export function ProductForm({ product }: Props) {
   const blobUrlsRef = useRef<string[]>([]);
 
   useEffect(() => {
-    const next = product
-      ? product.image_urls.length > 0
+    const next =
+      product && product.image_urls.length > 0
         ? product.image_urls
-        : product.image_url
+        : product?.image_url
           ? [product.image_url]
-          : []
-      : [];
+          : [];
     setImageUrls(next);
     setSelectedIndex(0);
-  }, [product?.id, product?.image_url, product?.image_urls]);
+  }, [
+    product?.id,
+    product?.image_url,
+    product?.image_urls?.join("|"),
+  ]);
 
   useEffect(() => {
     return () => {

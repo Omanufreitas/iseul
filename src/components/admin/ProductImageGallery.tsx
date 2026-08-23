@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   ImagePlus,
   Loader2,
@@ -39,15 +39,11 @@ export function ProductImageGallery({
   const [dragActive, setDragActive] = useState(false);
   const [showUrlField, setShowUrlField] = useState(false);
   const [urlDraft, setUrlDraft] = useState("");
-  const [imageLoaded, setImageLoaded] = useState(false);
 
   const hasImages = images.length > 0;
-  const previewUrl = images[selectedIndex] ?? "";
+  const safeIndex = Math.min(Math.max(selectedIndex, 0), Math.max(images.length - 1, 0));
+  const previewUrl = images[safeIndex] ?? "";
   const isRemoteUrl = Boolean(previewUrl && !previewUrl.startsWith("blob:"));
-
-  useEffect(() => {
-    setImageLoaded(false);
-  }, [previewUrl]);
 
   const pickFiles = useCallback(() => {
     if (!disabled && !uploading) inputRef.current?.click();
@@ -91,16 +87,13 @@ export function ProductImageGallery({
       {hasImages ? (
         <>
           <div className="group relative overflow-hidden rounded-2xl border border-iseul-line bg-iseul-paper shadow-sm">
-            <div className="relative aspect-square w-full max-h-[420px] bg-iseul-areia/30 sm:max-h-none">
+            <div className="relative aspect-square w-full max-h-[420px] bg-white sm:max-h-none">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
+                key={previewUrl}
                 src={previewUrl}
                 alt="Foto do produto"
-                onLoad={() => setImageLoaded(true)}
-                className={[
-                  "h-full w-full object-cover transition-all duration-500",
-                  imageLoaded ? "scale-100 opacity-100" : "scale-[1.02] opacity-0",
-                ].join(" ")}
+                className="h-full w-full object-contain p-4 sm:p-6"
               />
 
               {uploading && (
@@ -110,7 +103,7 @@ export function ProductImageGallery({
                 </div>
               )}
 
-              {selectedIndex === 0 && !uploading && isRemoteUrl && (
+              {safeIndex === 0 && !uploading && isRemoteUrl && (
                 <div className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-white/95 px-3 py-1.5 text-xs font-medium text-iseul-pine shadow-sm ring-1 ring-iseul-line/60">
                   <Star className="h-3.5 w-3.5 fill-current" strokeWidth={0} />
                   Capa
@@ -120,7 +113,7 @@ export function ProductImageGallery({
               {!uploading && (
                 <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 bg-gradient-to-t from-iseul-ink/55 via-iseul-ink/20 to-transparent p-4 pt-16 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
                   <p className="text-[11px] text-white/80">
-                    Foto {selectedIndex + 1} de {images.length}
+                    Foto {safeIndex + 1} de {images.length}
                   </p>
                   <div className="flex shrink-0 gap-2">
                     {selectedIndex !== 0 && (
@@ -160,7 +153,7 @@ export function ProductImageGallery({
                 ].join(" ")}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={url} alt="" className="h-full w-full object-cover" />
+                <img src={url} alt="" className="h-full w-full object-contain bg-white p-0.5" />
                 {index === 0 && (
                   <span className="absolute left-1 top-1 rounded bg-iseul-pine px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-white">
                     Capa
