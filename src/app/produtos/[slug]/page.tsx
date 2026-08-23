@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { AnnounceBar, StoreFooter, StoreHeader } from "@/components/store/HeaderFooter";
 import { CartDrawer } from "@/components/store/CartDrawer";
 import { ProductDetailClient } from "@/components/store/ProductDetailClient";
+import { ProductDetailGallery } from "@/components/store/ProductDetailGallery";
 import { ProductDetailInfo } from "@/components/store/ProductDetailInfo";
 import { ProductDetailMotion } from "@/components/store/ProductDetailMotion";
 import { ProductPageMobileCta } from "@/components/store/ProductPageMobileCta";
@@ -29,20 +30,15 @@ export default async function ProductPage({ params }: Props) {
       <StoreHeader settings={settings} />
       <CartDrawer settings={settings} />
 
-      <div className="mx-auto max-w-store px-6 py-12">
+      <div className="mx-auto max-w-[1120px] px-6 py-12">
         <Link href="/#catalogo" className="text-sm text-iseul-muted hover:text-iseul-ink">
           Voltar ao catálogo
         </Link>
 
         <ProductDetailMotion>
-          <div className="mt-8 grid gap-10 lg:grid-cols-[1fr_1fr]">
-            <div className="aspect-square overflow-hidden rounded-iseul border border-iseul-line bg-iseul-paper2 lg:sticky lg:top-24 lg:self-start">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={product.image_url}
-                alt={product.name}
-                className="h-full w-full object-cover"
-              />
+          <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,0.65fr)] lg:gap-12">
+            <div className="lg:sticky lg:top-24 lg:self-start">
+              <ProductDetailGallery product={product} />
             </div>
 
             <div>
