@@ -61,7 +61,7 @@ export function LandingCatalogSection({ products }: { products: Product[] }) {
   return (
     <section id="catalogo" className="landing-section scroll-mt-[70px] bg-iseul-areia/50">
       <div className="wrap">
-        <div className="cab reveal">
+        <div className="cab">
           <p className="eyebrow">produtos</p>
           <h2>
             Tudo que está <em>em estoque agora.</em>
@@ -69,7 +69,7 @@ export function LandingCatalogSection({ products }: { products: Product[] }) {
           <p>Filtre por etapa da rotina ou ordene por preço.</p>
         </div>
 
-        <div className="reveal mb-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
           <div className="flex flex-wrap justify-center gap-2 sm:justify-start">
             {chips.map((c) => {
               const n =
@@ -109,9 +109,9 @@ export function LandingCatalogSection({ products }: { products: Product[] }) {
         {filtered.length === 0 ? (
           <p className="py-16 text-center text-iseul-muted">Nenhum produto nessa categoria ainda.</p>
         ) : (
-          <div className="reveal grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3.5">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3.5">
             {filtered.map((p, i) => (
-              <ProductCard key={p.id} product={p} allProducts={products} index={i} />
+              <ProductCard key={p.id} product={p} allProducts={products} index={i} visible />
             ))}
           </div>
         )}

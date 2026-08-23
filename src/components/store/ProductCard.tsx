@@ -13,10 +13,13 @@ export function ProductCard({
   product,
   allProducts,
   index = 0,
+  visible = false,
 }: {
   product: Product;
   allProducts: Product[];
   index?: number;
+  /** Sem animação de entrada — catálogo na landing precisa aparecer sempre */
+  visible?: boolean;
 }) {
   const { addItem } = useCart();
   const reduce = useReducedMotion();
@@ -39,8 +42,8 @@ export function ProductCard({
   return (
     <m.article
       layout
-      initial={false}
-      whileInView={reduce ? undefined : "show"}
+      initial={visible || reduce ? "show" : false}
+      whileInView={visible || reduce ? undefined : "show"}
       viewport={{ once: true, margin: "-40px" }}
       variants={{
         hidden: popIn.hidden,
