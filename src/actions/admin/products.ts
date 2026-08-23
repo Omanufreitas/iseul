@@ -10,6 +10,10 @@ import {
   upsertMockProduct,
 } from "@/lib/mock-catalog-store";
 import { productToDbPayload } from "@/lib/products";
+import {
+  normalizeProductImageUrls,
+  primaryProductImageUrl,
+} from "@/lib/product-image";
 import { productFormSchema } from "@/lib/validations";
 import { slugify } from "@/lib/utils";
 import { isMockCatalogEnabled } from "@/lib/config";
@@ -28,6 +32,11 @@ function parseProduct(raw: unknown) {
 }
 
 function toProductPayload(data: ProductFormData, existing?: Product | null) {
+  const imageUrls = normalizeProductImageUrls(
+    data.image_urls,
+    data.image_url || existing?.image_url
+  );
+
   return {
     name: data.name,
     full_name: data.full_name ?? data.name,
@@ -42,7 +51,8 @@ function toProductPayload(data: ProductFormData, existing?: Product | null) {
     price: data.price,
     compare_at_price: data.compare_at_price ?? null,
     pitch: data.pitch ?? "",
-    image_url: data.image_url ?? "",
+    image_url: primaryProductImageUrl(imageUrls),
+    image_urls: imageUrls,
     image_fallback_url: data.image_fallback_url || null,
     shopee_url: existing?.shopee_url ?? null,
     shopee_id: existing?.shopee_id ?? null,

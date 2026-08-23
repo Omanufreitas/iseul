@@ -18,3 +18,36 @@ export function productImageSpecLabel(): string {
 export const PRODUCT_IMAGE_ACCEPT = "image/jpeg,image/png,image/webp";
 
 export const PRODUCT_IMAGE_MAX_BYTES = PRODUCT_IMAGE_SPECS.maxFileSizeMb * 1024 * 1024;
+
+const REMOTE_URL = /^https?:\/\//i;
+
+/** Normaliza lista de URLs (capa + galeria), sem blobs nem duplicatas. */
+export function normalizeProductImageUrls(
+  imageUrls: unknown,
+  legacyImageUrl?: string | null
+): string[] {
+  const raw = Array.isArray(imageUrls) ? imageUrls : [];
+  const collected: string[] = [];
+
+  for (const item of raw) {
+    if (typeof item !== "string") continue;
+    const url = item.trim();
+    if (!url || url.startsWith("blob:") || !REMOTE_URL.test(url)) continue;
+    if (!collected.includes(url)) collected.push(url);
+  }
+
+  const legacy = legacyImageUrl?.trim();
+  if (legacy && REMOTE_URL.test(legacy) && !collected.includes(legacy)) {
+    collected.unshift(legacy);
+  }
+
+  return collected;
+}
+
+export function primaryProductImageUrl(urls: string[]): string {
+  return urls[0] ?? "";
+}
+
+export function productImagesFromRow(row: Record<string, unknown>): string[] {
+  return normalizeProductImageUrls(row.image_urls, row.image_url as string | null);
+}

@@ -15,7 +15,7 @@ import {
   formatNcmDisplay,
 } from "@/lib/bling/product-fiscal";
 import { BlingProductBadge } from "@/components/admin/BlingProductBadge";
-import { ProductImageUpload } from "@/components/admin/ProductImageUpload";
+import { ProductImageGallery } from "@/components/admin/ProductImageGallery";
 import { PRODUCT_IMAGE_MAX_BYTES, productImageSpecLabel } from "@/lib/product-image";
 import { slugify } from "@/lib/utils";
 import type { Product } from "@/types";
@@ -27,44 +27,46 @@ type Props = {
 export function ProductForm({ product }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [imageUrl, setImageUrl] = useState(product?.image_url ?? "");
-  const [pendingFile, setPendingFile] = useState<File | null>(null);
-  const [imageFileName, setImageFileName] = useState<string | null>(null);
+  const initialImages = product
+    ? product.image_urls.length > 0
+      ? product.image_urls
+      : product.image_url
+        ? [product.image_url]
+        : []
+    : [];
+
+  const [imageUrls, setImageUrls] = useState<string[]>(initialImages);
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const [uploadingImage, setUploadingImage] = useState(false);
-  const previewObjectUrl = useRef<string | null>(null);
+  const blobUrlsRef = useRef<string[]>([]);
 
   useEffect(() => {
-    setImageUrl(product?.image_url ?? "");
-    setPendingFile(null);
-    setImageFileName(null);
-  }, [product?.id, product?.image_url]);
+    const next = product
+      ? product.image_urls.length > 0
+        ? product.image_urls
+        : product.image_url
+          ? [product.image_url]
+          : []
+      : [];
+    setImageUrls(next);
+    setSelectedIndex(0);
+  }, [product?.id, product?.image_url, product?.image_urls]);
 
   useEffect(() => {
     return () => {
-      if (previewObjectUrl.current) {
-        URL.revokeObjectURL(previewObjectUrl.current);
-        previewObjectUrl.current = null;
-      }
+      for (const url of blobUrlsRef.current) URL.revokeObjectURL(url);
+      blobUrlsRef.current = [];
     };
   }, []);
 
-  function setPreviewFromFile(file: File) {
-    if (previewObjectUrl.current) {
-      URL.revokeObjectURL(previewObjectUrl.current);
-    }
-    const objectUrl = URL.createObjectURL(file);
-    previewObjectUrl.current = objectUrl;
-    setImageUrl(objectUrl);
+  function trackBlob(url: string) {
+    blobUrlsRef.current.push(url);
   }
 
-  function clearImage() {
-    if (previewObjectUrl.current) {
-      URL.revokeObjectURL(previewObjectUrl.current);
-      previewObjectUrl.current = null;
-    }
-    setImageUrl("");
-    setPendingFile(null);
-    setImageFileName(null);
+  function revokeBlob(url: string) {
+    if (!url.startsWith("blob:")) return;
+    URL.revokeObjectURL(url);
+    blobUrlsRef.current = blobUrlsRef.current.filter((u) => u !== url);
   }
 
   async function uploadImageFile(file: File): Promise<string | null> {
@@ -81,53 +83,91 @@ export function ProductForm({ product }: Props) {
       return null;
     }
     if ("url" in result && result.url) {
-      if (previewObjectUrl.current) {
-        URL.revokeObjectURL(previewObjectUrl.current);
-        previewObjectUrl.current = null;
-      }
-      setImageUrl(result.url);
-      setPendingFile(null);
       return result.url;
     }
     return null;
   }
 
-  async function handleImageFile(file: File) {
-    setPendingFile(file);
-    setImageFileName(file.name);
-    setPreviewFromFile(file);
+  async function handleAddFiles(files: File[]) {
+    if (!files.length) return;
     setUploadingImage(true);
+    let added = 0;
     try {
-      const url = await uploadImageFile(file);
-      if (url) toast.success("Imagem enviada");
+      for (const file of files) {
+        const blob = URL.createObjectURL(file);
+        trackBlob(blob);
+        setImageUrls((prev) => [...prev, blob]);
+        const url = await uploadImageFile(file);
+        if (!url) {
+          setImageUrls((prev) => prev.filter((u) => u !== blob));
+          revokeBlob(blob);
+          continue;
+        }
+        revokeBlob(blob);
+        setImageUrls((prev) => prev.map((u) => (u === blob ? url : u)));
+        added++;
+      }
+      if (added > 0) {
+        toast.success(added === 1 ? "Foto adicionada" : `${added} fotos adicionadas`);
+      }
     } finally {
       setUploadingImage(false);
     }
+  }
+
+  function handleAddUrl(url: string) {
+    const trimmed = url.trim();
+    if (!trimmed) return;
+    try {
+      new URL(trimmed);
+    } catch {
+      toast.error("URL inválida.");
+      return;
+    }
+    if (imageUrls.includes(trimmed)) {
+      toast.error("Essa foto já está na galeria.");
+      return;
+    }
+    setImageUrls((prev) => [...prev, trimmed]);
+    setSelectedIndex(imageUrls.length);
+    toast.success("Foto adicionada");
+  }
+
+  function handleRemove(index: number) {
+    setImageUrls((prev) => {
+      const removed = prev[index];
+      if (removed) revokeBlob(removed);
+      const next = prev.filter((_, i) => i !== index);
+      return next;
+    });
+    setSelectedIndex((prev) => {
+      if (index < prev) return prev - 1;
+      if (prev >= imageUrls.length - 1) return Math.max(0, imageUrls.length - 2);
+      return prev;
+    });
+  }
+
+  function handleSetCover(index: number) {
+    if (index <= 0) return;
+    setImageUrls((prev) => {
+      const next = [...prev];
+      const [item] = next.splice(index, 1);
+      next.unshift(item);
+      return next;
+    });
+    setSelectedIndex(0);
   }
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
     startTransition(async () => {
-      let finalImageUrl = imageUrl.trim();
+      const remoteImages = imageUrls.filter(
+        (url) => url.trim() && !url.startsWith("blob:")
+      );
 
-      if (previewObjectUrl.current && finalImageUrl.startsWith("blob:")) {
-        finalImageUrl = "";
-      }
-
-      if (!finalImageUrl && pendingFile) {
-        setUploadingImage(true);
-        try {
-          const url = await uploadImageFile(pendingFile);
-          if (!url) return;
-          finalImageUrl = url;
-        } finally {
-          setUploadingImage(false);
-        }
-      }
-
-      if (!finalImageUrl) {
-        toast.error("Envie uma foto do produto ou cole a URL da imagem.");
+      if (remoteImages.length === 0) {
+        toast.error("Adicione ao menos uma foto do produto.");
         return;
       }
 
@@ -149,7 +189,8 @@ export function ProductForm({ product }: Props) {
         price: Number(fd.get("price")),
         compare_at_price: fd.get("compare_at_price") ? Number(fd.get("compare_at_price")) : null,
         pitch: String(fd.get("pitch") || ""),
-        image_url: finalImageUrl,
+        image_url: remoteImages[0],
+        image_urls: remoteImages,
         image_fallback_url: String(fd.get("image_fallback_url") || ""),
         sold_count: Number(fd.get("sold_count") || 0),
         rating: Number(fd.get("rating") || 0),
@@ -305,18 +346,16 @@ export function ProductForm({ product }: Props) {
           </Section>
 
           <Section title="Imagens">
-            <ProductImageUpload
-              imageUrl={imageUrl}
+            <ProductImageGallery
+              images={imageUrls}
               uploading={uploadingImage}
-              fileName={imageFileName}
               disabled={pending}
-              onFileSelect={(file) => void handleImageFile(file)}
-              onUrlChange={(url) => {
-                setImageFileName(null);
-                setPendingFile(null);
-                setImageUrl(url);
-              }}
-              onRemove={clearImage}
+              selectedIndex={selectedIndex}
+              onSelect={setSelectedIndex}
+              onAddFiles={(files) => void handleAddFiles(files)}
+              onAddUrl={handleAddUrl}
+              onRemove={handleRemove}
+              onSetCover={handleSetCover}
             />
             <Field label="URL fallback (opcional)" className="md:col-span-2">
               <input name="image_fallback_url" defaultValue={product?.image_fallback_url ?? ""} className={inputClass} />
@@ -335,11 +374,11 @@ export function ProductForm({ product }: Props) {
             <div className="p-4">
               <article className="overflow-hidden rounded-xl border border-iseul-line/80 bg-white shadow-sm">
                 <div className="relative aspect-square overflow-hidden bg-iseul-areia/40">
-                  {imageUrl ? (
+                  {imageUrls[0] ? (
                     <>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src={imageUrl}
+                        src={imageUrls[0]}
                         alt=""
                         className="h-full w-full object-cover transition-transform duration-500 hover:scale-105"
                       />

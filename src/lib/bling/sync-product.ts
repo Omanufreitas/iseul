@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/client";
 import { blingFetch, isBlingConfigured } from "@/lib/bling/client";
 import { normalizeNcm } from "@/lib/bling/product-fiscal";
 import { expandSkuCandidates, findBlingProductId } from "@/lib/bling/resolve-entities";
+import { normalizeProductImageUrls } from "@/lib/product-image";
 
 type DbProduct = {
   id: string;
@@ -16,13 +17,29 @@ type DbProduct = {
   tax_origin: number;
   unit: string;
   bling_product_id: string | null;
+  image_url: string | null;
+  image_urls: unknown;
 };
+
+function buildBlingMidia(imageUrls: string[]) {
+  const links = imageUrls.filter((u) => /^https?:\/\//i.test(u));
+  if (!links.length) return undefined;
+  return {
+    midia: {
+      imagens: {
+        externas: links.map((link) => ({ link })),
+      },
+    },
+  };
+}
 
 function buildBlingProductBody(product: DbProduct, codigo: string) {
   const ncm = normalizeNcm(product.ncm);
   if (!ncm) {
     throw new Error("NCM inválido — informe 8 dígitos.");
   }
+
+  const imageUrls = normalizeProductImageUrls(product.image_urls, product.image_url);
 
   return {
     nome: product.full_name?.trim() || product.name,
@@ -36,6 +53,7 @@ function buildBlingProductBody(product: DbProduct, codigo: string) {
       ncm,
       origem: Number(product.tax_origin ?? 1),
     },
+    ...buildBlingMidia(imageUrls),
   };
 }
 
@@ -77,7 +95,7 @@ export async function syncProductToBling(productId: string): Promise<{ ok: boole
   const { data: product, error } = await admin
     .from("products")
     .select(
-      "id, name, full_name, slug, sku, price, stock, active, ncm, tax_origin, unit, bling_product_id",
+      "id, name, full_name, slug, sku, price, stock, active, ncm, tax_origin, unit, bling_product_id, image_url, image_urls",
     )
     .eq("id", productId)
     .maybeSingle();

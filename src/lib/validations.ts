@@ -50,6 +50,10 @@ export const productFormSchema = z.object({
   compare_at_price: z.number().nullable().optional(),
   pitch: z.string().optional(),
   image_url: z.string().url().optional().or(z.literal("")).nullable(),
+  image_urls: z
+    .array(z.string().url())
+    .min(1, "Adicione ao menos uma foto do produto")
+    .optional(),
   image_fallback_url: z.string().optional(),
   shopee_url: z.string().optional(),
   shopee_id: z.number().nullable().optional(),

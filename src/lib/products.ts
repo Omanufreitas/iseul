@@ -1,4 +1,5 @@
 import type { Product } from "@/types";
+import { productImagesFromRow, primaryProductImageUrl } from "@/lib/product-image";
 import { slugify } from "@/lib/utils";
 
 export function mapDbProduct(row: Record<string, unknown>): Product {
@@ -22,6 +23,7 @@ export function mapDbProduct(row: Record<string, unknown>): Product {
     compare_at_price: row.compare_at_price != null ? Number(row.compare_at_price) : null,
     pitch: String(row.pitch ?? ""),
     image_url: String(row.image_url ?? ""),
+    image_urls: productImagesFromRow(row),
     image_fallback_url: row.image_fallback_url ? String(row.image_fallback_url) : null,
     shopee_url: row.shopee_url ? String(row.shopee_url) : null,
     sold_count: Number(row.sold_count ?? 0),
@@ -60,7 +62,8 @@ export function productToDbPayload(
     price: input.price,
     compare_at_price: input.compare_at_price ?? null,
     pitch: input.pitch ?? "",
-    image_url: input.image_url ?? "",
+    image_url: primaryProductImageUrl(input.image_urls ?? []) || input.image_url || "",
+    image_urls: input.image_urls ?? (input.image_url ? [input.image_url] : []),
     image_fallback_url: input.image_fallback_url ?? null,
     shopee_url: input.shopee_url ?? null,
     sold_count: input.sold_count ?? 0,

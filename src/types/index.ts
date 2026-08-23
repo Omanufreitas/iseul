@@ -18,6 +18,7 @@ export type Product = {
   compare_at_price: number | null;
   pitch: string;
   image_url: string;
+  image_urls: string[];
   image_fallback_url: string | null;
   shopee_url: string | null;
   sold_count: number;

@@ -32,6 +32,7 @@ function seedToProduct(row: SeedProduct, slug: string): Product {
     compare_at_price: row.before > 0 ? row.before : null,
     pitch: row.pitch,
     image_url: row.img,
+    image_urls: row.img ? [row.img] : [],
     image_fallback_url: row.fallback || null,
     shopee_url: row.shopee || null,
     sold_count: row.sold,
