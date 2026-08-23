@@ -9,6 +9,7 @@ import { getProductById } from "@/lib/catalog";
 import { isMockCatalogEnabled, isSupabaseConfigured } from "@/lib/config";
 import { RESERVATION_MINUTES } from "@/lib/constants";
 import { releaseExpiredReservations } from "@/lib/orders/fulfill";
+import { quoteShippingForCheckout, shippingPricesMatch } from "@/lib/shipping";
 
 async function getCheckoutRequestOrigin(): Promise<string | undefined> {
   const h = await headers();
@@ -69,7 +70,16 @@ export async function createCheckoutOrder(raw: unknown) {
   }
 
   const subtotal = prepared.reduce((s, r) => s + r.line_total, 0);
-  const total = subtotal + shipping_price;
+
+  const shippingQuote = await quoteShippingForCheckout(address.zip, items);
+  if ("error" in shippingQuote) {
+    return { error: shippingQuote.error };
+  }
+  if (!shippingPricesMatch(shippingQuote.price, shipping_price)) {
+    return { error: "Valor de frete desatualizado. Atualize o CEP e tente novamente." };
+  }
+
+  const total = subtotal + shippingQuote.price;
   const cpf = address.cpf.replace(/\D/g, "");
 
   const customerPatch = {
@@ -129,7 +139,7 @@ export async function createCheckoutOrder(raw: unknown) {
       payment_status: "pendente",
       payment_method: "asaas",
       subtotal,
-      shipping: shipping_price,
+      shipping: shippingQuote.price,
       discount: 0,
       total,
       shipping_address: address,
@@ -195,7 +205,7 @@ export async function createCheckoutOrder(raw: unknown) {
       state: address.state,
     },
     asaasItems,
-    shipping_price,
+    shippingQuote.price,
     requestOrigin
   );
 

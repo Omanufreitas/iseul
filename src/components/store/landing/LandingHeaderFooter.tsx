@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BrandMarquee } from "@/components/store/landing/BrandMarquee";
 import { LandingHeaderCart } from "@/components/store/landing/LandingHeaderCart";
 import { CONTACT_EMAIL, LEGAL_LINE, SITE_URL } from "@/lib/site";
 import { INSTAGRAM_HANDLE, INSTAGRAM_URL } from "@/lib/constants";
@@ -110,6 +111,7 @@ export function PolicyHeader() {
   return (
     <>
       <LandingAnnounceBar text="Frete grátis acima de R$199 · Estoque no Brasil, envio em 24h úteis · Originais e lacrados" />
+      <BrandMarquee />
       <header className="sticky top-0 z-40 border-b border-iseul-line bg-[color-mix(in_srgb,#FAF8F4_90%,transparent)] backdrop-blur-[12px]">
         <div className="wrap flex h-16 items-center gap-[22px]">
           <Link href="/" className="marca block w-[118px]" aria-label="Iseul, página inicial">

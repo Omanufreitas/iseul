@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="4000" height="1200" viewBox="0 0 4000 1200">
+<rect width="100%" height="100%" fill="none"/>
+<text x="420" y="780" fill="#151515" font-family="Arial Rounded MT Bold, Arial, sans-serif" font-size="610" letter-spacing="-35">medicube</text>
+<g transform="translate(3370 255)" fill="#151515">
+<rect x="0" y="0" width="110" height="110"/><rect x="135" y="0" width="110" height="110"/>
+<rect x="135" y="135" width="110" height="110"/><rect x="0" y="135" width="110" height="110"/>
+<rect x="36" y="36" width="40" height="40" fill="white"/><rect x="171" y="171" width="40" height="40" fill="white"/>
+</g>
+</svg>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="4000" height="1400" viewBox="0 0 4000 1400">
+<rect width="100%" height="100%" fill="none"/>
+<g transform="translate(650 700)">
+<rect x="-220" y="-220" width="440" height="440" rx="20" fill="#211916" transform="rotate(45)"/>
+<path d="M-135 80 C-60 -20,-15 -80,90 -155 M-85 -130 C-20 -55,20 5,145 105 M-45 -5 C35 -10,75 -30,130 -85" fill="none" stroke="white" stroke-width="38" stroke-linecap="round"/>
+</g>
+<text x="1120" y="835" fill="#171312" font-family="Arial, Helvetica, sans-serif" font-size="390" letter-spacing="115">K-SECRET</text>
+</svg>

@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { CartDrawer } from "@/components/store/CartDrawer";
 import { LandingFooter, LandingHeader } from "@/components/store/landing/LandingHeaderFooter";
+import { BrandMarquee } from "@/components/store/landing/BrandMarquee";
 import { LandingAnnounceBar, LandingPageMotion } from "@/components/store/landing/LandingPageMotion";
 import { LandingHero } from "@/components/store/landing/LandingHero";
 import { LandingTrustBar } from "@/components/store/landing/LandingTrustBar";
@@ -34,6 +35,7 @@ export default async function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
       />
       <LandingAnnounceBar text="Frete grátis acima de R$199 · Estoque no Brasil, envio em 24h úteis · Originais e lacrados" />
+      <BrandMarquee />
       <LandingHeader />
 
       <main id="topo">

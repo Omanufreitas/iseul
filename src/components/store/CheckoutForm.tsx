@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { useCart } from "@/context/cart-context";
+import { quoteShipping } from "@/actions/shipping";
 import { createCheckoutOrder } from "@/actions/checkout";
-import { formatCurrency, maskCep, maskCpf, maskPhone, shippingForCep } from "@/lib/utils";
+import { useCart } from "@/context/cart-context";
+import { formatCurrency, maskCep, maskCpf, maskPhone } from "@/lib/utils";
+import type { ShippingQuoteResult } from "@/lib/shipping";
 import type { StoreSettings } from "@/types";
 
 const BR_STATES = [
@@ -25,6 +27,7 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
   const { items, subtotal, clearCart } = useCart();
   const [pending, startTransition] = useTransition();
   const [shipping, setShipping] = useState<number | null>(null);
+  const [shippingMeta, setShippingMeta] = useState<ShippingQuoteResult | null>(null);
   const [cepLoading, setCepLoading] = useState(false);
   const lastLookupCep = useRef("");
   const [form, setForm] = useState({
@@ -42,21 +45,41 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
   });
 
   const cepDigits = form.zip.replace(/\D/g, "");
+  const cartItems = useMemo(
+    () => items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
+    [items]
+  );
 
   useEffect(() => {
     if (cepDigits.length !== 8) {
       setShipping(null);
+      setShippingMeta(null);
       return;
     }
 
-    const ship = shippingForCep(form.zip, subtotal, settings.free_shipping_threshold);
-    setShipping(ship);
+    let cancelled = false;
+    setCepLoading(true);
+
+    quoteShipping({ destinationCep: form.zip, items: cartItems })
+      .then((result) => {
+        if (cancelled) return;
+        if ("error" in result && result.error) {
+          setShipping(null);
+          setShippingMeta(null);
+          toast.error(result.error);
+          return;
+        }
+        if ("quote" in result && result.quote) {
+          setShipping(result.quote.price);
+          setShippingMeta(result.quote);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setCepLoading(false);
+      });
 
     if (lastLookupCep.current === cepDigits) return;
     lastLookupCep.current = cepDigits;
-
-    let cancelled = false;
-    setCepLoading(true);
 
     fetchCep(form.zip)
       .then((data) => {
@@ -72,15 +95,12 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
           city: data.localidade,
           state: data.uf,
         }));
-      })
-      .finally(() => {
-        if (!cancelled) setCepLoading(false);
       });
 
     return () => {
       cancelled = true;
     };
-  }, [cepDigits, form.zip, subtotal, settings.free_shipping_threshold]);
+  }, [cepDigits, form.zip, cartItems]);
 
   if (items.length === 0) {
     return (
@@ -99,13 +119,16 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
       toast.error("Informe um CEP válido");
       return;
     }
-    const ship = shipping ?? shippingForCep(form.zip, subtotal, settings.free_shipping_threshold);
+    if (shipping == null) {
+      toast.error("Aguarde o cálculo do frete");
+      return;
+    }
 
     startTransition(async () => {
       const result = await createCheckoutOrder({
-        items: items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
+        items: cartItems,
         address: form,
-        shipping_price: ship,
+        shipping_price: shipping,
       });
 
       if ("error" in result && result.error) {
@@ -120,11 +143,7 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
     });
   }
 
-  const ship =
-    shipping ??
-    (cepDigits.length === 8
-      ? shippingForCep(form.zip, subtotal, settings.free_shipping_threshold)
-      : null);
+  const ship = shipping;
   const total = subtotal + (ship ?? 0);
 
   return (
@@ -193,11 +212,18 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
               }}
             />
             {cepLoading && (
-              <span className="mt-1 block text-xs text-iseul-muted">Buscando endereço…</span>
+              <span className="mt-1 block text-xs text-iseul-muted">Calculando frete…</span>
             )}
             {cepDigits.length === 8 && ship != null && !cepLoading && (
               <span className="mt-1 block text-xs text-iseul-sage">
                 Frete: {ship === 0 ? "Grátis" : formatCurrency(ship)}
+                {shippingMeta?.source === "melhor_envio" && shippingMeta.carrier && shippingMeta.service && (
+                  <>
+                    {" "}
+                    · {shippingMeta.carrier} {shippingMeta.service}
+                    {shippingMeta.deliveryDays ? ` · ${shippingMeta.deliveryDays} dias úteis` : ""}
+                  </>
+                )}
               </span>
             )}
           </label>
@@ -235,7 +261,7 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
 
         <button
           type="submit"
-          disabled={pending || cepDigits.length !== 8}
+          disabled={pending || cepDigits.length !== 8 || ship == null || cepLoading}
           className="w-full rounded-full bg-iseul-ink py-4 text-sm font-medium text-iseul-paper hover:bg-iseul-accent disabled:opacity-60"
         >
           {pending ? "Redirecionando..." : "Ir para pagamento"}
