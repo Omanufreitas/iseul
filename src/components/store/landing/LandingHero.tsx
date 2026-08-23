@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { m, useReducedMotion } from "framer-motion";
 import { SplitWords } from "@/components/motion/SplitWords";
-import { DewCanvas } from "@/components/store/landing/DewCanvas";
+import { CentellaBranch } from "@/components/store/landing/CentellaBranch";
 import { DropLustro } from "@/components/store/landing/DropLustro";
 import { useClientReady } from "@/hooks/use-client-ready";
 import { EASE_OUT, fadeUp, fadeUpBlur, stagger } from "@/lib/motion";
@@ -14,7 +14,7 @@ export function LandingHero() {
 
   return (
     <div className="hero relative overflow-hidden bg-[radial-gradient(120%_80%_at_50%_-10%,var(--dew)_0%,transparent_62%),linear-gradient(180deg,transparent_60%,var(--paper)_100%)] py-24 pb-[84px] pt-[96px] text-center">
-      <DewCanvas />
+      <CentellaBranch />
       <m.div
         aria-hidden
         className="marca-dagua pointer-events-none absolute left-1/2 top-[46%] -translate-x-1/2 -translate-y-1/2 select-none whitespace-nowrap text-[clamp(230px,42vw,430px)] font-semibold leading-[0.8] tracking-[-0.02em] text-iseul-sage opacity-[0.09]"
@@ -55,12 +55,13 @@ export function LandingHero() {
             </h1>
           </m.div>
           <m.p variants={fadeUpBlur} className="lead mx-auto mb-8 mt-0 max-w-[40ch] text-[17px] text-iseul-muted">
-            Skincare coreano original, escolhido produto a produto. A seleção abre em breve.
+            Skincare coreano original, escolhido produto a produto. Estoque no Brasil, envio em 24h
+            úteis.
           </m.p>
           <m.div variants={fadeUp} className="acoes flex flex-wrap justify-center gap-2.5">
             <m.div whileHover={reduce ? undefined : { y: -2 }} whileTap={reduce ? undefined : { scale: 0.98 }}>
-              <Link className="btn" href="#avisar">
-                Quero saber quando abrir
+              <Link className="btn" href="#selecao">
+                Ver a seleção
               </Link>
             </m.div>
             <m.div whileHover={reduce ? undefined : { y: -2 }} whileTap={reduce ? undefined : { scale: 0.98 }}>

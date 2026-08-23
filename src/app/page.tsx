@@ -1,16 +1,22 @@
+import { Suspense } from "react";
+import { CartDrawer } from "@/components/store/CartDrawer";
 import { LandingFooter, LandingHeader } from "@/components/store/landing/LandingHeaderFooter";
 import { LandingAnnounceBar, LandingPageMotion } from "@/components/store/landing/LandingPageMotion";
 import { LandingHero } from "@/components/store/landing/LandingHero";
 import { LandingTrustBar } from "@/components/store/landing/LandingTrustBar";
 import { SelectionSection } from "@/components/store/landing/SelectionSection";
+import { LandingCatalogSection } from "@/components/store/landing/LandingCatalogSection";
 import { LandingRoutineSection } from "@/components/store/landing/LandingRoutineSection";
 import { LandingAboutSection } from "@/components/store/landing/LandingAboutSection";
 import { WaitlistSection } from "@/components/store/landing/WaitlistSection";
 import { LandingContactSection } from "@/components/store/landing/LandingContactSection";
 import { DewDivider } from "@/components/store/landing/DewDivider";
+import { listProducts, getStoreSettings } from "@/lib/catalog";
 import { CONTACT_EMAIL, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const [products, settings] = await Promise.all([listProducts(), getStoreSettings()]);
+
   const organizationJsonLd = {
     "@context": "https://schema.org",
     "@type": "Organization",
@@ -35,6 +41,9 @@ export default function HomePage() {
         <LandingTrustBar />
         <DewDivider />
         <SelectionSection />
+        <Suspense fallback={null}>
+          <LandingCatalogSection products={products} />
+        </Suspense>
         <LandingRoutineSection />
         <LandingAboutSection />
         <DewDivider />
@@ -43,6 +52,7 @@ export default function HomePage() {
       </main>
 
       <LandingFooter />
+      <CartDrawer settings={settings} />
     </LandingPageMotion>
   );
 }

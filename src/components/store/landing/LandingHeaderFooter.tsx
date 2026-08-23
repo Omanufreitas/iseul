@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LandingHeaderCart } from "@/components/store/landing/LandingHeaderCart";
 import { CONTACT_EMAIL, LEGAL_LINE, SITE_URL } from "@/lib/site";
 import { INSTAGRAM_HANDLE, INSTAGRAM_URL } from "@/lib/constants";
 
@@ -26,14 +27,6 @@ function IseulLogo({ dark = false }: { dark?: boolean }) {
   );
 }
 
-const NAV_LINKS = [
-  { href: "/#selecao", label: "A seleção" },
-  { href: "/#rotina", label: "A rotina" },
-  { href: "/#sobre", label: "Sobre" },
-  { href: "/trocas", label: "Políticas" },
-  { href: "/#avisar", label: "Avise-me" },
-] as const;
-
 export function LandingAnnounceBar({ text }: { text: string }) {
   return (
     <div className="relative z-[3] bg-iseul-pine px-4 py-[9px] text-center text-xs tracking-[0.06em] text-[#E9F0EC]">
@@ -49,17 +42,7 @@ export function LandingHeader() {
         <Link href="/#topo" className="marca block w-[118px]" aria-label="Iseul, página inicial">
           <IseulLogo />
         </Link>
-        <nav className="ml-auto flex max-w-[62vw] flex-wrap justify-end gap-x-6 gap-y-1 text-[13.5px] max-[660px]:max-w-none max-[660px]:gap-x-[15px] max-[660px]:text-[12.5px]">
-          {NAV_LINKS.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="text-iseul-muted no-underline transition-colors hover:text-iseul-ink"
-            >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
+        <LandingHeaderCart />
       </div>
     </header>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { useCart } from "@/context/cart-context";
 import { createCheckoutOrder } from "@/actions/checkout";
@@ -25,6 +25,8 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
   const { items, subtotal, clearCart } = useCart();
   const [pending, startTransition] = useTransition();
   const [shipping, setShipping] = useState<number | null>(null);
+  const [cepLoading, setCepLoading] = useState(false);
+  const lastLookupCep = useRef("");
   const [form, setForm] = useState({
     full_name: "",
     email: "",
@@ -39,6 +41,47 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
     state: "SP",
   });
 
+  const cepDigits = form.zip.replace(/\D/g, "");
+
+  useEffect(() => {
+    if (cepDigits.length !== 8) {
+      setShipping(null);
+      return;
+    }
+
+    const ship = shippingForCep(form.zip, subtotal, settings.free_shipping_threshold);
+    setShipping(ship);
+
+    if (lastLookupCep.current === cepDigits) return;
+    lastLookupCep.current = cepDigits;
+
+    let cancelled = false;
+    setCepLoading(true);
+
+    fetchCep(form.zip)
+      .then((data) => {
+        if (cancelled) return;
+        if (!data) {
+          toast.error("CEP não encontrado");
+          return;
+        }
+        setForm((f) => ({
+          ...f,
+          street: data.logradouro || f.street,
+          neighborhood: data.bairro || f.neighborhood,
+          city: data.localidade,
+          state: data.uf,
+        }));
+      })
+      .finally(() => {
+        if (!cancelled) setCepLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [cepDigits, form.zip, subtotal, settings.free_shipping_threshold]);
+
   if (items.length === 0) {
     return (
       <div className="mx-auto max-w-lg py-20 text-center">
@@ -50,26 +93,12 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
     );
   }
 
-  async function lookupCep() {
-    const data = await fetchCep(form.zip);
-    if (!data) {
-      toast.error("CEP não encontrado");
-      return;
-    }
-    setForm((f) => ({
-      ...f,
-      street: data.logradouro || f.street,
-      neighborhood: data.bairro || f.neighborhood,
-      city: data.localidade,
-      state: data.uf,
-    }));
-    const ship = shippingForCep(form.zip, subtotal, settings.free_shipping_threshold);
-    setShipping(ship);
-    toast.success("Endereço encontrado");
-  }
-
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (cepDigits.length !== 8) {
+      toast.error("Informe um CEP válido");
+      return;
+    }
     const ship = shipping ?? shippingForCep(form.zip, subtotal, settings.free_shipping_threshold);
 
     startTransition(async () => {
@@ -91,9 +120,11 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
     });
   }
 
-  const ship = shipping ?? (form.zip.replace(/\D/g, "").length === 8
-    ? shippingForCep(form.zip, subtotal, settings.free_shipping_threshold)
-    : null);
+  const ship =
+    shipping ??
+    (cepDigits.length === 8
+      ? shippingForCep(form.zip, subtotal, settings.free_shipping_threshold)
+      : null);
   const total = subtotal + (ship ?? 0);
 
   return (
@@ -145,24 +176,31 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
 
         <fieldset className="space-y-4 rounded-iseul border border-iseul-line bg-iseul-card p-6">
           <legend className="px-2 font-semibold">Entrega</legend>
-          <div className="flex gap-2">
-            <label className="block flex-1 text-sm">
-              <span className="mb-1 block text-iseul-muted">CEP</span>
-              <input
-                required
-                className="w-full rounded-lg border border-iseul-line bg-iseul-paper px-3 py-2.5"
-                value={form.zip}
-                onChange={(e) => setForm({ ...form, zip: maskCep(e.target.value) })}
-              />
-            </label>
-            <button
-              type="button"
-              onClick={lookupCep}
-              className="self-end rounded-full border border-iseul-line px-4 py-2.5 text-sm"
-            >
-              Buscar
-            </button>
-          </div>
+          <label className="block text-sm">
+            <span className="mb-1 block text-iseul-muted">CEP</span>
+            <input
+              required
+              inputMode="numeric"
+              autoComplete="postal-code"
+              placeholder="00000-000"
+              className="w-full rounded-lg border border-iseul-line bg-iseul-paper px-3 py-2.5"
+              value={form.zip}
+              onChange={(e) => {
+                const next = maskCep(e.target.value);
+                const nextDigits = next.replace(/\D/g, "");
+                if (nextDigits.length !== 8) lastLookupCep.current = "";
+                setForm({ ...form, zip: next });
+              }}
+            />
+            {cepLoading && (
+              <span className="mt-1 block text-xs text-iseul-muted">Buscando endereço…</span>
+            )}
+            {cepDigits.length === 8 && ship != null && !cepLoading && (
+              <span className="mt-1 block text-xs text-iseul-sage">
+                Frete: {ship === 0 ? "Grátis" : formatCurrency(ship)}
+              </span>
+            )}
+          </label>
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block text-sm sm:col-span-2">
               <span className="mb-1 block text-iseul-muted">Rua</span>
@@ -171,6 +209,10 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
             <label className="block text-sm">
               <span className="mb-1 block text-iseul-muted">Número</span>
               <input required className="w-full rounded-lg border border-iseul-line bg-iseul-paper px-3 py-2.5" value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} />
+            </label>
+            <label className="block text-sm">
+              <span className="mb-1 block text-iseul-muted">Complemento</span>
+              <input className="w-full rounded-lg border border-iseul-line bg-iseul-paper px-3 py-2.5" value={form.complement} onChange={(e) => setForm({ ...form, complement: e.target.value })} />
             </label>
             <label className="block text-sm">
               <span className="mb-1 block text-iseul-muted">Bairro</span>
@@ -193,7 +235,7 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
 
         <button
           type="submit"
-          disabled={pending}
+          disabled={pending || cepDigits.length !== 8}
           className="w-full rounded-full bg-iseul-ink py-4 text-sm font-medium text-iseul-paper hover:bg-iseul-accent disabled:opacity-60"
         >
           {pending ? "Redirecionando..." : "Ir para pagamento"}

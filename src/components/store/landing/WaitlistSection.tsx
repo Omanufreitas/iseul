@@ -12,12 +12,13 @@ export function WaitlistSection() {
     <section id="avisar" className="avisar landing-section scroll-mt-[70px] text-center">
       <div className="wrap">
         <Reveal className="cab">
-          <p className="eyebrow">lista de abertura</p>
+          <p className="eyebrow">lista de novidades</p>
           <h2>
-            Quero saber <em>quando abrir.</em>
+            Avise-me sobre <em>reposição e lançamentos.</em>
           </h2>
           <p className="mt-3 text-iseul-muted">
-            Sem disparo diário e sem promoção genérica. Um aviso quando a loja abrir, e só.
+            Sem disparo diário e sem promoção genérica. Só quando voltar ao estoque ou entrar algo
+            novo na seleção.
           </p>
         </Reveal>
         <Reveal delay={0.08}>
@@ -28,7 +29,7 @@ export function WaitlistSection() {
             <WaitlistForm />
           </m.div>
           <p className="mini mt-4 text-[12.5px] text-iseul-muted">
-            Ao enviar, você concorda em receber um e-mail sobre a abertura. Sem spam.
+            Ao enviar, você concorda em receber e-mails sobre novidades da Iseul. Sem spam.
           </p>
         </Reveal>
       </div>
