@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { ProductCard } from "@/components/store/ProductCard";
-import { Reveal } from "@/components/motion/Reveal";
 import { CATEGORIES } from "@/lib/constants";
 import type { Product } from "@/types";
 
@@ -60,19 +59,17 @@ export function LandingCatalogSection({ products }: { products: Product[] }) {
   if (products.length === 0) return null;
 
   return (
-    <section id="catalogo" className="landing-section scroll-mt-[70px] bg-iseul-areia/40">
+    <section id="catalogo" className="landing-section scroll-mt-[70px] bg-iseul-areia/50">
       <div className="wrap">
-        <Reveal className="cab">
-          <p className="eyebrow">catálogo</p>
+        <div className="cab reveal">
+          <p className="eyebrow">produtos</p>
           <h2>
             Tudo que está <em>em estoque agora.</em>
           </h2>
-          <p className="mt-3 text-iseul-muted">
-            Skincare coreano original, escolhido produto a produto. Filtre por etapa da rotina.
-          </p>
-        </Reveal>
+          <p>Filtre por etapa da rotina ou ordene por preço.</p>
+        </div>
 
-        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+        <div className="reveal mb-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
           <div className="flex flex-wrap justify-center gap-2 sm:justify-start">
             {chips.map((c) => {
               const n =
@@ -112,7 +109,7 @@ export function LandingCatalogSection({ products }: { products: Product[] }) {
         {filtered.length === 0 ? (
           <p className="py-16 text-center text-iseul-muted">Nenhum produto nessa categoria ainda.</p>
         ) : (
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
+          <div className="reveal grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3.5">
             {filtered.map((p, i) => (
               <ProductCard key={p.id} product={p} allProducts={products} index={i} />
             ))}

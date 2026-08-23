@@ -19,7 +19,7 @@ export function DewDropSvg({ className, elongated = false, idSuffix = "" }: Prop
       className={className}
     >
       <defs>
-        <radialGradient id={lensId} cx=".64" cy=".67" r=".76">
+        <radialGradient id={lensId} cx=".66" cy=".70" r=".78">
           <stop offset="0" stopColor="#FFFFFF" stopOpacity=".85" />
           <stop offset=".38" stopColor="#DCEBE3" stopOpacity=".46" />
           <stop offset=".82" stopColor="#8FA89A" stopOpacity=".26" />

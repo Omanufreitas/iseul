@@ -24,7 +24,7 @@ export async function joinWaitlist(
     await subscribeWaitlist(parsed.data.email);
     return {
       ok: true,
-      message: "Pronto. Você é avisada assim que a seleção abrir.",
+      message: "Pronto. Avisamos você nas próximas novidades.",
     };
   } catch {
     return { ok: false, message: "Não foi possível salvar agora. Tente de novo." };

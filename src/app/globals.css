@@ -119,6 +119,12 @@ button {
     margin: 0 auto 44px;
   }
 
+  .cab p {
+    color: var(--muted);
+    margin: 14px 0 0;
+    font-size: 15.5px;
+  }
+
   .eyebrow {
     font-size: 10.5px;
     letter-spacing: 0.28em;

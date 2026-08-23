@@ -1,10 +1,5 @@
-"use client";
-
-import { m, useReducedMotion } from "framer-motion";
-import { Reveal, Stagger, StaggerItem } from "@/components/motion/Reveal";
 import { CONTACT_EMAIL } from "@/lib/site";
 import { INSTAGRAM_HANDLE, INSTAGRAM_URL } from "@/lib/constants";
-import { EASE_OUT } from "@/lib/motion";
 
 const CHANNELS = [
   {
@@ -22,25 +17,13 @@ const CHANNELS = [
 ] as const;
 
 export function LandingContactSection() {
-  const reduce = useReducedMotion();
-
   return (
-    <section id="contato" className="contato landing-section border-t border-iseul-line">
-      <div className="wrap">
-        <Reveal className="cab">
-          <p className="eyebrow">contato</p>
-          <h2>
-            Fala com a gente <em>antes de comprar.</em>
-          </h2>
-          <p className="mt-3 text-iseul-muted">
-            Dúvida de rotina, de ativo ou de prazo. Respondemos em horário comercial.
-          </p>
-        </Reveal>
-
-        <Stagger className="canais flex flex-wrap justify-center gap-[clamp(22px,6vw,64px)] text-center">
-          {CHANNELS.map((channel) => (
-            <StaggerItem key={channel.label} className="canal">
-              <m.div whileHover={reduce ? undefined : { y: -3 }} transition={{ duration: 0.25, ease: EASE_OUT }}>
+    <div id="contato" className="contato border-t border-iseul-line">
+      <section className="py-[52px]">
+        <div className="wrap">
+          <div className="canais flex flex-wrap justify-center gap-[clamp(22px,6vw,64px)] text-center">
+            {CHANNELS.map((channel) => (
+              <div key={channel.label} className="canal reveal">
                 <span className="rot block text-[10px] font-medium uppercase tracking-[0.2em] text-iseul-sage">
                   {channel.label}
                 </span>
@@ -53,11 +36,11 @@ export function LandingContactSection() {
                 >
                   {channel.value}
                 </a>
-              </m.div>
-            </StaggerItem>
-          ))}
-        </Stagger>
-      </div>
-    </section>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    </div>
   );
 }

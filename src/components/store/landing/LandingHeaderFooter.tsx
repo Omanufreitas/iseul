@@ -38,7 +38,7 @@ export function LandingAnnounceBar({ text }: { text: string }) {
 export function LandingHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-iseul-line bg-[color-mix(in_srgb,#FAF8F4_90%,transparent)] backdrop-blur-[12px]">
-      <div className="wrap flex h-16 items-center gap-[22px]">
+      <div className="wrap hd flex h-16 items-center gap-[22px]">
         <Link href="/#topo" className="marca block w-[118px]" aria-label="Iseul, página inicial">
           <IseulLogo />
         </Link>
