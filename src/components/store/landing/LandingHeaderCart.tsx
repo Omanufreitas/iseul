@@ -13,6 +13,24 @@ const NAV_LINKS = [
   { href: "/#avisar", label: "Novidades" },
 ] as const;
 
+function CartButton({ count, onClick }: { count: number; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={`Abrir sacola${count ? `, ${count} itens` : ""}`}
+      className="relative shrink-0 rounded-full border border-iseul-line bg-iseul-paper px-3.5 py-1.5 text-[13px] font-medium text-iseul-ink transition-colors hover:border-iseul-sage"
+    >
+      Sacola
+      {count > 0 && (
+        <span className="ml-1.5 inline-grid h-[18px] min-w-[18px] place-items-center rounded-full bg-iseul-pine px-1 text-[10px] font-semibold text-white">
+          {count}
+        </span>
+      )}
+    </button>
+  );
+}
+
 export function LandingHeaderCart() {
   const { count, openCart } = useCart();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -24,50 +42,59 @@ export function LandingHeaderCart() {
     };
   }, [menuOpen]);
 
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const onChange = () => {
+      if (mq.matches) setMenuOpen(false);
+    };
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
   function closeMenu() {
     setMenuOpen(false);
   }
 
   return (
     <>
-      <div className="ml-auto flex items-center gap-2.5">
+      <nav id="navtopo" className="ml-auto flex items-center gap-x-3 lg:gap-x-4">
+        <div className="hidden flex-wrap justify-end gap-5 text-[13.5px] lg:flex xl:gap-6">
+          {NAV_LINKS.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="text-iseul-muted no-underline transition-colors hover:text-iseul-ink"
+            >
+              {link.label}
+            </Link>
+          ))}
+        </div>
+
         <button
           type="button"
           aria-label={menuOpen ? "Fechar menu" : "Abrir menu"}
           aria-expanded={menuOpen}
           aria-controls="landing-menu"
           onClick={() => setMenuOpen((v) => !v)}
-          className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-iseul-line bg-iseul-paper text-[18px] leading-none text-iseul-ink transition-colors hover:border-iseul-sage"
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-iseul-line bg-iseul-paper text-[18px] leading-none text-iseul-ink transition-colors hover:border-iseul-sage lg:hidden"
         >
           {menuOpen ? "✕" : "☰"}
         </button>
 
-        <button
-          type="button"
-          onClick={openCart}
-          aria-label={`Abrir sacola${count ? `, ${count} itens` : ""}`}
-          className="relative shrink-0 rounded-full border border-iseul-line bg-iseul-paper px-3.5 py-1.5 text-[13px] font-medium text-iseul-ink transition-colors hover:border-iseul-sage"
-        >
-          Sacola
-          {count > 0 && (
-            <span className="ml-1.5 inline-grid h-[18px] min-w-[18px] place-items-center rounded-full bg-iseul-pine px-1 text-[10px] font-semibold text-white">
-              {count}
-            </span>
-          )}
-        </button>
-      </div>
+        <CartButton count={count} onClick={openCart} />
+      </nav>
 
       {menuOpen && (
         <>
           <button
             type="button"
             aria-label="Fechar menu"
-            className="fixed inset-0 z-[45] bg-[rgba(24,22,18,0.42)] backdrop-blur-[2px]"
+            className="fixed inset-0 z-[45] bg-[rgba(24,22,18,0.42)] backdrop-blur-[2px] lg:hidden"
             onClick={closeMenu}
           />
           <nav
             id="landing-menu"
-            className="fixed right-0 top-0 z-[46] flex h-full w-full max-w-[min(100%,300px)] flex-col border-l border-iseul-line bg-[color-mix(in_srgb,#FAF8F4_98%,transparent)] shadow-[-10px_0_40px_rgba(0,0,0,0.08)] backdrop-blur-md"
+            className="fixed right-0 top-0 z-[46] flex h-full w-full max-w-[min(100%,300px)] flex-col border-l border-iseul-line bg-[color-mix(in_srgb,#FAF8F4_98%,transparent)] shadow-[-10px_0_40px_rgba(0,0,0,0.08)] backdrop-blur-md lg:hidden"
           >
             <div className="flex items-center justify-between border-b border-iseul-line px-5 py-4">
               <span className="font-serif text-xl text-iseul-ink">Menu</span>
