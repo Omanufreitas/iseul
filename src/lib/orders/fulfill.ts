@@ -4,6 +4,7 @@ import {
   getAsaasPayment,
   isConfirmedAsaasPaymentStatus,
 } from "@/lib/asaas";
+import { syncOrderToBling } from "@/lib/bling/sync-order";
 
 export async function releaseExpiredReservations() {
   const admin = createAdminClient();
@@ -60,6 +61,12 @@ export async function markOrderPaid(orderId: string, paymentId: string) {
 
   await admin.from("stock_reservations").delete().eq("order_id", orderId);
   await decrementStockForOrder(orderId);
+
+  try {
+    await syncOrderToBling(orderId);
+  } catch (e) {
+    console.error("[bling]", e);
+  }
 
   return { alreadyPaid: false };
 }

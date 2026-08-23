@@ -5,6 +5,13 @@ export function mapDbProduct(row: Record<string, unknown>): Product {
   return {
     id: String(row.id),
     shopee_id: row.shopee_id != null ? Number(row.shopee_id) : null,
+    sku: row.sku ? String(row.sku) : null,
+    ncm: row.ncm ? String(row.ncm) : null,
+    tax_origin: Number(row.tax_origin ?? 1),
+    unit: String(row.unit ?? "UN"),
+    bling_product_id: row.bling_product_id ? String(row.bling_product_id) : null,
+    bling_sync_status: row.bling_sync_status ? String(row.bling_sync_status) : null,
+    bling_sync_error: row.bling_sync_error ? String(row.bling_sync_error) : null,
     slug: String(row.slug),
     name: String(row.name),
     full_name: String(row.full_name ?? ""),
@@ -40,6 +47,10 @@ export function productToDbPayload(
 ) {
   return {
     shopee_id: input.shopee_id ?? null,
+    sku: input.sku?.trim() || null,
+    ncm: input.ncm?.replace(/\D/g, "") || null,
+    tax_origin: input.tax_origin ?? 1,
+    unit: input.unit?.trim() || "UN",
     slug: input.slug || slugify(input.name),
     name: input.name,
     full_name: input.full_name ?? input.name,

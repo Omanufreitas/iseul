@@ -13,6 +13,7 @@ import { productToDbPayload } from "@/lib/products";
 import { productFormSchema } from "@/lib/validations";
 import { slugify } from "@/lib/utils";
 import { isMockCatalogEnabled } from "@/lib/config";
+import { syncProductToBling } from "@/lib/bling/sync-product";
 import type { Product } from "@/types";
 import type { z } from "zod";
 
@@ -31,6 +32,10 @@ function toProductPayload(data: ProductFormData, existing?: Product | null) {
     name: data.name,
     full_name: data.full_name ?? data.name,
     slug: data.slug?.trim() || slugify(data.name),
+    sku: data.sku.trim(),
+    ncm: data.ncm.replace(/\D/g, ""),
+    tax_origin: data.tax_origin,
+    unit: data.unit.trim() || "UN",
     brand: data.brand ?? "",
     category_slug: data.category_slug,
     category_label: data.category_label,
@@ -48,6 +53,9 @@ function toProductPayload(data: ProductFormData, existing?: Product | null) {
     active: data.active,
     featured: data.featured ?? false,
     sort_order: existing?.sort_order ?? 0,
+    bling_product_id: existing?.bling_product_id ?? null,
+    bling_sync_status: existing?.bling_sync_status ?? null,
+    bling_sync_error: existing?.bling_sync_error ?? null,
   };
 }
 
@@ -70,17 +78,29 @@ export async function saveProduct(raw: unknown, id?: string) {
 
   const payload = productToDbPayload(toProductPayload(parsed.data, existing));
   const admin = createAdminClient();
+  let savedId = id;
 
   if (id) {
     const { error } = await admin.from("products").update(payload).eq("id", id);
     if (error) return { error: error.message };
   } else {
-    const { error } = await admin.from("products").insert(payload);
+    const { data: inserted, error } = await admin
+      .from("products")
+      .insert(payload)
+      .select("id")
+      .single();
     if (error) return { error: error.message };
+    savedId = String(inserted.id);
   }
 
-  revalidateAll();
-  return { success: true, id };
+  let blingWarning: string | undefined;
+  if (savedId) {
+    const sync = await syncProductToBling(savedId);
+    if (!sync.ok && sync.error) blingWarning = sync.error;
+  }
+
+  revalidateAll(savedId);
+  return { success: true, id: savedId, blingWarning };
 }
 
 export async function deleteProduct(id: string) {
@@ -154,9 +174,12 @@ export async function updateStoreSettings(raw: {
   return { success: true };
 }
 
-function revalidateAll() {
+function revalidateAll(productId?: string) {
   revalidatePath("/");
   revalidatePath("/admin/produtos");
   revalidatePath("/admin");
   revalidatePath("/produtos", "layout");
+  if (productId) {
+    revalidatePath(`/admin/produtos/${productId}`);
+  }
 }

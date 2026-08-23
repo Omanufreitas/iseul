@@ -4,10 +4,21 @@ import { StoreSettingsForm } from "@/components/admin/StoreSettingsForm";
 import { getStoreSettings } from "@/lib/catalog";
 import { isOwnerAdmin } from "@/lib/admin-access";
 
-export default async function AdminConfigPage() {
+export default async function AdminConfigPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ bling?: string; msg?: string }>;
+}) {
   const session = await requireAdmin();
   const settings = await getStoreSettings();
   const owner = isOwnerAdmin(session);
+  const params = await searchParams;
+
+  let blingMessage: string | null = null;
+  if (params.bling === "connected") blingMessage = "Bling conectado com sucesso.";
+  if (params.bling === "error") {
+    blingMessage = params.msg ? `Erro ao conectar Bling: ${params.msg}` : "Erro ao conectar Bling.";
+  }
 
   return (
     <div>
@@ -19,7 +30,7 @@ export default async function AdminConfigPage() {
           <StoreSettingsForm settings={settings} />
         </div>
 
-        {owner && <IntegrationsPanel />}
+        {owner && <IntegrationsPanel blingMessage={blingMessage} />}
       </div>
     </div>
   );

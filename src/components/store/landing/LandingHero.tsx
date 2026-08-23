@@ -22,18 +22,6 @@ export function LandingHero() {
         animate={reduce ? { opacity: 0.09, scale: 1 } : { opacity: 0.09, scale: 1 }}
         transition={{ duration: 1.4, ease: EASE_OUT }}
       />
-      <m.div
-        aria-hidden
-        className="pointer-events-none absolute left-[8%] top-[62%] h-32 w-32 rounded-full bg-iseul-dew/40 blur-2xl"
-        animate={reduce ? undefined : { opacity: [0.3, 0.55, 0.3], y: [0, -10, 0] }}
-        transition={reduce ? undefined : { duration: 9, repeat: Infinity, ease: "easeInOut" }}
-      />
-      <m.div
-        aria-hidden
-        className="pointer-events-none absolute bottom-[12%] right-[10%] h-24 w-24 rounded-full bg-iseul-sage/10 blur-3xl"
-        animate={reduce ? undefined : { scale: [1, 1.15, 1], opacity: [0.3, 0.55, 0.3] }}
-        transition={reduce ? undefined : { duration: 7, repeat: Infinity, ease: "easeInOut" }}
-      />
 
       <div className="wrap in relative">
         <m.div

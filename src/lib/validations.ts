@@ -35,6 +35,14 @@ export const productFormSchema = z.object({
   name: z.string().min(2),
   full_name: z.string().optional(),
   slug: z.string().optional(),
+  sku: z.string().trim().min(1, "Informe o SKU"),
+  ncm: z
+    .string()
+    .trim()
+    .min(1, "Informe o NCM")
+    .refine((v) => v.replace(/\D/g, "").length === 8, "NCM deve ter 8 dígitos"),
+  tax_origin: z.number().int().min(0).max(8),
+  unit: z.string().trim().min(1, "Informe a unidade"),
   brand: z.string().optional(),
   category_slug: z.string().min(1),
   category_label: z.string().min(1),

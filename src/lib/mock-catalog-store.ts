@@ -15,6 +15,13 @@ function seedToProduct(row: SeedProduct, slug: string): Product {
   return {
     id: `seed-${row.id}`,
     shopee_id: row.id,
+    sku: null,
+    ncm: null,
+    tax_origin: 1,
+    unit: "UN",
+    bling_product_id: null,
+    bling_sync_status: null,
+    bling_sync_error: null,
     slug,
     name: row.name,
     full_name: row.full,

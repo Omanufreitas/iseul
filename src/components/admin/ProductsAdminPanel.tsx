@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { deleteProduct, toggleProductActive } from "@/actions/admin/products";
 import { CATEGORIES } from "@/lib/constants";
 import { formatCurrency } from "@/lib/utils";
+import { BlingProductBadge } from "@/components/admin/BlingProductBadge";
 import type { Product } from "@/types";
 
 type Props = {
@@ -134,13 +135,16 @@ export function ProductsAdminPanel({ products }: Props) {
 
       <div className="hidden overflow-hidden rounded-xl border bg-white lg:block">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[960px] text-left text-sm">
+          <table className="w-full min-w-[1100px] text-left text-sm">
             <thead className="border-b bg-neutral-50 text-neutral-500">
               <tr>
                 <th className="px-4 py-3 font-medium">Produto</th>
+                <th className="px-4 py-3 font-medium">SKU</th>
+                <th className="px-4 py-3 font-medium">NCM</th>
                 <th className="px-4 py-3 font-medium">Categoria</th>
                 <th className="px-4 py-3 font-medium">Preço</th>
                 <th className="px-4 py-3 font-medium">Estoque</th>
+                <th className="px-4 py-3 font-medium">Bling</th>
                 <th className="px-4 py-3 font-medium">Status</th>
                 <th className="px-4 py-3 font-medium">Ações</th>
               </tr>
@@ -162,6 +166,8 @@ export function ProductsAdminPanel({ products }: Props) {
                       </div>
                     </div>
                   </td>
+                  <td className="px-4 py-3 font-mono text-xs text-neutral-600">{p.sku ?? "—"}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-neutral-600">{p.ncm ?? "—"}</td>
                   <td className="px-4 py-3 text-neutral-600">{p.category_label}</td>
                   <td className="px-4 py-3">{formatCurrency(p.price)}</td>
                   <td className="px-4 py-3">
@@ -176,6 +182,9 @@ export function ProductsAdminPanel({ products }: Props) {
                     >
                       {p.stock}
                     </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <BlingProductBadge status={p.bling_sync_status} title={p.bling_sync_error} />
                   </td>
                   <td className="px-4 py-3">
                     <button
@@ -268,6 +277,10 @@ function ProductCard({
           <div className="text-sm text-neutral-500">{product.brand}</div>
           <div className="mt-1 text-sm">
             {formatCurrency(product.price)} · Estoque: {product.stock}
+          </div>
+          <div className="mt-1 flex flex-wrap gap-2 text-xs text-neutral-500">
+            <span>SKU: {product.sku ?? "—"}</span>
+            <BlingProductBadge status={product.bling_sync_status} title={product.bling_sync_error} />
           </div>
         </div>
       </div>

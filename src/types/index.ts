@@ -1,6 +1,13 @@
 export type Product = {
   id: string;
   shopee_id: number | null;
+  sku: string | null;
+  ncm: string | null;
+  tax_origin: number;
+  unit: string;
+  bling_product_id: string | null;
+  bling_sync_status: string | null;
+  bling_sync_error: string | null;
   slug: string;
   name: string;
   full_name: string;
@@ -55,6 +62,11 @@ export type Order = {
   mercadopago_payment_id: string | null;
   asaas_payment_id: string | null;
   asaas_checkout_id: string | null;
+  bling_order_id: string | null;
+  bling_sync_status: string | null;
+  bling_sync_error: string | null;
+  nfe_number: string | null;
+  nfe_url: string | null;
   subtotal: number;
   shipping: number;
   discount: number;

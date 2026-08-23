@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { OrderStatusForm } from "@/components/admin/OrderStatusForm";
+import { BlingOrderPanel } from "@/components/admin/BlingOrderPanel";
 import { getOrderById } from "@/lib/admin-orders";
 import { formatCurrency } from "@/lib/utils";
 import type { OrderStatus } from "@/types";
@@ -157,6 +158,15 @@ export default async function AdminOrderDetailPage({ params }: Props) {
               )}
             </dl>
           </div>
+
+          <BlingOrderPanel
+            orderId={order.id}
+            blingOrderId={order.bling_order_id}
+            blingSyncStatus={order.bling_sync_status}
+            blingSyncError={order.bling_sync_error}
+            nfeNumber={order.nfe_number}
+            nfeUrl={order.nfe_url}
+          />
         </div>
       </div>
     </div>
