@@ -1,4 +1,5 @@
 import { CONTACT_EMAIL } from "@/lib/site";
+import { getMelhorEnvioAccessToken } from "@/lib/melhor-envio/token-store";
 
 const PRODUCTION_BASE = "https://melhorenvio.com.br";
 const SANDBOX_BASE = "https://sandbox.melhorenvio.com.br";
@@ -45,8 +46,14 @@ function apiBaseUrl(): string {
 }
 
 export function isMelhorEnvioConfigured(): boolean {
+  const hasToken = !!process.env.MELHOR_ENVIO_TOKEN?.trim();
+  const hasOAuth = !!(
+    process.env.MELHOR_ENVIO_CLIENT_ID?.trim() &&
+    process.env.MELHOR_ENVIO_CLIENT_SECRET?.trim() &&
+    (process.env.MELHOR_ENVIO_REFRESH_TOKEN?.trim() || hasToken)
+  );
   return !!(
-    process.env.MELHOR_ENVIO_TOKEN?.trim() &&
+    (hasToken || hasOAuth) &&
     normalizePostalCode(process.env.MELHOR_ENVIO_ORIGIN_POSTAL_CODE ?? "79072266")
   );
 }
@@ -69,7 +76,7 @@ export async function calculateMelhorEnvioQuotes(
   destinationPostalCode: string,
   products: MelhorEnvioProductInput[]
 ): Promise<MelhorEnvioQuoteOption[]> {
-  const token = process.env.MELHOR_ENVIO_TOKEN?.trim();
+  const token = (await getMelhorEnvioAccessToken())?.trim();
   if (!token) return [];
 
   const from = getMelhorEnvioOriginPostalCode();

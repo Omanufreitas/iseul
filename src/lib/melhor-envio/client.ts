@@ -1,4 +1,5 @@
 import { CONTACT_EMAIL } from "@/lib/site";
+import { getMelhorEnvioAccessToken } from "./token-store";
 
 export class MelhorEnvioError extends Error {
   constructor(
@@ -12,7 +13,13 @@ export class MelhorEnvioError extends Error {
 }
 
 export function isMelhorEnvioConfigured(): boolean {
-  return !!process.env.MELHOR_ENVIO_TOKEN?.trim();
+  const hasToken = !!process.env.MELHOR_ENVIO_TOKEN?.trim();
+  const hasOAuth = !!(
+    process.env.MELHOR_ENVIO_CLIENT_ID?.trim() &&
+    process.env.MELHOR_ENVIO_CLIENT_SECRET?.trim() &&
+    (process.env.MELHOR_ENVIO_REFRESH_TOKEN?.trim() || hasToken)
+  );
+  return hasToken || hasOAuth;
 }
 
 export function melhorEnvioBaseUrl(): string {
@@ -26,7 +33,7 @@ export async function melhorEnvioFetch<T>(
   path: string,
   options: RequestInit & { json?: unknown } = {}
 ): Promise<T> {
-  const token = process.env.MELHOR_ENVIO_TOKEN?.trim();
+  const token = (await getMelhorEnvioAccessToken())?.trim();
   if (!token) {
     throw new MelhorEnvioError("MELHOR_ENVIO_TOKEN não configurado");
   }
