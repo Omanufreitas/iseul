@@ -1,5 +1,6 @@
-import { isAsaasConfigured } from "@/lib/config";
+import { getAsaasApiKey, isAsaasConfigured } from "@/lib/config";
 import { ASAAS_CHECKOUT_PLACEHOLDER_IMAGE_BASE64 } from "@/lib/asaas-constants";
+import { normalizePostalCode } from "@/lib/melhor-envio";
 import { resolveStoreOrigin } from "@/lib/store-url";
 
 type AsaasResult<T> = { ok: true; data: T } | { ok: false; error: string };
@@ -22,9 +23,11 @@ export type CheckoutPayer = {
   zip: string;
   street: string;
   number: string;
+  complement?: string;
   neighborhood: string;
   city: string;
   state: string;
+  city_ibge: number;
 };
 
 export type AsaasCheckoutSession = {
@@ -54,7 +57,7 @@ function asaasApiBase(): string {
   const env = process.env.ASAAS_ENV?.trim().toLowerCase();
   if (env === "sandbox") return "https://api-sandbox.asaas.com";
   if (env === "production") return "https://api.asaas.com";
-  const key = process.env.ASAAS_API_KEY?.trim() ?? "";
+  const key = getAsaasApiKey();
   if (key.includes("_test_") || key.startsWith("$aact_hmlg")) {
     return "https://api-sandbox.asaas.com";
   }
@@ -63,7 +66,7 @@ function asaasApiBase(): string {
 
 function asaasHeaders(): HeadersInit {
   return {
-    access_token: process.env.ASAAS_API_KEY!.trim(),
+    access_token: getAsaasApiKey(),
     "Content-Type": "application/json",
     "User-Agent": "Iseul/1.0",
   };
@@ -89,6 +92,18 @@ async function asaasFetch<T>(path: string, init?: RequestInit): Promise<AsaasRes
   }
 
   return { ok: true, data: (await res.json()) as T };
+}
+
+function normalizeAsaasPhone(phone: string): string {
+  let digits = phone.replace(/\D/g, "");
+  if (digits.length === 13 && digits.startsWith("55")) digits = digits.slice(2);
+  if (digits.length > 11) digits = digits.slice(-11);
+  return digits;
+}
+
+function normalizeAsaasAddressNumber(number: string): number {
+  const parsed = Number.parseInt(number.replace(/\D/g, ""), 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 }
 
 function canUseHostedCheckout(appUrl: string): boolean {
@@ -134,10 +149,22 @@ export async function createStoreAsaasCheckout(
   }
 
   const cpfCnpj = payer.cpf.replace(/\D/g, "");
-  const phone = payer.phone.replace(/\D/g, "");
+  const phone = normalizeAsaasPhone(payer.phone);
+  const postalCode = normalizePostalCode(payer.zip);
+  const cityIbge = Number(payer.city_ibge);
+
+  if (phone.length < 10) {
+    return { ok: false, error: "Telefone inválido. Informe DDD + número." };
+  }
+  if (postalCode.length !== 8) {
+    return { ok: false, error: "CEP inválido. Informe 8 dígitos." };
+  }
+  if (!Number.isFinite(cityIbge) || cityIbge <= 0) {
+    return { ok: false, error: "CEP não encontrado. Aguarde o preenchimento automático do endereço." };
+  }
 
   const asaasItems = items.map((item) => ({
-    name: item.title.slice(0, 80),
+    name: item.title.slice(0, 30),
     description: item.title.slice(0, 150),
     quantity: item.quantity,
     value: Math.round(item.unit_price * 100) / 100,
@@ -171,9 +198,11 @@ export async function createStoreAsaasCheckout(
       cpfCnpj,
       phone,
       address: payer.street.slice(0, 120),
-      addressNumber: Number.parseInt(payer.number, 10) || payer.number || "S/N",
-      postalCode: payer.zip.replace(/\D/g, ""),
+      addressNumber: normalizeAsaasAddressNumber(payer.number),
+      complement: payer.complement?.slice(0, 255) || undefined,
+      postalCode,
       province: payer.neighborhood.slice(0, 80),
+      city: cityIbge,
     },
   };
 

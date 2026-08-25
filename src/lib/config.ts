@@ -21,8 +21,18 @@ export function isSupabaseConfigured(): boolean {
   );
 }
 
+/** Chaves Asaas começam com $. Se o .env tiver `\$aact_...`, removemos a barra. */
+export function getAsaasApiKey(): string {
+  let key = process.env.ASAAS_API_KEY?.trim() ?? "";
+  if (key.startsWith("\\$")) key = key.slice(1);
+  else if (key.startsWith("\\") && key.includes("$aact")) {
+    key = key.replace(/^\\+/, "");
+  }
+  return key;
+}
+
 export function isAsaasConfigured(): boolean {
-  return !!process.env.ASAAS_API_KEY?.trim();
+  return !!getAsaasApiKey();
 }
 
 /** @deprecated Mercado Pago removido — use isAsaasConfigured */

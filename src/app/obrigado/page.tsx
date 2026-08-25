@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { AnnounceBar, StoreFooter, StoreHeader } from "@/components/store/HeaderFooter";
+import { AnnounceBar, StoreHeader } from "@/components/store/HeaderFooter";
+import { LandingFooter } from "@/components/store/landing/LandingHeaderFooter";
 import { getStoreSettings } from "@/lib/catalog";
 import { syncOrderByReference } from "@/lib/orders/fulfill";
 import { isSupabaseConfigured } from "@/lib/config";
@@ -43,7 +44,7 @@ export default async function ObrigadoPage({ searchParams }: Props) {
           Voltar para a loja
         </Link>
       </div>
-      <StoreFooter settings={settings} />
+      <LandingFooter />
     </>
   );
 }

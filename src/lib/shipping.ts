@@ -1,24 +1,32 @@
-import { getProductById, getStoreSettings } from "@/lib/catalog";
+import { getProductById, getStoreSettings, getVariantById } from "@/lib/catalog";
 import { getFreeShippingThreshold } from "@/lib/config";
+import {
+  applyFreeShipping,
+  pickDefaultShippingOption,
+} from "@/lib/free-shipping";
 import {
   calculateMelhorEnvioQuotes,
   DEFAULT_PRODUCT_SHIPPING,
   isMelhorEnvioConfigured,
   normalizePostalCode,
-  pickCheapestQuote,
-  type MelhorEnvioProductInput,
+  type MelhorEnvioQuoteOption,
 } from "@/lib/melhor-envio";
 import { shippingForCep } from "@/lib/utils";
 
 export type ShippingQuoteItem = {
   productId: string;
+  variantId?: string | null;
   quantity: number;
 };
+
+export type ShippingQuoteOption = MelhorEnvioQuoteOption;
 
 export type ShippingQuoteResult = {
   price: number;
   freeShipping: boolean;
-  source: "free_threshold" | "melhor_envio" | "fallback";
+  source: "melhor_envio" | "fallback";
+  options: ShippingQuoteOption[];
+  selectedOptionId: number;
   deliveryDays?: number;
   carrier?: string;
   service?: string;
@@ -26,7 +34,7 @@ export type ShippingQuoteResult = {
 
 function buildMelhorEnvioProducts(
   items: Array<{ productId: string; quantity: number; unitPrice: number }>
-): MelhorEnvioProductInput[] {
+) {
   return items.map((item) => ({
     id: item.productId,
     width: DEFAULT_PRODUCT_SHIPPING.width,
@@ -38,9 +46,55 @@ function buildMelhorEnvioProducts(
   }));
 }
 
+function buildFallbackOptions(cep: string, subtotal: number, freeThreshold: number): MelhorEnvioQuoteOption[] {
+  const pacPrice = subtotal >= freeThreshold ? 24.9 : shippingForCep(cep, subtotal, freeThreshold);
+  return [
+    { id: -1, name: "PAC", company: "Correios", price: pacPrice, deliveryDays: 8 },
+    { id: -2, name: "SEDEX", company: "Correios", price: Math.round((pacPrice + 15) * 100) / 100, deliveryDays: 3 },
+  ];
+}
+
+async function resolveCartSubtotal(items: ShippingQuoteItem[]) {
+  const resolved: Array<{ productId: string; quantity: number; unitPrice: number }> = [];
+  let subtotal = 0;
+
+  for (const item of items) {
+    const product = await getProductById(item.productId);
+    if (!product || !product.active) {
+      return { error: "Produto indisponível na sacola." as const };
+    }
+
+    const variants = product.variants ?? [];
+    let unitPrice = product.price;
+    let availableStock = product.stock;
+
+    if (variants.length > 0) {
+      if (!item.variantId) {
+        return { error: `Selecione uma variação: ${product.name}` as const };
+      }
+      const variant = variants.find((v) => v.id === item.variantId) ?? (await getVariantById(item.variantId));
+      if (!variant || !variant.active || variant.product_id !== product.id) {
+        return { error: `Variação indisponível: ${product.name}` as const };
+      }
+      unitPrice = variant.price;
+      availableStock = variant.stock;
+    }
+
+    if (availableStock < item.quantity) {
+      return { error: `Estoque insuficiente: ${product.name}` as const };
+    }
+
+    resolved.push({ productId: product.id, quantity: item.quantity, unitPrice });
+    subtotal += unitPrice * item.quantity;
+  }
+
+  return { resolved, subtotal };
+}
+
 export async function quoteShippingForCheckout(
   destinationCep: string,
-  items: ShippingQuoteItem[]
+  items: ShippingQuoteItem[],
+  selectedOptionId?: number | null
 ): Promise<ShippingQuoteResult | { error: string }> {
   const cep = normalizePostalCode(destinationCep);
   if (cep.length !== 8) return { error: "CEP inválido" };
@@ -49,52 +103,48 @@ export async function quoteShippingForCheckout(
   const settings = await getStoreSettings();
   const freeThreshold = settings.free_shipping_threshold || getFreeShippingThreshold();
 
-  const resolved: Array<{ productId: string; quantity: number; unitPrice: number }> = [];
-  let subtotal = 0;
-
-  for (const item of items) {
-    const product = await getProductById(item.productId);
-    if (!product || !product.active) {
-      return { error: "Produto indisponível na sacola." };
-    }
-    if (product.stock < item.quantity) {
-      return { error: `Estoque insuficiente: ${product.name}` };
-    }
-    resolved.push({
-      productId: product.id,
-      quantity: item.quantity,
-      unitPrice: product.price,
-    });
-    subtotal += product.price * item.quantity;
+  const cart = await resolveCartSubtotal(items);
+  if ("error" in cart && cart.error) {
+    return { error: cart.error };
   }
 
-  if (subtotal >= freeThreshold) {
-    return {
-      price: 0,
-      freeShipping: true,
-      source: "free_threshold",
-    };
-  }
+  const { resolved, subtotal } = cart;
+  const qualifiesForFree = subtotal >= freeThreshold;
+
+  let options: MelhorEnvioQuoteOption[] = [];
+  let source: ShippingQuoteResult["source"] = "fallback";
 
   if (isMelhorEnvioConfigured()) {
     const quotes = await calculateMelhorEnvioQuotes(cep, buildMelhorEnvioProducts(resolved));
-    const best = pickCheapestQuote(quotes);
-    if (best) {
-      return {
-        price: Math.round(best.price * 100) / 100,
-        freeShipping: false,
-        source: "melhor_envio",
-        deliveryDays: best.deliveryDays,
-        carrier: best.company,
-        service: best.name,
-      };
+    if (quotes.length > 0) {
+      options = quotes;
+      source = "melhor_envio";
     }
   }
 
+  if (options.length === 0) {
+    options = buildFallbackOptions(cep, subtotal, freeThreshold);
+  }
+
+  options = applyFreeShipping(options, subtotal, freeThreshold);
+
+  const selected =
+    (selectedOptionId != null ? options.find((o) => o.id === selectedOptionId) : null) ??
+    pickDefaultShippingOption(options);
+
+  if (!selected) {
+    return { error: "Nenhuma opção de frete disponível para este CEP." };
+  }
+
   return {
-    price: shippingForCep(cep, subtotal, freeThreshold),
-    freeShipping: false,
-    source: "fallback",
+    price: Math.round(selected.price * 100) / 100,
+    freeShipping: qualifiesForFree && selected.price === 0,
+    source,
+    options,
+    selectedOptionId: selected.id,
+    deliveryDays: selected.deliveryDays,
+    carrier: selected.company,
+    service: selected.name,
   };
 }
 

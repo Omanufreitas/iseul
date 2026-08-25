@@ -9,6 +9,7 @@ const quoteShippingSchema = z.object({
     .array(
       z.object({
         productId: z.string().min(1),
+        variantId: z.string().optional().nullable(),
         quantity: z.number().int().min(1).max(20),
       })
     )

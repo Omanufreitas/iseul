@@ -8,13 +8,26 @@ import type { Product } from "@/types";
 
 type Props = {
   product: Product;
+  baseProduct?: Product;
+  variantId?: string | null;
+  variantLabel?: string | null;
+  maxQuantity?: number;
   onAdd: () => void;
 };
 
 /** CTA fixo no mobile — some quando o botão principal está visível */
-export function MobileProductCta({ product, onAdd }: Props) {
+export function MobileProductCta({
+  product,
+  baseProduct,
+  variantId = null,
+  variantLabel = null,
+  maxQuantity,
+  onAdd,
+}: Props) {
   const { addItem } = useCart();
   const [hidden, setHidden] = useState(false);
+
+  const source = baseProduct ?? product;
 
   useEffect(() => {
     const target = document.getElementById("product-add-btn");
@@ -29,21 +42,29 @@ export function MobileProductCta({ product, onAdd }: Props) {
     return () => observer.disconnect();
   }, []);
 
+  if (product.stock <= 0) return null;
+
   function handleAdd() {
-    addItem({
-      productId: product.id,
-      slug: product.slug,
-      name: product.name,
-      brand: product.brand,
-      price: product.price,
-      image_url: product.image_url,
-      image_fallback_url: product.image_fallback_url,
-    });
+    const name =
+      variantLabel != null ? `${source.name} — ${variantLabel}` : source.name;
+
+    addItem(
+      {
+        productId: source.id,
+        variantId,
+        variantLabel,
+        slug: source.slug,
+        name,
+        brand: source.brand,
+        price: product.price,
+        image_url: product.image_url,
+        image_fallback_url: source.image_fallback_url,
+      },
+      1
+    );
     toast.success("Adicionado à sacola");
     onAdd();
   }
-
-  if (product.stock <= 0) return null;
 
   return (
     <div
@@ -60,16 +81,17 @@ export function MobileProductCta({ product, onAdd }: Props) {
         <div className="mb-2 flex items-center justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="truncate text-[11px] font-semibold uppercase tracking-wide text-iseul-accent2">
-              {product.brand}
+              {source.brand}
             </div>
-            <div className="truncate text-sm font-medium">{product.name}</div>
+            <div className="truncate text-sm font-medium">{source.name}</div>
           </div>
           <div className="shrink-0 font-serif text-xl">{formatCurrency(product.price)}</div>
         </div>
         <button
           type="button"
           onClick={handleAdd}
-          className="w-full rounded-full bg-iseul-ink py-3.5 text-sm font-medium text-iseul-paper shadow-[0_4px_20px_rgba(28,26,22,.18)] transition-colors active:bg-iseul-accent"
+          disabled={maxQuantity != null && maxQuantity <= 0}
+          className="w-full rounded-full bg-iseul-ink py-3.5 text-sm font-medium text-iseul-paper shadow-[0_4px_20px_rgba(28,26,22,.18)] transition-colors active:bg-iseul-accent disabled:opacity-60"
         >
           Adicionar à sacola
         </button>

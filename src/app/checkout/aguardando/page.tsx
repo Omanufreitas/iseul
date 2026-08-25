@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { AnnounceBar, StoreHeader, StoreFooter } from "@/components/store/HeaderFooter";
+import { AnnounceBar, StoreHeader } from "@/components/store/HeaderFooter";
+import { LandingFooter } from "@/components/store/landing/LandingHeaderFooter";
 import { getStoreSettings } from "@/lib/catalog";
 
 export default async function AguardandoPage() {
@@ -18,7 +19,7 @@ export default async function AguardandoPage() {
           Voltar para a loja
         </Link>
       </div>
-      <StoreFooter settings={settings} />
+      <LandingFooter />
     </>
   );
 }

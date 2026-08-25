@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { PolicyFooter, PolicyHeader } from "@/components/store/landing/LandingHeaderFooter";
+import { LandingFooter, PolicyHeader } from "@/components/store/landing/LandingHeaderFooter";
 import { SITE_URL } from "@/lib/site";
 
 type Props = {
@@ -19,7 +19,7 @@ export function PolicyPageShell({ title, children }: Props) {
         </div>
         <div className="doc mx-auto max-w-[720px] px-6 py-10">{children}</div>
       </main>
-      <PolicyFooter />
+      <LandingFooter />
     </>
   );
 }

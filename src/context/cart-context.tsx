@@ -9,6 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { cartItemKey } from "@/lib/cart-key";
 import type { CartItem } from "@/types";
 
 type CartContextValue = {
@@ -16,8 +17,8 @@ type CartContextValue = {
   count: number;
   subtotal: number;
   addItem: (item: Omit<CartItem, "quantity">, qty?: number) => void;
-  removeItem: (productId: string) => void;
-  setQuantity: (productId: string, quantity: number) => void;
+  removeItem: (key: string) => void;
+  setQuantity: (key: string, quantity: number) => void;
   clearCart: () => void;
   openCart: () => void;
   closeCart: () => void;
@@ -25,7 +26,7 @@ type CartContextValue = {
 };
 
 const CartContext = createContext<CartContextValue | null>(null);
-const STORAGE_KEY = "iseul-cart-v1";
+const STORAGE_KEY = "iseul-cart-v2";
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
@@ -35,7 +36,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setItems(JSON.parse(raw) as CartItem[]);
+      if (raw) {
+        setItems(JSON.parse(raw) as CartItem[]);
+      } else {
+        const legacy = localStorage.getItem("iseul-cart-v1");
+        if (legacy) setItems(JSON.parse(legacy) as CartItem[]);
+      }
     } catch {
       /* ignore */
     }
@@ -48,28 +54,29 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [items, hydrated]);
 
   const addItem = useCallback((item: Omit<CartItem, "quantity">, qty = 1) => {
+    const key = cartItemKey(item);
     setItems((prev) => {
-      const existing = prev.find((i) => i.productId === item.productId);
+      const existing = prev.find((i) => cartItemKey(i) === key);
       if (existing) {
         return prev.map((i) =>
-          i.productId === item.productId ? { ...i, quantity: i.quantity + qty } : i
+          cartItemKey(i) === key ? { ...i, quantity: i.quantity + qty } : i
         );
       }
       return [...prev, { ...item, quantity: qty }];
     });
   }, []);
 
-  const removeItem = useCallback((productId: string) => {
-    setItems((prev) => prev.filter((i) => i.productId !== productId));
+  const removeItem = useCallback((key: string) => {
+    setItems((prev) => prev.filter((i) => cartItemKey(i) !== key));
   }, []);
 
-  const setQuantity = useCallback((productId: string, quantity: number) => {
+  const setQuantity = useCallback((key: string, quantity: number) => {
     if (quantity <= 0) {
-      setItems((prev) => prev.filter((i) => i.productId !== productId));
+      setItems((prev) => prev.filter((i) => cartItemKey(i) !== key));
       return;
     }
     setItems((prev) =>
-      prev.map((i) => (i.productId === productId ? { ...i, quantity } : i))
+      prev.map((i) => (cartItemKey(i) === key ? { ...i, quantity } : i))
     );
   }, []);
 
@@ -105,3 +112,5 @@ export function useCart() {
   if (!ctx) throw new Error("useCart must be used within CartProvider");
   return ctx;
 }
+
+export { cartItemKey };

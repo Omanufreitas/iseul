@@ -67,14 +67,14 @@ export function ProductCard({
         href={`/produtos/${product.slug}`}
         className="relative aspect-square overflow-hidden bg-iseul-paper2"
       >
-        <div className="absolute left-2.5 top-2.5 z-10 flex flex-col gap-1.5">
+        <div className="absolute left-2.5 top-2.5 z-10 flex flex-col items-start gap-1.5">
           {discount > 0 && (
-            <span className="rounded-full bg-iseul-sale px-2 py-1 text-[10.5px] font-semibold uppercase tracking-wide text-white">
+            <span className="inline-flex w-fit rounded-full bg-iseul-sale px-2 py-1 text-[10.5px] font-semibold uppercase tracking-wide text-white">
               -{discount}%
             </span>
           )}
           {hot.has(product.id) && (
-            <span className="rounded-full bg-iseul-accent px-2 py-1 text-[10.5px] font-semibold uppercase tracking-wide text-white">
+            <span className="inline-flex w-fit rounded-full bg-iseul-accent px-2 py-1 text-[10.5px] font-semibold uppercase tracking-wide text-white">
               Mais vendido
             </span>
           )}

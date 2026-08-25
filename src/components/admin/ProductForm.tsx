@@ -16,6 +16,11 @@ import {
 } from "@/lib/bling/product-fiscal";
 import { BlingProductBadge } from "@/components/admin/BlingProductBadge";
 import { ProductImageGallery } from "@/components/admin/ProductImageGallery";
+import {
+  ProductVariantsEditor,
+  variantsFromProduct,
+  type ProductVariantInput,
+} from "@/components/admin/ProductVariantsEditor";
 import { PRODUCT_IMAGE_MAX_BYTES, productImageSpecLabel } from "@/lib/product-image";
 import { slugify } from "@/lib/utils";
 import type { Product } from "@/types";
@@ -38,6 +43,9 @@ export function ProductForm({ product }: Props) {
   const [imageUrls, setImageUrls] = useState<string[]>(initialImages);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [variants, setVariants] = useState<ProductVariantInput[]>(
+    variantsFromProduct(product?.variants)
+  );
   const blobUrlsRef = useRef<string[]>([]);
 
   useEffect(() => {
@@ -49,10 +57,12 @@ export function ProductForm({ product }: Props) {
           : [];
     setImageUrls(next);
     setSelectedIndex(0);
+    setVariants(variantsFromProduct(product?.variants));
   }, [
     product?.id,
     product?.image_url,
     product?.image_urls?.join("|"),
+    product?.variants?.map((v) => v.id).join("|"),
   ]);
 
   useEffect(() => {
@@ -201,6 +211,7 @@ export function ProductForm({ product }: Props) {
         stock: Number(fd.get("stock") || 0),
         active: fd.get("active") === "on",
         featured: fd.get("featured") === "on",
+        variants: variants.filter((v) => v.label.trim()),
       };
 
       const result = await saveProduct(payload, product?.id);
@@ -325,6 +336,12 @@ export function ProductForm({ product }: Props) {
           </Section>
 
           <Section title="Preço e estoque">
+            {variants.length > 0 && (
+              <p className="md:col-span-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                Este produto tem variações. Preço e estoque da loja serão sincronizados automaticamente
+                a partir das variações ao salvar.
+              </p>
+            )}
             <Field label="Preço (R$) *">
               <input name="price" type="number" step="0.01" min="0" required defaultValue={product?.price} className={inputClass} />
             </Field>
@@ -338,6 +355,10 @@ export function ProductForm({ product }: Props) {
               <input name="sold_count" type="number" min="0" defaultValue={product?.sold_count ?? 0} className={inputClass} />
             </Field>
           </Section>
+
+          <div className="rounded-xl border bg-white p-4 sm:p-6">
+            <ProductVariantsEditor variants={variants} onChange={setVariants} />
+          </div>
 
           <Section title="Avaliações">
             <Field label="Nota (0 a 5)">

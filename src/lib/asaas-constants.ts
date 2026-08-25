@@ -1,3 +1,3 @@
-/** PNG 1×1 transparente — exigido pelo checkout Asaas em `items[].imageBase64`. */
+/** PNG 1×1 — base64 oficial do docs Asaas checkout */
 export const ASAAS_CHECKOUT_PLACEHOLDER_IMAGE_BASE64 =
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=";

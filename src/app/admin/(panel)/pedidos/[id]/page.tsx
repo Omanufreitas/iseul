@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { OrderStatusForm } from "@/components/admin/OrderStatusForm";
+import { MelhorEnvioOrderPanel } from "@/components/admin/MelhorEnvioOrderPanel";
+import { OrderFulfillmentForm } from "@/components/admin/OrderFulfillmentForm";
 import { BlingOrderPanel } from "@/components/admin/BlingOrderPanel";
 import { getOrderById } from "@/lib/admin-orders";
 import { formatCurrency } from "@/lib/utils";
@@ -17,6 +18,17 @@ const STATUS_LABELS: Record<OrderStatus, string> = {
   cancelado: "Cancelado",
 };
 
+function shippingMethodLabel(order: {
+  shipping_method: string | null;
+  shipping_address: Record<string, string> | null;
+}): string | null {
+  if (order.shipping_method?.trim()) return order.shipping_method;
+  const addr = order.shipping_address;
+  if (!addr) return null;
+  const fromParts = [addr.shipping_carrier, addr.shipping_service].filter(Boolean).join(" ");
+  return fromParts || null;
+}
+
 export default async function AdminOrderDetailPage({ params }: Props) {
   const { id } = await params;
   const data = await getOrderById(decodeURIComponent(id));
@@ -24,6 +36,7 @@ export default async function AdminOrderDetailPage({ params }: Props) {
 
   const { order, items } = data;
   const address = order.shipping_address;
+  const shippingLabel = shippingMethodLabel(order);
 
   return (
     <div className="space-y-6">
@@ -70,16 +83,43 @@ export default async function AdminOrderDetailPage({ params }: Props) {
               <h2 className="font-semibold">Endereço de entrega</h2>
               <p className="mt-3 text-sm leading-relaxed text-neutral-600">
                 {address.street}, {address.number}
-                {address.complement ? `, ${address.complement}` : ""}
+                {address.complement ? ` — ${address.complement}` : ""}
                 <br />
-                {address.neighborhood}, {address.city} - {address.state}
+                {address.neighborhood} · {address.city}/{address.state}
                 <br />
                 CEP {address.zip}
               </p>
+              {shippingLabel && (
+                <p className="mt-3 text-sm font-medium text-neutral-900">
+                  Frete: {shippingLabel}
+                  {address.shipping_delivery_days
+                    ? ` · ${address.shipping_delivery_days} dias úteis`
+                    : ""}
+                </p>
+              )}
+              {order.tracking_code && (
+                <p className="mt-2 text-sm text-neutral-600">
+                  Rastreio: <span className="font-mono">{order.tracking_code}</span>
+                </p>
+              )}
             </div>
           )}
 
-          <OrderStatusForm orderId={order.id} currentStatus={order.status} />
+          <OrderFulfillmentForm
+            orderId={order.id}
+            currentStatus={order.status}
+            trackingCode={order.tracking_code}
+            notes={order.notes}
+          />
+
+          <MelhorEnvioOrderPanel
+            orderId={order.id}
+            status={order.status}
+            hasShippingAddress={!!address}
+            melhorEnvioStatus={order.melhor_envio_status}
+            melhorEnvioError={order.melhor_envio_error}
+            melhorEnvioLabelUrl={order.melhor_envio_label_url}
+          />
         </div>
 
         <div className="space-y-6">

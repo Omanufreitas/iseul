@@ -1,3 +1,29 @@
+export type ProductVariant = {
+  id: string;
+  product_id: string;
+  label: string;
+  sku: string | null;
+  price: number;
+  compare_at_price: number | null;
+  stock: number;
+  image_url: string | null;
+  sort_order: number;
+  active: boolean;
+};
+
+export type Coupon = {
+  id: string;
+  code: string;
+  name: string;
+  discount_percent: number;
+  active: boolean;
+  valid_from: string | null;
+  valid_until: string | null;
+  max_uses: number | null;
+  used_count: number;
+  created_at?: string;
+};
+
 export type Product = {
   id: string;
   shopee_id: number | null;
@@ -30,6 +56,7 @@ export type Product = {
   sort_order: number;
   created_at?: string;
   updated_at?: string;
+  variants?: ProductVariant[];
 };
 
 export type StoreSettings = {
@@ -72,6 +99,15 @@ export type Order = {
   shipping: number;
   discount: number;
   total: number;
+  shipping_method: string | null;
+  shipping_service_id: string | null;
+  tracking_code: string | null;
+  notes: string | null;
+  melhor_envio_cart_id: string | null;
+  melhor_envio_order_id: string | null;
+  melhor_envio_label_url: string | null;
+  melhor_envio_status: string | null;
+  melhor_envio_error: string | null;
   shipping_address: Record<string, string> | null;
   customer_email: string;
   customer_name: string;
@@ -94,6 +130,8 @@ export type OrderItem = {
 
 export type CartItem = {
   productId: string;
+  variantId?: string | null;
+  variantLabel?: string | null;
   slug: string;
   name: string;
   brand: string;

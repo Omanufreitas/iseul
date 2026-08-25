@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
-import { useCart } from "@/context/cart-context";
+import { useCart, cartItemKey } from "@/context/cart-context";
 import { formatCurrency } from "@/lib/utils";
 import { backdropFade, slideFromRight, stagger, fadeUp } from "@/lib/motion";
 import type { StoreSettings } from "@/types";
@@ -67,9 +67,11 @@ export function CartDrawer({ settings }: { settings: StoreSettings }) {
                 </m.div>
               ) : (
                 <m.div variants={stagger(0.06)} initial="hidden" animate="show">
-                  {items.map((item) => (
+                  {items.map((item) => {
+                    const key = cartItemKey(item);
+                    return (
                     <m.div
-                      key={item.productId}
+                      key={key}
                       layout
                       variants={fadeUp}
                       className="flex gap-3.5 border-b border-iseul-line py-3.5"
@@ -90,12 +92,15 @@ export function CartDrawer({ settings }: { settings: StoreSettings }) {
                           {item.brand}
                         </div>
                         <div className="truncate text-[13.5px] leading-snug">{item.name}</div>
+                        {item.variantLabel && (
+                          <div className="text-xs text-iseul-muted">{item.variantLabel}</div>
+                        )}
                         <div className="mt-2 flex items-center gap-2">
                           <span className="inline-flex items-center rounded-full border border-iseul-line text-sm">
                             <button
                               type="button"
                               className="px-2.5 py-1 transition-colors hover:bg-iseul-paper2"
-                              onClick={() => setQuantity(item.productId, item.quantity - 1)}
+                              onClick={() => setQuantity(key, item.quantity - 1)}
                             >
                               −
                             </button>
@@ -103,7 +108,7 @@ export function CartDrawer({ settings }: { settings: StoreSettings }) {
                             <button
                               type="button"
                               className="px-2.5 py-1 transition-colors hover:bg-iseul-paper2"
-                              onClick={() => setQuantity(item.productId, item.quantity + 1)}
+                              onClick={() => setQuantity(key, item.quantity + 1)}
                             >
                               +
                             </button>
@@ -111,7 +116,7 @@ export function CartDrawer({ settings }: { settings: StoreSettings }) {
                           <button
                             type="button"
                             className="text-xs text-iseul-muted underline"
-                            onClick={() => removeItem(item.productId)}
+                            onClick={() => removeItem(key)}
                           >
                             remover
                           </button>
@@ -121,7 +126,8 @@ export function CartDrawer({ settings }: { settings: StoreSettings }) {
                         {formatCurrency(item.price * item.quantity)}
                       </div>
                     </m.div>
-                  ))}
+                    );
+                  })}
                 </m.div>
               )}
             </div>

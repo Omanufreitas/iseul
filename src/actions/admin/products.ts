@@ -10,6 +10,7 @@ import {
   upsertMockProduct,
 } from "@/lib/mock-catalog-store";
 import { productToDbPayload } from "@/lib/products";
+import { aggregateFromVariants } from "@/lib/variants";
 import {
   normalizeProductImageUrls,
   primaryProductImageUrl,
@@ -22,6 +23,84 @@ import type { Product } from "@/types";
 import type { z } from "zod";
 
 type ProductFormData = z.infer<typeof productFormSchema>;
+
+async function saveProductVariants(
+  admin: ReturnType<typeof createAdminClient>,
+  productId: string,
+  variants: NonNullable<ProductFormData["variants"]>
+) {
+  if (variants.length === 0) {
+    await admin.from("product_variants").delete().eq("product_id", productId);
+    return;
+  }
+
+  const { data: existing } = await admin
+    .from("product_variants")
+    .select("id")
+    .eq("product_id", productId);
+
+  const keepIds = variants.map((v) => v.id).filter(Boolean) as string[];
+  const deleteIds = (existing ?? [])
+    .map((row) => String(row.id))
+    .filter((id) => !keepIds.includes(id));
+
+  if (deleteIds.length) {
+    await admin.from("product_variants").delete().in("id", deleteIds);
+  }
+
+  for (let i = 0; i < variants.length; i++) {
+    const variant = variants[i];
+    const row = {
+      product_id: productId,
+      label: variant.label.trim(),
+      sku: variant.sku?.trim() || null,
+      price: variant.price,
+      compare_at_price: variant.compare_at_price ?? null,
+      stock: variant.stock,
+      image_url: variant.image_url?.trim() || null,
+      sort_order: i,
+      active: variant.active,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (variant.id) {
+      await admin.from("product_variants").update(row).eq("id", variant.id);
+    } else {
+      await admin.from("product_variants").insert(row);
+    }
+  }
+
+  const { data: allVariants } = await admin
+    .from("product_variants")
+    .select("*")
+    .eq("product_id", productId);
+
+  const mapped = (allVariants ?? []).map((row) => ({
+    id: String(row.id),
+    product_id: productId,
+    label: String(row.label),
+    sku: row.sku ? String(row.sku) : null,
+    price: Number(row.price),
+    compare_at_price: row.compare_at_price != null ? Number(row.compare_at_price) : null,
+    stock: Number(row.stock),
+    image_url: row.image_url ? String(row.image_url) : null,
+    sort_order: Number(row.sort_order ?? 0),
+    active: Boolean(row.active),
+  }));
+
+  const aggregate = aggregateFromVariants(mapped);
+  if (aggregate) {
+    await admin
+      .from("products")
+      .update({
+        price: aggregate.price,
+        compare_at_price: aggregate.compare_at_price,
+        stock: aggregate.stock,
+        ...(aggregate.primaryImage ? { image_url: aggregate.primaryImage } : {}),
+      })
+      .eq("id", productId);
+  }
+}
 
 function parseProduct(raw: unknown) {
   const parsed = productFormSchema.safeParse(raw);
@@ -101,6 +180,14 @@ export async function saveProduct(raw: unknown, id?: string) {
       .single();
     if (error) return { error: error.message };
     savedId = String(inserted.id);
+  }
+
+  if (savedId && parsed.data.variants != null) {
+    try {
+      await saveProductVariants(admin, savedId, parsed.data.variants);
+    } catch (e) {
+      return { error: e instanceof Error ? e.message : "Erro ao salvar variações" };
+    }
   }
 
   let blingWarning: string | undefined;

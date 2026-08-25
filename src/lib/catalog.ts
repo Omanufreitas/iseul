@@ -7,7 +7,8 @@ import {
   getMockSettings,
 } from "@/lib/mock-catalog";
 import { mapDbProduct } from "@/lib/products";
-import type { Product, StoreSettings } from "@/types";
+import { mapDbVariant } from "@/lib/variants";
+import type { Product, ProductVariant, StoreSettings } from "@/types";
 
 export async function getStoreSettings(): Promise<StoreSettings> {
   if (isMockCatalogEnabled()) return getMockSettings();
@@ -61,6 +62,44 @@ function sortProducts(products: Product[], sort: string): Product[] {
   return list.sort((a, b) => b.sold_count - a.sold_count || b.review_count - a.review_count);
 }
 
+async function attachVariants(product: Product): Promise<Product> {
+  if (isMockCatalogEnabled() || !isSupabaseConfigured()) return product;
+
+  const supabase = createServerStoreClient();
+  const { data } = await supabase
+    .from("product_variants")
+    .select("*")
+    .eq("product_id", product.id)
+    .order("sort_order")
+    .order("label");
+
+  const variants = (data ?? []).map((row) => mapDbVariant(row));
+  return variants.length > 0 ? { ...product, variants } : product;
+}
+
+export async function getProductVariants(productId: string): Promise<ProductVariant[]> {
+  if (isMockCatalogEnabled() || !isSupabaseConfigured()) return [];
+
+  const supabase = createServerStoreClient();
+  const { data } = await supabase
+    .from("product_variants")
+    .select("*")
+    .eq("product_id", productId)
+    .order("sort_order")
+    .order("label");
+
+  return (data ?? []).map((row) => mapDbVariant(row));
+}
+
+export async function getVariantById(variantId: string): Promise<ProductVariant | null> {
+  if (isMockCatalogEnabled() || !isSupabaseConfigured()) return null;
+
+  const supabase = createServerStoreClient();
+  const { data } = await supabase.from("product_variants").select("*").eq("id", variantId).maybeSingle();
+  if (!data) return null;
+  return mapDbVariant(data);
+}
+
 export async function getProductBySlug(slug: string): Promise<Product | null> {
   if (isMockCatalogEnabled()) {
     const p = getMockProductBySlug(slug);
@@ -69,8 +108,11 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
 
   const supabase = createServerStoreClient();
   const { data } = await supabase.from("products").select("*").eq("slug", slug).eq("active", true).maybeSingle();
-  if (!data) return getMockProductBySlug(slug);
-  return mapDbProduct(data);
+  if (!data) {
+    const mock = getMockProductBySlug(slug);
+    return mock?.active ? mock : null;
+  }
+  return attachVariants(mapDbProduct(data));
 }
 
 export async function getProductById(id: string): Promise<Product | null> {
@@ -79,7 +121,7 @@ export async function getProductById(id: string): Promise<Product | null> {
   const supabase = createServerStoreClient();
   const { data } = await supabase.from("products").select("*").eq("id", id).maybeSingle();
   if (!data) return getMockProductById(id);
-  return mapDbProduct(data);
+  return attachVariants(mapDbProduct(data));
 }
 
 export async function listAllProductsAdmin(): Promise<Product[]> {
