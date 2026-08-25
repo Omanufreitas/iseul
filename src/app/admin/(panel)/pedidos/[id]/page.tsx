@@ -1,23 +1,11 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { MelhorEnvioOrderPanel } from "@/components/admin/MelhorEnvioOrderPanel";
-import { OrderFulfillmentForm } from "@/components/admin/OrderFulfillmentForm";
-import { AsaasPaymentPanel } from "@/components/admin/AsaasPaymentPanel";
-import { BlingOrderPanel } from "@/components/admin/BlingOrderPanel";
+import { OrderActionsPanel } from "@/components/admin/OrderActionsPanel";
+import { OrderDetailHeader } from "@/components/admin/OrderDetailHeader";
+import { OrderIntegrationsPanel } from "@/components/admin/OrderIntegrationsPanel";
 import { getOrderById } from "@/lib/admin-orders";
 import { formatCurrency } from "@/lib/utils";
-import type { OrderStatus } from "@/types";
 
 type Props = { params: Promise<{ id: string }> };
-
-const STATUS_LABELS: Record<OrderStatus, string> = {
-  aguardando_pagamento: "Aguardando pagamento",
-  pago: "Pago",
-  separando: "Separando",
-  enviado: "Enviado",
-  entregue: "Entregue",
-  cancelado: "Cancelado",
-};
 
 function shippingMethodLabel(order: {
   shipping_method: string | null;
@@ -41,91 +29,24 @@ export default async function AdminOrderDetailPage({ params }: Props) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <Link href="/admin/pedidos" className="text-sm text-neutral-500 hover:text-neutral-900">
-          Voltar aos pedidos
-        </Link>
-        <h1 className="mt-2 text-2xl font-semibold">Pedido #{order.order_number}</h1>
-        <p className="text-sm text-neutral-500">
-          {new Date(order.ordered_at).toLocaleString("pt-BR")}
-        </p>
-      </div>
+      <OrderDetailHeader
+        orderNumber={order.order_number}
+        orderedAt={order.ordered_at}
+        total={order.total}
+        status={order.status}
+        paymentStatus={order.payment_status}
+        paymentMethod={order.payment_method}
+        nfeNumber={order.nfe_number}
+        blingSyncStatus={order.bling_sync_status}
+        blingSyncError={order.bling_sync_error}
+        melhorEnvioStatus={order.melhor_envio_status}
+        melhorEnvioLabelUrl={order.melhor_envio_label_url}
+      />
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="space-y-6">
           <div className="rounded-xl border bg-white p-5">
-            <h2 className="font-semibold">Cliente</h2>
-            <dl className="mt-3 space-y-2 text-sm">
-              <div className="flex justify-between gap-4">
-                <dt className="text-neutral-500">Nome</dt>
-                <dd className="font-medium">{order.customer_name}</dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-neutral-500">E-mail</dt>
-                <dd className="break-all text-right">{order.customer_email}</dd>
-              </div>
-              {order.customer_phone && (
-                <div className="flex justify-between gap-4">
-                  <dt className="text-neutral-500">Telefone</dt>
-                  <dd>{order.customer_phone}</dd>
-                </div>
-              )}
-              {order.customer_cpf && (
-                <div className="flex justify-between gap-4">
-                  <dt className="text-neutral-500">CPF</dt>
-                  <dd>{order.customer_cpf}</dd>
-                </div>
-              )}
-            </dl>
-          </div>
-
-          {address && (
-            <div className="rounded-xl border bg-white p-5">
-              <h2 className="font-semibold">Endereço de entrega</h2>
-              <p className="mt-3 text-sm leading-relaxed text-neutral-600">
-                {address.street}, {address.number}
-                {address.complement ? ` — ${address.complement}` : ""}
-                <br />
-                {address.neighborhood} · {address.city}/{address.state}
-                <br />
-                CEP {address.zip}
-              </p>
-              {shippingLabel && (
-                <p className="mt-3 text-sm font-medium text-neutral-900">
-                  Frete: {shippingLabel}
-                  {address.shipping_delivery_days
-                    ? ` · ${address.shipping_delivery_days} dias úteis`
-                    : ""}
-                </p>
-              )}
-              {order.tracking_code && (
-                <p className="mt-2 text-sm text-neutral-600">
-                  Rastreio: <span className="font-mono">{order.tracking_code}</span>
-                </p>
-              )}
-            </div>
-          )}
-
-          <OrderFulfillmentForm
-            orderId={order.id}
-            currentStatus={order.status}
-            trackingCode={order.tracking_code}
-            notes={order.notes}
-          />
-
-          <MelhorEnvioOrderPanel
-            orderId={order.id}
-            status={order.status}
-            hasShippingAddress={!!address}
-            melhorEnvioStatus={order.melhor_envio_status}
-            melhorEnvioError={order.melhor_envio_error}
-            melhorEnvioLabelUrl={order.melhor_envio_label_url}
-          />
-        </div>
-
-        <div className="space-y-6">
-          <div className="rounded-xl border bg-white p-5">
-            <h2 className="font-semibold">Itens</h2>
+            <h2 className="font-semibold text-iseul-ink">Itens</h2>
             <ul className="mt-3 divide-y text-sm">
               {items.map((item) => (
                 <li key={item.id} className="flex justify-between gap-3 py-3">
@@ -157,37 +78,91 @@ export default async function AdminOrderDetailPage({ params }: Props) {
                   <dd>-{formatCurrency(order.discount)}</dd>
                 </div>
               )}
-              <div className="flex justify-between font-semibold">
+              <div className="flex justify-between font-semibold text-iseul-ink">
                 <dt>Total</dt>
                 <dd>{formatCurrency(order.total)}</dd>
               </div>
             </dl>
           </div>
 
-          <AsaasPaymentPanel
+          <div className="rounded-xl border bg-white p-5">
+            <h2 className="font-semibold text-iseul-ink">Cliente e entrega</h2>
+            <dl className="mt-4 space-y-2 text-sm">
+              <div className="flex justify-between gap-4">
+                <dt className="text-neutral-500">Nome</dt>
+                <dd className="text-right font-medium">{order.customer_name}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-neutral-500">E-mail</dt>
+                <dd className="break-all text-right">{order.customer_email}</dd>
+              </div>
+              {order.customer_phone && (
+                <div className="flex justify-between gap-4">
+                  <dt className="text-neutral-500">Telefone</dt>
+                  <dd>{order.customer_phone}</dd>
+                </div>
+              )}
+              {order.customer_cpf && (
+                <div className="flex justify-between gap-4">
+                  <dt className="text-neutral-500">CPF</dt>
+                  <dd>{order.customer_cpf}</dd>
+                </div>
+              )}
+            </dl>
+
+            {address && (
+              <div className="mt-4 border-t pt-4">
+                <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+                  Endereço de entrega
+                </p>
+                <p className="mt-2 text-sm leading-relaxed text-neutral-600">
+                  {address.street}, {address.number}
+                  {address.complement ? ` — ${address.complement}` : ""}
+                  <br />
+                  {address.neighborhood} · {address.city}/{address.state}
+                  <br />
+                  CEP {address.zip}
+                </p>
+                {shippingLabel && (
+                  <p className="mt-3 text-sm font-medium text-iseul-ink">
+                    Frete: {shippingLabel}
+                    {address.shipping_delivery_days
+                      ? ` · ${address.shipping_delivery_days} dias úteis`
+                      : ""}
+                  </p>
+                )}
+                {order.tracking_code && (
+                  <p className="mt-2 text-sm text-neutral-600">
+                    Rastreio:{" "}
+                    <span className="font-mono font-medium text-iseul-ink">
+                      {order.tracking_code}
+                    </span>
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="space-y-6 lg:sticky lg:top-6 lg:self-start">
+          <OrderActionsPanel
+            orderId={order.id}
+            currentStatus={order.status}
+            trackingCode={order.tracking_code}
+            notes={order.notes}
+            hasShippingAddress={!!address}
+            melhorEnvioStatus={order.melhor_envio_status}
+            melhorEnvioError={order.melhor_envio_error}
+            melhorEnvioLabelUrl={order.melhor_envio_label_url}
+          />
+
+          <OrderIntegrationsPanel
             orderId={order.id}
             paymentStatus={order.payment_status}
+            paymentMethod={order.payment_method}
             asaasCheckoutId={order.asaas_checkout_id}
             asaasPaymentId={order.asaas_payment_id}
             paidAt={order.paid_at}
-          />
-
-          <div className="rounded-xl border bg-white p-5">
-            <h2 className="font-semibold">Pedido</h2>
-            <dl className="mt-3 space-y-2 text-sm">
-              <div className="flex justify-between gap-4">
-                <dt className="text-neutral-500">Status operacional</dt>
-                <dd>{STATUS_LABELS[order.status]}</dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-neutral-500">Método</dt>
-                <dd>{order.payment_method}</dd>
-              </div>
-            </dl>
-          </div>
-
-          <BlingOrderPanel
-            orderId={order.id}
             blingOrderId={order.bling_order_id}
             blingSyncStatus={order.bling_sync_status}
             blingSyncError={order.bling_sync_error}
