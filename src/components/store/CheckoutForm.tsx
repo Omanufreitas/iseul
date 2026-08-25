@@ -71,7 +71,6 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
   });
 
   const cepDigits = form.zip.replace(/\D/g, "");
-  const freeThreshold = settings.free_shipping_threshold ?? 199;
   const cartItems = useMemo(
     () =>
       items.map((i) => ({
@@ -337,11 +336,6 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
           {shippingOptions.length > 0 && !cepLoading && (
             <div className="space-y-2">
               <p className="text-sm font-medium text-iseul-ink">Forma de envio</p>
-              {subtotal >= freeThreshold && (
-                <p className="text-xs text-iseul-sage">
-                  Frete grátis na opção mais econômica (PAC/Jadlog). Opções mais rápidas têm custo adicional.
-                </p>
-              )}
               <ul className="space-y-2">
                 {shippingOptions.map((option) => {
                   const selected = option.id === selectedShippingId;
