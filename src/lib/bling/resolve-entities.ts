@@ -50,19 +50,82 @@ async function searchBlingContacts(path: string, cpf: string): Promise<number | 
   return match?.id ?? (items.length === 1 ? (items[0]?.id ?? null) : null);
 }
 
+type BlingContactAddressInput = {
+  cep?: string;
+  endereco?: string;
+  numero?: string;
+  bairro?: string;
+  municipio?: string;
+  uf?: string;
+};
+
+function buildBlingContactEndereco(endereco?: BlingContactAddressInput) {
+  if (!endereco?.cep && !endereco?.endereco) return undefined;
+
+  return {
+    geral: {
+      cep: endereco.cep?.replace(/\D/g, "") ?? "",
+      endereco: endereco.endereco ?? "",
+      numero: endereco.numero?.trim() || "S/N",
+      bairro: endereco.bairro ?? "",
+      municipio: endereco.municipio ?? "",
+      uf: endereco.uf ?? "",
+      complemento: "",
+    },
+  };
+}
+
+async function upsertBlingContact(input: {
+  nome: string;
+  cpf: string;
+  email?: string;
+  tipoPessoa: "F" | "J";
+  endereco?: BlingContactAddressInput;
+  existingId?: number;
+}): Promise<number> {
+  const body = {
+    nome: input.nome,
+    tipo: input.tipoPessoa,
+    numeroDocumento: input.cpf,
+    email: input.email ?? undefined,
+    situacao: "A",
+    endereco: buildBlingContactEndereco(input.endereco),
+  };
+
+  if (input.existingId) {
+    const update = await blingFetch(`/contatos/${input.existingId}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+    if (!update.ok) {
+      throw new Error(update.error);
+    }
+    return input.existingId;
+  }
+
+  const create = await blingFetch<{ data?: { id?: number } }>("/contatos", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+
+  if (!create.ok) {
+    throw new Error(create.error);
+  }
+
+  const id = create.data.data?.id;
+  if (!id) {
+    throw new Error("Bling não retornou ID ao criar contato.");
+  }
+
+  return id;
+}
+
 export async function findOrCreateBlingContact(input: {
   nome: string;
   cpf: string;
   email?: string;
   tipoPessoa: "F" | "J";
-  endereco?: {
-    cep?: string;
-    endereco?: string;
-    numero?: string;
-    bairro?: string;
-    municipio?: string;
-    uf?: string;
-  };
+  endereco?: BlingContactAddressInput;
 }): Promise<number> {
   const cpf = input.cpf.replace(/\D/g, "");
   if (!cpf) {
@@ -76,30 +139,7 @@ export async function findOrCreateBlingContact(input: {
     )) ??
     (await searchBlingContacts(`/contatos?pesquisa=${encodeURIComponent(cpf)}&limite=10`, cpf));
 
-  if (existing) return existing;
-
-  const create = await blingFetch<{ data?: { id?: number } }>("/contatos", {
-    method: "POST",
-    body: JSON.stringify({
-      nome: input.nome,
-      tipo: input.tipoPessoa,
-      numeroDocumento: cpf,
-      email: input.email ?? undefined,
-      situacao: "A",
-      endereco: input.endereco,
-    }),
-  });
-
-  if (!create.ok) {
-    throw new Error(create.error);
-  }
-
-  const id = create.data.data?.id;
-  if (!id) {
-    throw new Error("Bling não retornou ID ao criar contato.");
-  }
-
-  return id;
+  return upsertBlingContact({ ...input, cpf, existingId: existing ?? undefined });
 }
 
 export function isBlingDuplicateOrderNumberError(error: string): boolean {

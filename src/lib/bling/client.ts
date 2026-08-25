@@ -42,9 +42,14 @@ export async function blingFetch<T>(
 
   if (!res.ok) {
     const text = await res.text();
-    return { ok: false, error: `Bling ${res.status}: ${text.slice(0, 300)}` };
+    return { ok: false, error: `Bling ${res.status}: ${text.slice(0, 1500)}` };
   }
 
-  const data = (await res.json()) as T;
+  const text = await res.text();
+  if (!text.trim()) {
+    return { ok: true, data: {} as T };
+  }
+
+  const data = JSON.parse(text) as T;
   return { ok: true, data };
 }

@@ -13,6 +13,10 @@ type NfeData = {
   linkPDF?: string;
 };
 
+type GerarNfeResponse = {
+  idNotaFiscal?: number;
+};
+
 function pickNfeFields(data: NfeData | undefined): Omit<EmitNfeResult, "nfeId"> & { nfeId?: number } {
   return {
     nfeId: data?.id,
@@ -29,26 +33,22 @@ async function fetchNfeById(nfeId: number): Promise<NfeData | null> {
 
 /** Emite NF-e a partir de um pedido de venda já criado no Bling. */
 export async function emitNfeForSaleOrder(pedidoVendaId: number): Promise<EmitNfeResult> {
-  const natureza =
-    process.env.BLING_NFE_NATUREZA_OPERACAO?.trim() || "Venda de mercadoria";
-
-  const create = await blingFetch<{ data?: NfeData }>("/nfe", {
-    method: "POST",
-    body: JSON.stringify({
-      pedidoVendaId,
-      tipo: 1,
-      naturezaOperacao: natureza,
-    }),
-  });
+  const create = await blingFetch<{ data?: GerarNfeResponse & NfeData }>(
+    `/pedidos/vendas/${pedidoVendaId}/gerar-nfe`,
+    {
+      method: "POST",
+      body: JSON.stringify({}),
+    },
+  );
 
   if (!create.ok) {
     throw new Error(create.error);
   }
 
   const created = pickNfeFields(create.data.data);
-  const nfeId = created.nfeId;
+  const nfeId = create.data.data?.idNotaFiscal ?? created.nfeId;
   if (!nfeId) {
-    throw new Error("Bling não retornou ID ao criar NF-e.");
+    throw new Error("Bling não retornou ID ao gerar NF-e.");
   }
 
   const send = await blingFetch<{ data?: NfeData }>(`/nfe/${nfeId}/enviar`, {

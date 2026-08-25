@@ -8,15 +8,31 @@ import {
   findOrCreateBlingContact,
   isBlingDuplicateOrderNumberError,
 } from "@/lib/bling/resolve-entities";
+import { resolveBlingNaturezaOperacaoId } from "@/lib/bling/resolve-natureza";
 
 type BlingSalePayload = {
   contato: { id: number };
   data: string;
   observacoes?: string;
+  transporte?: {
+    fretePorConta: number;
+    frete: number;
+    etiqueta: {
+      nome: string;
+      endereco: string;
+      numero: string;
+      complemento?: string;
+      bairro: string;
+      municipio: string;
+      uf: string;
+      cep: string;
+    };
+  };
   itens: Array<{
     produto: { id: number };
     quantidade: number;
     valor: number;
+    naturezaOperacao: { id: number };
   }>;
 };
 
@@ -48,6 +64,45 @@ async function resolveProductSkuCandidates(
   return [...merged];
 }
 
+async function fetchNfeSummary(nfeId: number): Promise<{ numero: string | null; linkDanfe: string | null }> {
+  const result = await blingFetch<{ data?: { numero?: string | number; linkDanfe?: string; linkPDF?: string } }>(
+    `/nfe/${nfeId}`,
+  );
+  if (!result.ok) return { numero: null, linkDanfe: null };
+  const data = result.data.data;
+  return {
+    numero: data?.numero != null ? String(data.numero) : null,
+    linkDanfe: data?.linkDanfe ?? data?.linkPDF ?? null,
+  };
+}
+
+/** Se o pedido no Bling já tem NF-e, sincroniza número/DANFE sem emitir de novo. */
+async function syncExistingNfeFromBlingPedido(
+  admin: ReturnType<typeof createAdminClient>,
+  orderId: string,
+  pedidoVendaId: number,
+): Promise<boolean> {
+  const pedido = await blingFetch<{ data?: { notaFiscal?: { id?: number } } }>(
+    `/pedidos/vendas/${pedidoVendaId}`,
+  );
+  if (!pedido.ok) return false;
+
+  const nfeId = pedido.data.data?.notaFiscal?.id;
+  if (!nfeId) return false;
+
+  const summary = await fetchNfeSummary(nfeId);
+  await admin
+    .from("orders")
+    .update({
+      nfe_number: summary.numero,
+      nfe_url: summary.linkDanfe,
+      bling_sync_error: null,
+    })
+    .eq("id", orderId);
+
+  return !!(summary.numero || summary.linkDanfe);
+}
+
 async function tryEmitNfeForOrder(
   admin: ReturnType<typeof createAdminClient>,
   orderId: string,
@@ -56,6 +111,9 @@ async function tryEmitNfeForOrder(
   if (!isBlingNfeEnabled()) return;
 
   try {
+    const alreadyLinked = await syncExistingNfeFromBlingPedido(admin, orderId, pedidoVendaId);
+    if (alreadyLinked) return;
+
     const nfe = await emitNfeForSaleOrder(pedidoVendaId);
     await admin
       .from("orders")
@@ -157,6 +215,18 @@ export async function syncOrderToBling(orderId: string): Promise<void> {
     return;
   }
 
+  let naturezaOperacaoId: number;
+  try {
+    naturezaOperacaoId = await resolveBlingNaturezaOperacaoId();
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Erro ao resolver natureza de operação no Bling";
+    await admin
+      .from("orders")
+      .update({ bling_sync_status: "error", bling_sync_error: message })
+      .eq("id", orderId);
+    return;
+  }
+
   const blingItens: BlingSalePayload["itens"] = [];
   const missingSkus: string[] = [];
 
@@ -173,6 +243,7 @@ export async function syncOrderToBling(orderId: string): Promise<void> {
       produto: { id: productId },
       quantidade: item.quantity,
       valor: Number(item.unit_price),
+      naturezaOperacao: { id: naturezaOperacaoId },
     });
   }
 
@@ -190,12 +261,30 @@ export async function syncOrderToBling(orderId: string): Promise<void> {
 
   const orderNumber = Number(order.order_number ?? 0);
   const shipping = Number(order.shipping ?? 0);
+
   const payload: BlingSalePayload = {
     contato: { id: contatoId },
     data: new Date().toISOString().slice(0, 10),
     itens: blingItens,
     observacoes: `Pedido Iseul online${orderNumber ? ` #${orderNumber}` : ""}${shipping > 0 ? `. Frete: R$ ${shipping.toFixed(2)}` : ""}`,
   };
+
+  if (addr?.zip && addr?.street && addr?.city && addr?.state) {
+    payload.transporte = {
+      fretePorConta: shipping > 0 ? 1 : 9,
+      frete: shipping,
+      etiqueta: {
+        nome: nome,
+        endereco: addr.street,
+        numero: addr.number?.trim() || "S/N",
+        complemento: addr.complement ?? "",
+        bairro: addr.neighborhood ?? "",
+        municipio: addr.city,
+        uf: addr.state,
+        cep: addr.zip.replace(/\D/g, ""),
+      },
+    };
+  }
 
   const result = await blingFetch<{ data?: { id?: number } }>("/pedidos/vendas", {
     method: "POST",
@@ -231,4 +320,71 @@ export async function syncOrderToBling(orderId: string): Promise<void> {
   if (blingId) {
     await tryEmitNfeForOrder(admin, orderId, blingId);
   }
+}
+
+/** Reenvia pedidos pagos ao Bling sem duplicar (idempotente). */
+export async function resyncPaidOrdersToBling(options?: {
+  orderId?: string;
+  orderNumber?: number;
+}): Promise<Array<{ orderId: string; orderNumber: number | null; result: string }>> {
+  if (!isBlingConfigured()) {
+    throw new Error("Bling não configurado.");
+  }
+
+  const admin = createAdminClient();
+  let query = admin
+    .from("orders")
+    .select("id, order_number, payment_status, bling_order_id, bling_sync_status, nfe_number")
+    .eq("payment_status", "aprovado")
+    .order("order_number", { ascending: true });
+
+  if (options?.orderId) {
+    query = query.eq("id", options.orderId);
+  } else if (options?.orderNumber != null) {
+    query = query.eq("order_number", options.orderNumber);
+  } else {
+    query = query.or(
+      "nfe_number.is.null,bling_sync_status.is.null,bling_sync_status.eq.error,bling_order_id.is.null,bling_sync_status.eq.pending",
+    );
+  }
+
+  const { data: orders, error } = await query;
+  if (error) throw new Error(error.message);
+
+  const results: Array<{ orderId: string; orderNumber: number | null; result: string }> = [];
+
+  for (const order of orders ?? []) {
+    const before = {
+      blingOrderId: order.bling_order_id,
+      nfeNumber: order.nfe_number,
+      status: order.bling_sync_status,
+    };
+
+    await syncOrderToBling(order.id);
+
+    const { data: after } = await admin
+      .from("orders")
+      .select("bling_order_id, bling_sync_status, bling_sync_error, nfe_number")
+      .eq("id", order.id)
+      .maybeSingle();
+
+    let result = "ok";
+    if (after?.bling_sync_status === "error") {
+      result = after.bling_sync_error ?? "erro";
+    } else if (after?.nfe_number && !before.nfeNumber) {
+      result = `nfe emitida (${after.nfe_number})`;
+    } else if (after?.bling_order_id && !before.blingOrderId) {
+      result = `pedido criado no Bling (#${after.bling_order_id})`;
+    } else if (after?.nfe_number) {
+      result = "já sincronizado";
+    } else if (after?.bling_order_id && after?.bling_sync_status === "synced") {
+      result = after.bling_sync_error ? `pedido ok; ${after.bling_sync_error}` : "pedido ok, sem NF-e";
+    } else {
+      result = after?.bling_sync_status ?? "sem alteração";
+    }
+
+    results.push({ orderId: order.id, orderNumber: order.order_number, result });
+  }
+
+  return results;
 }
