@@ -21,12 +21,18 @@ export async function POST(request: Request) {
     const paymentId = payload.payment?.id;
 
     if (isAsaasPaymentActivationEvent(event) && paymentId) {
-      const result = await syncOrderPaymentFromAsaas(paymentId);
+      const result = await syncOrderPaymentFromAsaas(paymentId, {
+        checkoutSession: payload.payment?.checkoutSession,
+        externalReference: payload.payment?.externalReference,
+      });
       return NextResponse.json(result.body, { status: result.status });
     }
 
     if (isAsaasPaymentFailureEvent(event) && paymentId) {
-      await syncOrderPaymentFromAsaas(paymentId);
+      await syncOrderPaymentFromAsaas(paymentId, {
+        checkoutSession: payload.payment?.checkoutSession,
+        externalReference: payload.payment?.externalReference,
+      });
       return NextResponse.json({ received: true, event });
     }
 

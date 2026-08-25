@@ -130,19 +130,27 @@ async function markOrderFailed(orderId: string) {
   await admin.from("stock_reservations").delete().eq("order_id", orderId);
 }
 
-export async function syncOrderPaymentFromAsaas(paymentId: string) {
+export async function syncOrderPaymentFromAsaas(
+  paymentId: string,
+  webhookHints?: {
+    checkoutSession?: string | null;
+    externalReference?: string | null;
+  },
+) {
   const payment = await getAsaasPayment(paymentId);
   if (!payment) {
     return { status: 200, body: { received: true, skipped: "payment_not_found" } };
   }
 
-  let orderId = payment.externalReference ?? null;
-  if (!orderId && payment.checkoutSession) {
+  let orderId = payment.externalReference ?? webhookHints?.externalReference ?? null;
+  const checkoutSession = payment.checkoutSession ?? webhookHints?.checkoutSession ?? null;
+
+  if (!orderId && checkoutSession) {
     const admin = createAdminClient();
     const { data: order } = await admin
       .from("orders")
       .select("id")
-      .eq("asaas_checkout_id", payment.checkoutSession)
+      .eq("asaas_checkout_id", checkoutSession)
       .maybeSingle();
     orderId = order?.id ?? null;
   }
