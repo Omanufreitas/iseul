@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/actions/admin/auth";
 import { createAdminClient } from "@/lib/supabase/client";
 import { isMockCatalogEnabled } from "@/lib/config";
+import { syncOrderByReference } from "@/lib/orders/fulfill";
 import type { OrderStatus } from "@/types";
 
 export async function updateOrderFulfillment(
@@ -57,4 +58,24 @@ export async function deleteOrder(orderId: string) {
 
   revalidatePath("/admin/pedidos");
   return { success: true };
+}
+
+export async function syncOrderPaymentAdmin(orderId: string) {
+  await requireAdmin();
+  if (isMockCatalogEnabled()) return { error: "Pedidos disponíveis apenas com Supabase." };
+
+  try {
+    const result = await syncOrderByReference(orderId);
+    revalidatePath("/admin/pedidos");
+    revalidatePath(`/admin/pedidos/${orderId}`);
+    if (result.paid) {
+      return { success: true, message: "Pagamento confirmado no Asaas." };
+    }
+    return {
+      error:
+        "Nenhum pagamento confirmado encontrado no Asaas para este pedido. Verifique o painel Asaas ou o webhook.",
+    };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Erro ao consultar Asaas" };
+  }
 }

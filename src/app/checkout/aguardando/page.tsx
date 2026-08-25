@@ -2,9 +2,22 @@ import Link from "next/link";
 import { AnnounceBar, StoreHeader } from "@/components/store/HeaderFooter";
 import { LandingFooter } from "@/components/store/landing/LandingHeaderFooter";
 import { getStoreSettings } from "@/lib/catalog";
+import { syncOrderByReference } from "@/lib/orders/fulfill";
+import { isSupabaseConfigured } from "@/lib/config";
 
-export default async function AguardandoPage() {
+type Props = { searchParams: Promise<{ order?: string }> };
+
+export default async function AguardandoPage({ searchParams }: Props) {
+  const { order } = await searchParams;
   const settings = await getStoreSettings();
+
+  if (order && isSupabaseConfigured()) {
+    try {
+      await syncOrderByReference(order);
+    } catch {
+      /* webhook pode confirmar depois */
+    }
+  }
 
   return (
     <>

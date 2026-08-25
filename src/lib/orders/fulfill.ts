@@ -132,12 +132,27 @@ async function markOrderFailed(orderId: string) {
 
 export async function syncOrderPaymentFromAsaas(paymentId: string) {
   const payment = await getAsaasPayment(paymentId);
-  if (!payment?.externalReference) {
+  if (!payment) {
+    return { status: 200, body: { received: true, skipped: "payment_not_found" } };
+  }
+
+  let orderId = payment.externalReference ?? null;
+  if (!orderId && payment.checkoutSession) {
+    const admin = createAdminClient();
+    const { data: order } = await admin
+      .from("orders")
+      .select("id")
+      .eq("asaas_checkout_id", payment.checkoutSession)
+      .maybeSingle();
+    orderId = order?.id ?? null;
+  }
+
+  if (!orderId) {
     return { status: 200, body: { received: true, skipped: "no_reference" } };
   }
 
   if (isConfirmedAsaasPaymentStatus(payment.status)) {
-    const result = await markOrderPaid(payment.externalReference, payment.id);
+    const result = await markOrderPaid(orderId, payment.id);
     return { status: 200, body: { ok: true, paid: true, ...result } };
   }
 
@@ -146,14 +161,25 @@ export async function syncOrderPaymentFromAsaas(paymentId: string) {
     payment.status === "REFUNDED" ||
     payment.status === "RECEIVED_IN_CASH_UNDONE"
   ) {
-    await markOrderFailed(payment.externalReference);
+    await markOrderFailed(orderId);
   }
 
   return { status: 200, body: { ok: true, status: payment.status } };
 }
 
 export async function syncOrderByReference(orderId: string) {
-  const approved = await findConfirmedPaymentForReference(orderId);
+  const admin = createAdminClient();
+  const { data: order } = await admin
+    .from("orders")
+    .select("id, payment_status, asaas_checkout_id")
+    .eq("id", orderId)
+    .maybeSingle();
+
+  if (!order || order.payment_status === "aprovado") {
+    return { paid: order?.payment_status === "aprovado", alreadyPaid: true };
+  }
+
+  const approved = await findConfirmedPaymentForReference(orderId, order.asaas_checkout_id);
   if (!approved) return { paid: false };
   await markOrderPaid(orderId, approved.id);
   return { paid: true };

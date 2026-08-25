@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MelhorEnvioOrderPanel } from "@/components/admin/MelhorEnvioOrderPanel";
 import { OrderFulfillmentForm } from "@/components/admin/OrderFulfillmentForm";
+import { AsaasPaymentPanel } from "@/components/admin/AsaasPaymentPanel";
 import { BlingOrderPanel } from "@/components/admin/BlingOrderPanel";
 import { getOrderById } from "@/lib/admin-orders";
 import { formatCurrency } from "@/lib/utils";
@@ -163,39 +164,25 @@ export default async function AdminOrderDetailPage({ params }: Props) {
             </dl>
           </div>
 
+          <AsaasPaymentPanel
+            orderId={order.id}
+            paymentStatus={order.payment_status}
+            asaasCheckoutId={order.asaas_checkout_id}
+            asaasPaymentId={order.asaas_payment_id}
+            paidAt={order.paid_at}
+          />
+
           <div className="rounded-xl border bg-white p-5">
-            <h2 className="font-semibold">Pagamento</h2>
+            <h2 className="font-semibold">Pedido</h2>
             <dl className="mt-3 space-y-2 text-sm">
               <div className="flex justify-between gap-4">
-                <dt className="text-neutral-500">Status</dt>
-                <dd className="capitalize">{order.payment_status}</dd>
+                <dt className="text-neutral-500">Status operacional</dt>
+                <dd>{STATUS_LABELS[order.status]}</dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="text-neutral-500">Método</dt>
                 <dd>{order.payment_method}</dd>
               </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-neutral-500">Status atual</dt>
-                <dd>{STATUS_LABELS[order.status]}</dd>
-              </div>
-              {order.asaas_payment_id && (
-                <div className="flex justify-between gap-4">
-                  <dt className="text-neutral-500">ID Asaas</dt>
-                  <dd className="break-all text-right font-mono text-xs">{order.asaas_payment_id}</dd>
-                </div>
-              )}
-              {order.mercadopago_payment_id && (
-                <div className="flex justify-between gap-4">
-                  <dt className="text-neutral-500">ID Mercado Pago (legado)</dt>
-                  <dd className="break-all text-right font-mono text-xs">{order.mercadopago_payment_id}</dd>
-                </div>
-              )}
-              {order.paid_at && (
-                <div className="flex justify-between gap-4">
-                  <dt className="text-neutral-500">Pago em</dt>
-                  <dd>{new Date(order.paid_at).toLocaleString("pt-BR")}</dd>
-                </div>
-              )}
             </dl>
           </div>
 

@@ -234,9 +234,24 @@ export async function listPaymentsByExternalReference(
   return result.ok ? result.data.data ?? [] : [];
 }
 
+export async function listPaymentsByCheckoutSession(
+  checkoutSessionId: string,
+): Promise<AsaasPayment[]> {
+  if (!isAsaasConfigured()) return [];
+  const params = new URLSearchParams({ checkoutSession: checkoutSessionId, limit: "20" });
+  const result = await asaasFetch<{ data: AsaasPayment[] }>(`/v3/payments?${params}`);
+  return result.ok ? result.data.data ?? [] : [];
+}
+
 export async function findConfirmedPaymentForReference(
-  externalReference: string
+  externalReference: string,
+  checkoutSessionId?: string | null,
 ): Promise<AsaasPayment | null> {
-  const payments = await listPaymentsByExternalReference(externalReference);
-  return pickConfirmedAsaasPayment(payments);
+  const byReference = pickConfirmedAsaasPayment(
+    await listPaymentsByExternalReference(externalReference),
+  );
+  if (byReference) return byReference;
+
+  if (!checkoutSessionId) return null;
+  return pickConfirmedAsaasPayment(await listPaymentsByCheckoutSession(checkoutSessionId));
 }
