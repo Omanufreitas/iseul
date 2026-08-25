@@ -83,7 +83,7 @@ async function upsertBlingContact(input: {
   endereco?: BlingContactAddressInput;
   existingId?: number;
 }): Promise<number> {
-  const body = {
+  const body: Record<string, unknown> = {
     nome: input.nome,
     tipo: input.tipoPessoa,
     numeroDocumento: input.cpf,
@@ -91,6 +91,11 @@ async function upsertBlingContact(input: {
     situacao: "A",
     endereco: buildBlingContactEndereco(input.endereco),
   };
+
+  // PF no e-commerce = consumidor final / não contribuinte de ICMS (CSOSN 102 na NF-e).
+  if (input.tipoPessoa === "F") {
+    body.indicadorIe = 9;
+  }
 
   if (input.existingId) {
     const update = await blingFetch(`/contatos/${input.existingId}`, {

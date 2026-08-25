@@ -8,7 +8,7 @@ import {
   findOrCreateBlingContact,
   isBlingDuplicateOrderNumberError,
 } from "@/lib/bling/resolve-entities";
-import { resolveBlingNaturezaOperacaoId } from "@/lib/bling/resolve-natureza";
+import { resolveBlingNaturezaOperacaoIdForCustomer } from "@/lib/bling/resolve-natureza";
 
 type BlingSalePayload = {
   contato: { id: number };
@@ -187,6 +187,7 @@ export async function syncOrderToBling(orderId: string): Promise<void> {
   const cpf = (order.customer_cpf ?? addr?.cpf ?? "").replace(/\D/g, "");
   const nome = order.customer_name ?? addr?.full_name ?? "Cliente";
   const email = order.customer_email ?? addr?.email ?? undefined;
+  const tipoPessoa = cpf.length > 11 ? "J" : "F";
 
   let contatoId: number;
   try {
@@ -194,7 +195,7 @@ export async function syncOrderToBling(orderId: string): Promise<void> {
       nome,
       cpf,
       email,
-      tipoPessoa: cpf.length > 11 ? "J" : "F",
+      tipoPessoa,
       endereco: addr
         ? {
             cep: addr.zip?.replace(/\D/g, ""),
@@ -217,7 +218,10 @@ export async function syncOrderToBling(orderId: string): Promise<void> {
 
   let naturezaOperacaoId: number;
   try {
-    naturezaOperacaoId = await resolveBlingNaturezaOperacaoId();
+    naturezaOperacaoId = await resolveBlingNaturezaOperacaoIdForCustomer({
+      document: cpf,
+      tipoPessoa,
+    });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Erro ao resolver natureza de operação no Bling";
     await admin
