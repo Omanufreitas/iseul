@@ -102,19 +102,24 @@ export async function getMelhorEnvioLabelPdfUrlForOrder(orderId: string): Promis
   return fetchLabelPdfUrlWithRetry(order.melhor_envio_order_id);
 }
 
+function pickShipperField(value: unknown, fallback: string): string {
+  const trimmed = String(value ?? "").trim();
+  return trimmed || fallback;
+}
+
 function mapShipperFromRow(data: Record<string, unknown> | null): ShipperSettings {
   const d = data ?? {};
   return {
-    name: String(d.shipper_name ?? DEFAULT_SHIPPER.name),
-    document: String(d.shipper_document ?? DEFAULT_SHIPPER.document),
-    phone: String(d.shipper_phone ?? DEFAULT_SHIPPER.phone),
-    email: String(d.shipper_email ?? DEFAULT_SHIPPER.email),
-    street: String(d.shipper_street ?? DEFAULT_SHIPPER.street),
-    number: String(d.shipper_number ?? DEFAULT_SHIPPER.number),
-    complement: String(d.shipper_complement ?? DEFAULT_SHIPPER.complement),
-    neighborhood: String(d.shipper_neighborhood ?? DEFAULT_SHIPPER.neighborhood),
-    city: String(d.shipper_city ?? DEFAULT_SHIPPER.city),
-    state: String(d.shipper_state ?? DEFAULT_SHIPPER.state),
+    name: pickShipperField(d.shipper_name, DEFAULT_SHIPPER.name),
+    document: pickShipperField(d.shipper_document, DEFAULT_SHIPPER.document),
+    phone: pickShipperField(d.shipper_phone, DEFAULT_SHIPPER.phone),
+    email: pickShipperField(d.shipper_email, DEFAULT_SHIPPER.email),
+    street: pickShipperField(d.shipper_street, DEFAULT_SHIPPER.street),
+    number: pickShipperField(d.shipper_number, DEFAULT_SHIPPER.number),
+    complement: pickShipperField(d.shipper_complement, DEFAULT_SHIPPER.complement),
+    neighborhood: pickShipperField(d.shipper_neighborhood, DEFAULT_SHIPPER.neighborhood),
+    city: pickShipperField(d.shipper_city, DEFAULT_SHIPPER.city),
+    state: pickShipperField(d.shipper_state, DEFAULT_SHIPPER.state),
     zip: getMelhorEnvioOriginPostalCode(),
   };
 }
