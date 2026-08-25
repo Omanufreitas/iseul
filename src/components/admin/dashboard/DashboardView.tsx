@@ -21,6 +21,8 @@ import {
 import {
   ArrowDownRight,
   ArrowUpRight,
+  Eye,
+  EyeOff,
   Minus,
   Package,
   ShoppingBag,
@@ -31,6 +33,7 @@ import {
 import { getDashboardData } from "@/actions/admin/dashboard";
 import { CountUp } from "@/components/motion/CountUp";
 import { DateRangePicker } from "@/components/admin/dashboard/DateRangePicker";
+import { MASKED_CURRENCY, useHideDashboardValues } from "@/components/admin/dashboard/useHideDashboardValues";
 import type { DashboardData } from "@/lib/admin-dashboard";
 import { pctChange } from "@/lib/dashboard-dates";
 import { fadeUp, popIn, stagger } from "@/lib/motion";
@@ -128,11 +131,13 @@ function CustomTooltip({
   payload,
   label,
   formatter,
+  hideValues,
 }: {
   active?: boolean;
   payload?: unknown;
   label?: string;
   formatter?: (v: number) => string;
+  hideValues?: boolean;
 }) {
   const items = (payload ?? []) as { value?: number; name?: string; color?: string }[];
   if (!active || !items.length) return null;
@@ -141,9 +146,25 @@ function CustomTooltip({
       <p className="mb-1 font-medium text-iseul-ink">{label}</p>
       {items.map((p) => (
         <p key={String(p.name)} style={{ color: p.color ?? "#3F5C4E" }}>
-          {p.name}: {formatter ? formatter(Number(p.value ?? 0)) : p.value}
+          {p.name}:{" "}
+          {hideValues
+            ? MASKED_CURRENCY
+            : formatter
+              ? formatter(Number(p.value ?? 0))
+              : p.value}
         </p>
       ))}
+    </div>
+  );
+}
+
+function ChartValuesOverlay({ hidden }: { hidden: boolean }) {
+  if (!hidden) return null;
+  return (
+    <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-lg bg-white/55 backdrop-blur-[3px]">
+      <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-neutral-500 shadow-sm ring-1 ring-neutral-200">
+        Valores ocultos
+      </span>
     </div>
   );
 }
@@ -153,6 +174,7 @@ export function DashboardView({ initialData }: Props) {
   const searchParams = useSearchParams();
   const [data, setData] = useState(initialData);
   const [pending, startTransition] = useTransition();
+  const { hidden: hideValues, toggle: toggleHideValues } = useHideDashboardValues();
 
   const applyRange = useCallback(
     (from: string, to: string) => {
@@ -226,6 +248,16 @@ export function DashboardView({ initialData }: Props) {
           >
             <Sparkles className="h-5 w-5 text-iseul-accent" />
             <h1 className="text-2xl font-semibold text-iseul-ink">Dashboard</h1>
+            <button
+              type="button"
+              onClick={toggleHideValues}
+              aria-label={hideValues ? "Mostrar valores" : "Ocultar valores"}
+              aria-pressed={hideValues}
+              title={hideValues ? "Mostrar valores" : "Ocultar valores"}
+              className="grid h-9 w-9 place-items-center rounded-lg border border-iseul-line bg-white text-iseul-muted transition hover:border-iseul-accent2 hover:text-iseul-ink"
+            >
+              {hideValues ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
           </motion.div>
           <p className="mt-1 text-sm text-iseul-muted">
             Comparado ao período anterior ({range.prevFrom} → {range.prevTo})
@@ -266,13 +298,17 @@ export function DashboardView({ initialData }: Props) {
                     <div className="grid h-10 w-10 place-items-center rounded-xl bg-white/80 shadow-sm">
                       <kpi.icon className="h-5 w-5 text-iseul-accent" />
                     </div>
-                    {!kpi.hideTrend && <TrendBadge current={kpi.value} previous={kpi.prev} />}
+                    {!kpi.hideTrend && !(hideValues && kpi.format === "currency") && (
+                      <TrendBadge current={kpi.value} previous={kpi.prev} />
+                    )}
                   </div>
                   <p className="mt-4 text-xs font-medium uppercase tracking-wide text-iseul-muted">
                     {kpi.label}
                   </p>
                   <p className="mt-1 text-2xl font-semibold tabular-nums text-iseul-ink">
-                    {kpi.format === "currency" ? (
+                    {hideValues && kpi.format === "currency" ? (
+                      MASKED_CURRENCY
+                    ) : kpi.format === "currency" ? (
                       <CountUp
                         value={kpi.value}
                         prefix="R$ "
@@ -313,50 +349,55 @@ export function DashboardView({ initialData }: Props) {
                     icon={TrendingUp}
                   />
                 ) : (
-                  <ResponsiveContainer width="100%" height={280}>
-                    <AreaChart data={data.revenueSeries} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#3F5C4E" stopOpacity={0.35} />
-                          <stop offset="100%" stopColor="#3F5C4E" stopOpacity={0.02} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#E4DED4" vertical={false} />
-                      <XAxis
-                        dataKey="label"
-                        tick={{ fontSize: 11, fill: "#6E675C" }}
-                        axisLine={false}
-                        tickLine={false}
-                        interval="preserveStartEnd"
-                      />
-                      <YAxis
-                        tick={{ fontSize: 11, fill: "#6E675C" }}
-                        axisLine={false}
-                        tickLine={false}
-                        tickFormatter={(v) => `R$${v}`}
-                        width={56}
-                      />
-                      <Tooltip
-                        content={({ active, payload, label }) => (
-                          <CustomTooltip
-                            active={active}
-                            payload={payload}
-                            label={String(label ?? "")}
-                            formatter={(v) => formatCurrency(v)}
-                          />
-                        )}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="revenue"
-                        name="Receita"
-                        stroke="#3F5C4E"
-                        strokeWidth={2.5}
-                        fill="url(#revenueGrad)"
-                        animationDuration={900}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
+                  <div className="relative">
+                    <ResponsiveContainer width="100%" height={280}>
+                      <AreaChart data={data.revenueSeries} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#3F5C4E" stopOpacity={0.35} />
+                            <stop offset="100%" stopColor="#3F5C4E" stopOpacity={0.02} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#E4DED4" vertical={false} />
+                        <XAxis
+                          dataKey="label"
+                          tick={{ fontSize: 11, fill: "#6E675C" }}
+                          axisLine={false}
+                          tickLine={false}
+                          interval="preserveStartEnd"
+                        />
+                        <YAxis
+                          tick={{ fontSize: 11, fill: "#6E675C" }}
+                          axisLine={false}
+                          tickLine={false}
+                          tickFormatter={(v) => `R$${v}`}
+                          width={56}
+                          hide={hideValues}
+                        />
+                        <Tooltip
+                          content={({ active, payload, label }) => (
+                            <CustomTooltip
+                              active={active}
+                              payload={payload}
+                              label={String(label ?? "")}
+                              formatter={(v) => formatCurrency(v)}
+                              hideValues={hideValues}
+                            />
+                          )}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="revenue"
+                          name="Receita"
+                          stroke="#3F5C4E"
+                          strokeWidth={2.5}
+                          fill="url(#revenueGrad)"
+                          animationDuration={900}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                    <ChartValuesOverlay hidden={hideValues} />
+                  </div>
                 )}
               </ChartCard>
 
@@ -409,38 +450,43 @@ export function DashboardView({ initialData }: Props) {
                 {data.topProducts.length === 0 ? (
                   <EmptyChart message="Vendas por produto aparecem aqui." icon={Package} />
                 ) : (
-                  <ResponsiveContainer width="100%" height={Math.max(220, data.topProducts.length * 36)}>
-                    <BarChart
-                      data={data.topProducts}
-                      layout="vertical"
-                      margin={{ top: 0, right: 16, left: 0, bottom: 0 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke="#E4DED4" horizontal={false} />
-                      <XAxis type="number" hide />
-                      <YAxis
-                        type="category"
-                        dataKey="name"
-                        width={120}
-                        tick={{ fontSize: 11, fill: "#6E675C" }}
-                        axisLine={false}
-                        tickLine={false}
-                      />
-                      <Tooltip
-                        formatter={(v) => formatCurrency(Number(v))}
-                        labelFormatter={(_, payload) => {
-                          const row = payload?.[0]?.payload as { brand?: string; name: string };
-                          return row?.brand ? `${row.name} · ${row.brand}` : row?.name;
-                        }}
-                      />
-                      <Bar
-                        dataKey="revenue"
-                        name="Receita"
-                        fill="#3F5C4E"
-                        radius={[0, 8, 8, 0]}
-                        animationDuration={800}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <div className="relative">
+                    <ResponsiveContainer width="100%" height={Math.max(220, data.topProducts.length * 36)}>
+                      <BarChart
+                        data={data.topProducts}
+                        layout="vertical"
+                        margin={{ top: 0, right: 16, left: 0, bottom: 0 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="#E4DED4" horizontal={false} />
+                        <XAxis type="number" hide />
+                        <YAxis
+                          type="category"
+                          dataKey="name"
+                          width={120}
+                          tick={{ fontSize: 11, fill: "#6E675C" }}
+                          axisLine={false}
+                          tickLine={false}
+                        />
+                        <Tooltip
+                          formatter={(v) =>
+                            hideValues ? MASKED_CURRENCY : formatCurrency(Number(v))
+                          }
+                          labelFormatter={(_, payload) => {
+                            const row = payload?.[0]?.payload as { brand?: string; name: string };
+                            return row?.brand ? `${row.name} · ${row.brand}` : row?.name;
+                          }}
+                        />
+                        <Bar
+                          dataKey="revenue"
+                          name="Receita"
+                          fill="#3F5C4E"
+                          radius={[0, 8, 8, 0]}
+                          animationDuration={800}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                    <ChartValuesOverlay hidden={hideValues} />
+                  </div>
                 )}
               </ChartCard>
 
@@ -448,30 +494,37 @@ export function DashboardView({ initialData }: Props) {
                 {data.categoryMix.length === 0 ? (
                   <EmptyChart message="Categorias com vendas no período." icon={Sparkles} />
                 ) : (
-                  <ResponsiveContainer width="100%" height={260}>
-                    <BarChart data={data.categoryMix} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#E4DED4" vertical={false} />
-                      <XAxis
-                        dataKey="category"
-                        tick={{ fontSize: 10, fill: "#6E675C" }}
-                        axisLine={false}
-                        tickLine={false}
-                        interval={0}
-                        angle={-20}
-                        textAnchor="end"
-                        height={56}
-                      />
-                      <YAxis hide />
-                      <Tooltip formatter={(v) => formatCurrency(Number(v))} />
-                      <Bar
-                        dataKey="revenue"
-                        name="Receita"
-                        fill="#8FA89A"
-                        radius={[8, 8, 0, 0]}
-                        animationDuration={800}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <div className="relative">
+                    <ResponsiveContainer width="100%" height={260}>
+                      <BarChart data={data.categoryMix} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#E4DED4" vertical={false} />
+                        <XAxis
+                          dataKey="category"
+                          tick={{ fontSize: 10, fill: "#6E675C" }}
+                          axisLine={false}
+                          tickLine={false}
+                          interval={0}
+                          angle={-20}
+                          textAnchor="end"
+                          height={56}
+                        />
+                        <YAxis hide />
+                        <Tooltip
+                          formatter={(v) =>
+                            hideValues ? MASKED_CURRENCY : formatCurrency(Number(v))
+                          }
+                        />
+                        <Bar
+                          dataKey="revenue"
+                          name="Receita"
+                          fill="#8FA89A"
+                          radius={[8, 8, 0, 0]}
+                          animationDuration={800}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                    <ChartValuesOverlay hidden={hideValues} />
+                  </div>
                 )}
               </ChartCard>
             </div>
