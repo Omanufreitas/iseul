@@ -33,3 +33,28 @@ export async function updateOrderFulfillment(
   revalidatePath(`/admin/pedidos/${orderId}`);
   return { success: true };
 }
+
+export async function deleteOrder(orderId: string) {
+  await requireAdmin();
+  if (isMockCatalogEnabled()) return { error: "Pedidos disponíveis apenas com Supabase." };
+
+  const admin = createAdminClient();
+  const { data: order } = await admin
+    .from("orders")
+    .select("id, order_number, payment_status, customer_name")
+    .eq("id", orderId)
+    .maybeSingle();
+
+  if (!order) return { error: "Pedido não encontrado." };
+  if (order.payment_status === "aprovado") {
+    return { error: "Pedidos pagos não podem ser excluídos. Altere o status ou cancele no Bling se necessário." };
+  }
+
+  await admin.from("stock_reservations").delete().eq("order_id", orderId);
+
+  const { error } = await admin.from("orders").delete().eq("id", orderId);
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/pedidos");
+  return { success: true };
+}
