@@ -138,6 +138,28 @@ export function buildCartPayload(input: {
   };
 }
 
+/** IDs usados no checkout quando Melhor Envio não cotou (fallback local). */
+const CHECKOUT_FALLBACK_SERVICE_IDS: Record<number, number> = {
+  [-1]: 1,
+  [-2]: 2,
+};
+
+export function resolveServiceIdFromCheckoutFallback(
+  fallbackId: number,
+  shippingMethod: string
+): number | null {
+  if (CHECKOUT_FALLBACK_SERVICE_IDS[fallbackId]) {
+    return CHECKOUT_FALLBACK_SERVICE_IDS[fallbackId];
+  }
+
+  const methodLower = shippingMethod.toLowerCase();
+  if (/\bsedex\b/.test(methodLower)) return 2;
+  if (/\bpac\b/.test(methodLower)) return 1;
+  if (/jadlog/.test(methodLower)) return 3;
+
+  return null;
+}
+
 export async function matchServiceIdFromQuote(input: {
   originZip: string;
   destinationZip: string;
@@ -162,8 +184,8 @@ export async function matchServiceIdFromQuote(input: {
     maxHeight = Math.max(maxHeight, dims?.height_cm ?? 3);
   }
 
-  const data = await melhorEnvioFetch<
-    Array<{ id: number; name: string; price: string; company?: { name: string } }>
+  const raw = await melhorEnvioFetch<
+    Array<{ id: number; name: string; price: string; company?: { name: string }; error?: string }>
   >("/me/shipment/calculate", {
     method: "POST",
     json: {
@@ -180,16 +202,38 @@ export async function matchServiceIdFromQuote(input: {
     },
   });
 
+  const data = Array.isArray(raw) ? raw.filter((row) => !row.error && row.id != null) : [];
+
   const methodLower = input.shippingMethod.toLowerCase();
   const match = data.find((o) => {
     const label = o.company?.name ? `${o.company.name} ${o.name}` : o.name;
+    const labelLower = label.toLowerCase();
     const priceMatch = Math.abs(Number(o.price) - input.shippingPrice) < 0.02;
     const nameMatch =
       methodLower.includes(o.name.toLowerCase()) ||
-      label.toLowerCase().includes(methodLower) ||
-      methodLower.includes(label.toLowerCase());
+      labelLower.includes(methodLower) ||
+      methodLower.includes(labelLower);
     return nameMatch || (priceMatch && methodLower.split(" ")[0] === o.name.toLowerCase());
   });
 
-  return match?.id ?? data[0]?.id ?? null;
+  if (match?.id) return match.id;
+
+  if (/\bpac\b/i.test(methodLower)) {
+    const pac = data.find(
+      (o) => /\bpac\b/i.test(o.name) && !/\bsedex\b/i.test(o.name.toLowerCase())
+    );
+    if (pac?.id) return pac.id;
+  }
+
+  if (/\bsedex\b/i.test(methodLower)) {
+    const sedex = data.find((o) => /\bsedex\b/i.test(o.name.toLowerCase()));
+    if (sedex?.id) return sedex.id;
+  }
+
+  if (/\bjadlog\b/i.test(methodLower)) {
+    const jadlog = data.find((o) => /jadlog/i.test(o.company?.name ?? o.name));
+    if (jadlog?.id) return jadlog.id;
+  }
+
+  return data[0]?.id ?? null;
 }

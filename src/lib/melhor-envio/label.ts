@@ -2,7 +2,7 @@ import { onlyDigits, validateCpfCnpjMessage } from "@/lib/br-document";
 import { CONTACT_EMAIL } from "@/lib/site";
 import { createAdminClient } from "@/lib/supabase/client";
 import { getMelhorEnvioOriginPostalCode } from "@/lib/melhor-envio";
-import { buildCartPayload, matchServiceIdFromQuote } from "./build-cart";
+import { buildCartPayload, matchServiceIdFromQuote, resolveServiceIdFromCheckoutFallback } from "./build-cart";
 import { isMelhorEnvioConfigured, melhorEnvioFetch, MelhorEnvioError } from "./client";
 import type {
   MelhorEnvioCartResponse,
@@ -124,6 +124,16 @@ function mapShipperFromRow(data: Record<string, unknown> | null): ShipperSetting
   };
 }
 
+function isValidMelhorEnvioServiceId(id: number): boolean {
+  return Number.isFinite(id) && id > 0;
+}
+
+function parseServiceId(value: unknown): number {
+  if (value == null || value === "") return NaN;
+  const parsed = Number.parseInt(String(value), 10);
+  return isValidMelhorEnvioServiceId(parsed) ? parsed : NaN;
+}
+
 function validateShipper(shipper: ShipperSettings): string | null {
   if (!shipper.name.trim()) return "Configure o nome do remetente em Admin → Configurações";
   const docError = validateCpfCnpjMessage(shipper.document);
@@ -212,14 +222,24 @@ export async function generateMelhorEnvioLabelForOrder(orderId: string): Promise
     }
   }
 
-  let serviceId = order.shipping_service_id
-    ? Number.parseInt(String(order.shipping_service_id), 10)
-    : NaN;
+  let serviceId = parseServiceId(order.shipping_service_id);
 
   if (!Number.isFinite(serviceId)) {
-    const fromAddress = addr.shipping_option_id ?? addr.shipping_service_id;
-    if (fromAddress) {
-      serviceId = Number.parseInt(String(fromAddress), 10);
+    serviceId = parseServiceId(addr.shipping_option_id ?? addr.shipping_service_id);
+  }
+
+  if (!Number.isFinite(serviceId)) {
+    const rawFallback = Number.parseInt(
+      String(order.shipping_service_id ?? addr.shipping_option_id ?? ""),
+      10
+    );
+    if (Number.isFinite(rawFallback)) {
+      const mapped = resolveServiceIdFromCheckoutFallback(
+        rawFallback,
+        order.shipping_method ??
+          [addr.shipping_carrier, addr.shipping_service].filter(Boolean).join(" ")
+      );
+      if (mapped) serviceId = mapped;
     }
   }
 
