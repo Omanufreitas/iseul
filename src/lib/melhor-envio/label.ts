@@ -2,7 +2,7 @@ import { onlyDigits, validateCpfCnpjMessage } from "@/lib/br-document";
 import { CONTACT_EMAIL } from "@/lib/site";
 import { createAdminClient } from "@/lib/supabase/client";
 import { getMelhorEnvioOriginPostalCode } from "@/lib/melhor-envio";
-import { buildCartPayload, matchServiceIdFromQuote, resolveServiceIdFromCheckoutFallback } from "./build-cart";
+import { buildCartPayload, resolveMelhorEnvioServiceId } from "./build-cart";
 import { isMelhorEnvioConfigured, melhorEnvioFetch, MelhorEnvioError } from "./client";
 import type {
   MelhorEnvioCartResponse,
@@ -63,7 +63,7 @@ export async function fetchMelhorEnvioLabelPdfUrl(meOrderId: string): Promise<st
 function isLabelNotReadyYet(e: unknown): boolean {
   return (
     e instanceof MelhorEnvioError &&
-    /precisa estar gerado|E-PRT-0011/i.test(e.message)
+    /precisa estar gerado|E-PRT-0011|E-PRT-0007|não processada/i.test(e.message)
   );
 }
 
@@ -128,10 +128,11 @@ function isValidMelhorEnvioServiceId(id: number): boolean {
   return Number.isFinite(id) && id > 0;
 }
 
-function parseServiceId(value: unknown): number {
-  if (value == null || value === "") return NaN;
-  const parsed = Number.parseInt(String(value), 10);
-  return isValidMelhorEnvioServiceId(parsed) ? parsed : NaN;
+function shouldResetMelhorEnvioAttempt(status: string | null, error: string | null): boolean {
+  if (status === "error") {
+    return /service selecionado é inválido|service.*inválido/i.test(error ?? "");
+  }
+  return false;
 }
 
 function validateShipper(shipper: ShipperSettings): string | null {
@@ -164,12 +165,29 @@ export async function generateMelhorEnvioLabelForOrder(orderId: string): Promise
       `id, order_number, subtotal, shipping, shipping_method, shipping_service_id,
        shipping_address, customer_cpf, customer_phone, customer_email, customer_name,
        melhor_envio_cart_id, melhor_envio_order_id, melhor_envio_label_url, melhor_envio_status,
+       melhor_envio_error,
        items:order_items(product_name, quantity, unit_price, variant_id)`
     )
     .eq("id", orderId)
     .maybeSingle();
 
   if (error || !order) throw new MelhorEnvioError("Pedido não encontrado");
+
+  if (shouldResetMelhorEnvioAttempt(order.melhor_envio_status, order.melhor_envio_error)) {
+    await admin
+      .from("orders")
+      .update({
+        melhor_envio_cart_id: null,
+        melhor_envio_order_id: null,
+        melhor_envio_status: null,
+        melhor_envio_error: null,
+      })
+      .eq("id", orderId);
+    order.melhor_envio_cart_id = null;
+    order.melhor_envio_order_id = null;
+    order.melhor_envio_status = null;
+    order.melhor_envio_error = null;
+  }
 
   if (order.melhor_envio_order_id && order.melhor_envio_status === "generated") {
     const labelUrl = await fetchLabelPdfUrlWithRetry(order.melhor_envio_order_id);
@@ -222,45 +240,26 @@ export async function generateMelhorEnvioLabelForOrder(orderId: string): Promise
     }
   }
 
-  let serviceId = parseServiceId(order.shipping_service_id);
+  const shippingLabel =
+    order.shipping_method ??
+    [addr.shipping_carrier, addr.shipping_service].filter(Boolean).join(" ");
 
-  if (!Number.isFinite(serviceId)) {
-    serviceId = parseServiceId(addr.shipping_option_id ?? addr.shipping_service_id);
+  const serviceId = await resolveMelhorEnvioServiceId({
+    storedServiceId: order.shipping_service_id,
+    addressOptionId: addr.shipping_option_id ?? addr.shipping_service_id,
+    shippingMethod: shippingLabel,
+    originZip: shipper.zip,
+    destinationZip: addr.zip,
+    items,
+    variantDims,
+    shippingPrice: Number(order.shipping ?? 0),
+  });
+
+  if (!serviceId) {
+    throw new MelhorEnvioError("Não foi possível identificar o serviço de frete deste pedido.");
   }
 
-  if (!Number.isFinite(serviceId)) {
-    const rawFallback = Number.parseInt(
-      String(order.shipping_service_id ?? addr.shipping_option_id ?? ""),
-      10
-    );
-    if (Number.isFinite(rawFallback)) {
-      const mapped = resolveServiceIdFromCheckoutFallback(
-        rawFallback,
-        order.shipping_method ??
-          [addr.shipping_carrier, addr.shipping_service].filter(Boolean).join(" ")
-      );
-      if (mapped) serviceId = mapped;
-    }
-  }
-
-  if (!Number.isFinite(serviceId)) {
-    const shippingLabel =
-      order.shipping_method ??
-      [addr.shipping_carrier, addr.shipping_service].filter(Boolean).join(" ");
-    const matched = await matchServiceIdFromQuote({
-      originZip: shipper.zip,
-      destinationZip: addr.zip,
-      items,
-      variantDims,
-      shippingMethod: shippingLabel,
-      shippingPrice: Number(order.shipping ?? 0),
-    });
-    if (!matched) {
-      throw new MelhorEnvioError(
-        "Não foi possível identificar o serviço de frete deste pedido."
-      );
-    }
-    serviceId = matched;
+  if (String(order.shipping_service_id) !== String(serviceId)) {
     await admin.from("orders").update({ shipping_service_id: String(serviceId) }).eq("id", orderId);
   }
 

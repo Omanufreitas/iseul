@@ -11,7 +11,7 @@ function isSedexOption(option: MelhorEnvioQuoteOption): boolean {
 export function isPacShippingOption(option: MelhorEnvioQuoteOption): boolean {
   if (isSedexOption(option)) return false;
   const label = shippingLabel(option);
-  return /\bpac\b/.test(label) || option.id === -1;
+  return /\bpac\b/.test(label) || option.id === 1;
 }
 
 export function isJadlogShippingOption(option: MelhorEnvioQuoteOption): boolean {

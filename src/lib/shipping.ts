@@ -49,8 +49,8 @@ function buildMelhorEnvioProducts(
 function buildFallbackOptions(cep: string, subtotal: number, freeThreshold: number): MelhorEnvioQuoteOption[] {
   const pacPrice = subtotal >= freeThreshold ? 24.9 : shippingForCep(cep, subtotal, freeThreshold);
   return [
-    { id: -1, name: "PAC", company: "Correios", price: pacPrice, deliveryDays: 8 },
-    { id: -2, name: "SEDEX", company: "Correios", price: Math.round((pacPrice + 15) * 100) / 100, deliveryDays: 3 },
+    { id: 1, name: "PAC", company: "Correios", price: pacPrice, deliveryDays: 8 },
+    { id: 2, name: "SEDEX", company: "Correios", price: Math.round((pacPrice + 15) * 100) / 100, deliveryDays: 3 },
   ];
 }
 

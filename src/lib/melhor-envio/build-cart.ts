@@ -160,6 +160,57 @@ export function resolveServiceIdFromCheckoutFallback(
   return null;
 }
 
+export function parseMelhorEnvioServiceId(value: unknown): number {
+  if (value == null || value === "") return NaN;
+  const parsed = Number.parseInt(String(value), 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : NaN;
+}
+
+export async function resolveMelhorEnvioServiceId(input: {
+  storedServiceId: unknown;
+  addressOptionId: unknown;
+  shippingMethod: string;
+  originZip: string;
+  destinationZip: string;
+  items: OrderItemRow[];
+  variantDims: Map<string, VariantDims>;
+  shippingPrice: number;
+}): Promise<number | null> {
+  let serviceId = parseMelhorEnvioServiceId(input.storedServiceId);
+  if (!Number.isFinite(serviceId)) {
+    serviceId = parseMelhorEnvioServiceId(input.addressOptionId);
+  }
+
+  if (!Number.isFinite(serviceId)) {
+    const rawFallback = Number.parseInt(
+      String(input.storedServiceId ?? input.addressOptionId ?? ""),
+      10
+    );
+    if (Number.isFinite(rawFallback)) {
+      const mapped = resolveServiceIdFromCheckoutFallback(rawFallback, input.shippingMethod);
+      if (mapped) serviceId = mapped;
+    }
+  }
+
+  if (!Number.isFinite(serviceId)) {
+    const mapped = resolveServiceIdFromCheckoutFallback(0, input.shippingMethod);
+    if (mapped) serviceId = mapped;
+  }
+
+  if (!Number.isFinite(serviceId)) {
+    serviceId = (await matchServiceIdFromQuote({
+      originZip: input.originZip,
+      destinationZip: input.destinationZip,
+      items: input.items,
+      variantDims: input.variantDims,
+      shippingMethod: input.shippingMethod,
+      shippingPrice: input.shippingPrice,
+    })) ?? NaN;
+  }
+
+  return Number.isFinite(serviceId) ? serviceId : null;
+}
+
 export async function matchServiceIdFromQuote(input: {
   originZip: string;
   destinationZip: string;
