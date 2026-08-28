@@ -142,13 +142,17 @@ export function OrdersAdminPanel({ orders, products, filters }: Props) {
     [orders],
   );
 
+  const allRange = getAllDateRange();
+  const hasCustomDateRange =
+    (filters.from && filters.from !== allRange.from) ||
+    (filters.to && filters.to !== allRange.to);
+
   const hasActiveFilters = Boolean(
     filters.q?.trim() ||
       filters.productId ||
       filters.paymentStatus ||
       filters.orderStatus ||
-      filters.from ||
-      filters.to,
+      hasCustomDateRange,
   );
 
   function clearFilters() {
@@ -171,7 +175,7 @@ export function OrdersAdminPanel({ orders, products, filters }: Props) {
         <StatCard label="Receita (pagos)" value={formatCurrency(stats.revenue)} icon={Package} />
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-iseul-line/80 bg-white shadow-card">
+      <div className="rounded-2xl border border-iseul-line/80 bg-white shadow-card">
         <div className="border-b bg-gradient-to-r from-iseul-dew/60 via-white to-white px-4 py-4 sm:px-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
@@ -272,12 +276,14 @@ export function OrdersAdminPanel({ orders, products, filters }: Props) {
             </select>
           </label>
 
-          <div className="xl:col-span-2">
+          <div className="xl:col-span-3">
             <span className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-neutral-600">
               <CalendarRange className="h-3.5 w-3.5" />
               Período
             </span>
             <DateRangePicker
+              variant="field"
+              align="left"
               from={from}
               to={to}
               onApply={(nextFrom, nextTo) => {
@@ -311,7 +317,7 @@ export function OrdersAdminPanel({ orders, products, filters }: Props) {
                 Status: {STATUS_OPTIONS.find((o) => o.value === filters.orderStatus)?.label}
               </span>
             )}
-            {(filters.from || filters.to) && (
+            {hasCustomDateRange && (
               <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-neutral-700 ring-1 ring-iseul-line">
                 {filters.from
                   ? new Date(`${filters.from}T12:00:00`).toLocaleDateString("pt-BR")

@@ -13,7 +13,17 @@ type Props = {
   to: string;
   onApply: (from: string, to: string) => void;
   disabled?: boolean;
+  /** Alinha o painel — use "left" dentro de formulários de filtro */
+  align?: "left" | "right";
+  /** "field" ocupa a largura total e combina com inputs de filtro */
+  variant?: "default" | "field";
 };
+
+function formatRangeShort(from: string, to: string) {
+  const f = new Date(`${from}T12:00:00`).toLocaleDateString("pt-BR");
+  const t = new Date(`${to}T12:00:00`).toLocaleDateString("pt-BR");
+  return `${f} — ${t}`;
+}
 
 function formatRangeLabel(from: string, to: string) {
   const f = new Date(`${from}T12:00:00`).toLocaleDateString("pt-BR", {
@@ -29,7 +39,14 @@ function formatRangeLabel(from: string, to: string) {
   return `${f} — ${t}`;
 }
 
-export function DateRangePicker({ from, to, onApply, disabled }: Props) {
+export function DateRangePicker({
+  from,
+  to,
+  onApply,
+  disabled,
+  align = "right",
+  variant = "default",
+}: Props) {
   const [open, setOpen] = useState(false);
   const [draftFrom, setDraftFrom] = useState(from);
   const [draftTo, setDraftTo] = useState(to);
@@ -71,36 +88,51 @@ export function DateRangePicker({ from, to, onApply, disabled }: Props) {
     return r.from === from && r.to === to;
   });
 
+  const buttonLabel = activePreset?.label ?? formatRangeShort(from, to);
+  const isField = variant === "field";
+
   return (
-    <div className="relative" ref={panelRef}>
+    <div className={cn("relative", isField && "w-full")} ref={panelRef}>
       <button
         type="button"
         disabled={disabled}
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          "flex items-center gap-2 rounded-xl border border-iseul-line bg-white px-4 py-2.5 text-sm font-medium shadow-sm transition",
+          "flex items-center gap-2 rounded-xl border border-iseul-line bg-white text-sm font-medium shadow-sm transition",
           "hover:border-iseul-accent2 hover:shadow-md disabled:opacity-60",
-          open && "border-iseul-accent ring-2 ring-iseul-dew"
+          open && "border-iseul-accent ring-2 ring-iseul-dew",
+          isField
+            ? "w-full justify-between px-3.5 py-2.5 bg-neutral-50/50"
+            : "px-4 py-2.5",
         )}
       >
-        <Calendar className="h-4 w-4 text-iseul-accent" />
-        <span className="hidden sm:inline">{activePreset?.label ?? "Personalizado"}</span>
-        <span className="text-neutral-500 sm:hidden">Período</span>
-        <span className="hidden text-neutral-400 md:inline">·</span>
-        <span className="hidden text-neutral-600 md:inline">{formatRangeLabel(from, to)}</span>
-        <ChevronDown className={cn("h-4 w-4 text-neutral-400 transition", open && "rotate-180")} />
+        <span className="flex min-w-0 items-center gap-2">
+          <Calendar className="h-4 w-4 shrink-0 text-iseul-accent" />
+          <span className="truncate">{buttonLabel}</span>
+        </span>
+        <ChevronDown className={cn("h-4 w-4 shrink-0 text-neutral-400 transition", open && "rotate-180")} />
       </button>
 
       {open && (
-        <div className="absolute right-0 z-50 mt-2 w-[min(100vw-2rem,420px)] overflow-hidden rounded-2xl border border-iseul-line bg-white shadow-card">
-          <div className="border-b bg-gradient-to-r from-iseul-dew/80 to-white px-4 py-3">
-            <p className="text-xs font-medium uppercase tracking-wider text-iseul-muted">
-              Período
-            </p>
-            <p className="mt-0.5 text-sm text-iseul-ink">{formatRangeLabel(from, to)}</p>
-          </div>
+        <div
+          className={cn(
+            "absolute z-50 mt-2 w-[min(100vw-2rem,380px)] overflow-hidden rounded-2xl border border-iseul-line bg-white shadow-card",
+            align === "left" ? "left-0" : "right-0",
+          )}
+        >
+          {!isField && (
+            <div className="border-b bg-gradient-to-r from-iseul-dew/80 to-white px-4 py-3">
+              <p className="text-xs font-medium uppercase tracking-wider text-iseul-muted">
+                Período
+              </p>
+              <p className="mt-0.5 text-sm text-iseul-ink">{formatRangeLabel(from, to)}</p>
+            </div>
+          )}
 
           <div className="p-4">
+            {isField && !activePreset && (
+              <p className="mb-3 text-xs text-iseul-muted">{formatRangeShort(from, to)}</p>
+            )}
             <p className="mb-2 text-xs font-medium text-neutral-500">Atalhos</p>
             <div className="flex flex-wrap gap-2">
               {DATE_PRESETS.map((p) => (
