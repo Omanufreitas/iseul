@@ -1,11 +1,129 @@
 import { createAdminClient } from "@/lib/supabase/client";
 import { isMockCatalogEnabled, isSupabaseConfigured } from "@/lib/config";
+import { endOfDay, startOfDay } from "@/lib/dashboard-dates";
 import type { Order, OrderItem, OrderStatus } from "@/types";
 
 export type AdminOrderDetail = {
   order: Order;
   items: OrderItem[];
 };
+
+export type OrderListFilters = {
+  q?: string;
+  productId?: string;
+  from?: string;
+  to?: string;
+  limit?: number;
+};
+
+export type AdminOrderListItem = {
+  id: string;
+  order_number: number;
+  customer_name: string;
+  customer_email: string;
+  total: number;
+  status: string;
+  payment_status: string;
+  ordered_at: string;
+  items: { product_id: string | null; product_name: string }[];
+};
+
+type OrderRow = {
+  id: string;
+  order_number: number;
+  customer_name: string;
+  customer_email: string;
+  total: number;
+  status: string;
+  payment_status: string;
+  ordered_at: string;
+  order_items: { product_id: string | null; product_name: string }[] | null;
+};
+
+function mapOrderRow(row: OrderRow): AdminOrderListItem {
+  return {
+    id: String(row.id),
+    order_number: Number(row.order_number),
+    customer_name: row.customer_name,
+    customer_email: row.customer_email,
+    total: Number(row.total),
+    status: row.status,
+    payment_status: row.payment_status,
+    ordered_at: row.ordered_at,
+    items: row.order_items ?? [],
+  };
+}
+
+export async function listOrderFilterProducts(): Promise<{ id: string; name: string }[]> {
+  if (isMockCatalogEnabled() || !isSupabaseConfigured()) return [];
+
+  const admin = createAdminClient();
+  const { data } = await admin.from("products").select("id, name").order("name");
+  return (data ?? []).map((p) => ({ id: String(p.id), name: p.name }));
+}
+
+export async function listOrdersAdmin(filters: OrderListFilters = {}): Promise<AdminOrderListItem[]> {
+  if (isMockCatalogEnabled() || !isSupabaseConfigured()) return [];
+
+  const admin = createAdminClient();
+  const limit = filters.limit ?? 200;
+  const productId = filters.productId?.trim();
+
+  let orderIdsForProduct: string[] | null = null;
+  if (productId) {
+    const { data: itemRows, error: itemsError } = await admin
+      .from("order_items")
+      .select("order_id")
+      .eq("product_id", productId);
+    if (itemsError) throw new Error(itemsError.message);
+    orderIdsForProduct = [...new Set((itemRows ?? []).map((row) => String(row.order_id)))];
+    if (!orderIdsForProduct.length) return [];
+  }
+
+  let query = admin
+    .from("orders")
+    .select(
+      `id, order_number, customer_name, customer_email, total, status, payment_status, ordered_at,
+       order_items ( product_id, product_name )`,
+    )
+    .order("ordered_at", { ascending: false })
+    .limit(limit);
+
+  if (orderIdsForProduct) {
+    query = query.in("id", orderIdsForProduct);
+  }
+
+  if (filters.from) {
+    const from = startOfDay(new Date(`${filters.from}T12:00:00`));
+    if (!Number.isNaN(from.getTime())) {
+      query = query.gte("ordered_at", from.toISOString());
+    }
+  }
+
+  if (filters.to) {
+    const to = endOfDay(new Date(`${filters.to}T12:00:00`));
+    if (!Number.isNaN(to.getTime())) {
+      query = query.lte("ordered_at", to.toISOString());
+    }
+  }
+
+  const q = filters.q?.trim();
+  if (q) {
+    const safe = q.replace(/[%_,]/g, " ").trim();
+    if (/^\d+$/.test(safe)) {
+      query = query.or(
+        `customer_name.ilike.%${safe}%,customer_email.ilike.%${safe}%,order_number.eq.${safe}`,
+      );
+    } else if (safe) {
+      query = query.or(`customer_name.ilike.%${safe}%,customer_email.ilike.%${safe}%`);
+    }
+  }
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+
+  return ((data ?? []) as OrderRow[]).map(mapOrderRow);
+}
 
 export async function getOrderById(id: string): Promise<AdminOrderDetail | null> {
   if (isMockCatalogEnabled() || !isSupabaseConfigured()) return null;

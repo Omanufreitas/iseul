@@ -1,124 +1,55 @@
-import { createAdminClient } from "@/lib/supabase/client";
-import { isSupabaseConfigured } from "@/lib/config";
-import { formatCurrency } from "@/lib/utils";
-import { OrderListActions } from "@/components/admin/OrderListActions";
+import { Suspense } from "react";
+import { OrdersAdminPanel } from "@/components/admin/OrdersAdminPanel";
+import { DATE_PRESETS } from "@/components/admin/dashboard/DateRangePicker";
+import { listOrderFilterProducts, listOrdersAdmin } from "@/lib/admin-orders";
 
-async function listOrders() {
-  if (!isSupabaseConfigured()) return [];
-  const admin = createAdminClient();
-  const { data } = await admin
-    .from("orders")
-    .select(
-      "id, order_number, customer_name, customer_email, total, status, payment_status, ordered_at",
-    )
-    .order("ordered_at", { ascending: false })
-    .limit(100);
-  return data ?? [];
+type Props = {
+  searchParams: Promise<{
+    q?: string;
+    product?: string;
+    from?: string;
+    to?: string;
+  }>;
+};
+
+function parseFilters(searchParams: Awaited<Props["searchParams"]>) {
+  const allRange = DATE_PRESETS.find((p) => p.id === "all")!.getRange();
+  return {
+    q: searchParams.q?.trim() || undefined,
+    productId: searchParams.product || undefined,
+    from: searchParams.from || allRange.from,
+    to: searchParams.to || allRange.to,
+  };
 }
 
-export default async function AdminOrdersPage() {
-  const orders = await listOrders();
+async function OrdersContent({ searchParams }: Props) {
+  const sp = await searchParams;
+  const filters = parseFilters(sp);
+  const [orders, products] = await Promise.all([
+    listOrdersAdmin(filters),
+    listOrderFilterProducts(),
+  ]);
 
+  return <OrdersAdminPanel orders={orders} products={products} filters={filters} />;
+}
+
+export default function AdminOrdersPage(props: Props) {
   return (
     <div>
-      <h1 className="text-2xl font-semibold">Pedidos</h1>
-      <p className="text-sm text-neutral-500">Últimos 100 pedidos</p>
+      <div className="mb-6">
+        <h1 className="text-2xl font-semibold">Pedidos</h1>
+        <p className="text-sm text-neutral-500">Filtre por cliente, produto e data</p>
+      </div>
 
-      {orders.length === 0 ? (
-        <p className="mt-8 text-neutral-500">Nenhum pedido ainda.</p>
-      ) : (
-        <>
-          <div className="mt-6 space-y-3 md:hidden">
-            {orders.map((o) => (
-              <div key={o.id} className="rounded-xl border bg-white p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="font-mono text-xs text-neutral-500">#{o.order_number}</div>
-                    <div className="mt-1 font-medium">{o.customer_name}</div>
-                    <div className="text-xs text-neutral-500">{o.customer_email}</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-medium">{formatCurrency(Number(o.total))}</div>
-                    <div className="mt-1 text-xs capitalize text-neutral-500">
-                      {o.status.replace(/_/g, " ")}
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-2 flex items-center justify-between">
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs ${
-                      o.payment_status === "aprovado"
-                        ? "bg-green-100 text-green-800"
-                        : "bg-amber-100 text-amber-800"
-                    }`}
-                  >
-                    {o.payment_status}
-                  </span>
-                  <span className="text-xs text-neutral-400">
-                    {new Date(o.ordered_at).toLocaleString("pt-BR")}
-                  </span>
-                </div>
-                <OrderListActions
-                  orderId={o.id}
-                  orderNumber={o.order_number}
-                  customerName={o.customer_name}
-                  layout="stack"
-                />
-              </div>
-            ))}
+      <Suspense
+        fallback={
+          <div className="rounded-2xl border bg-white p-8 text-center text-sm text-neutral-500">
+            Carregando pedidos…
           </div>
-
-          <div className="mt-6 hidden overflow-x-auto rounded-xl border bg-white md:block">
-            <table className="w-full min-w-[860px] text-left text-sm">
-              <thead className="border-b bg-neutral-50 text-neutral-500">
-                <tr>
-                  <th className="px-4 py-3">#</th>
-                  <th className="px-4 py-3">Cliente</th>
-                  <th className="px-4 py-3">Total</th>
-                  <th className="px-4 py-3">Pagamento</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Data</th>
-                  <th className="px-4 py-3 text-right">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orders.map((o) => (
-                  <tr key={o.id} className="border-b last:border-0 hover:bg-neutral-50">
-                    <td className="px-4 py-3 font-mono text-xs">{o.order_number}</td>
-                    <td className="px-4 py-3">
-                      <div className="font-medium">{o.customer_name}</div>
-                      <div className="text-xs text-neutral-500">{o.customer_email}</div>
-                    </td>
-                    <td className="px-4 py-3">{formatCurrency(Number(o.total))}</td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-xs ${
-                          o.payment_status === "aprovado"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-amber-100 text-amber-800"
-                        }`}
-                      >
-                        {o.payment_status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 capitalize">{o.status.replace(/_/g, " ")}</td>
-                    <td className="px-4 py-3 text-xs text-neutral-500">
-                      {new Date(o.ordered_at).toLocaleString("pt-BR")}
-                    </td>
-                    <td className="px-4 py-3">
-                      <OrderListActions
-                        orderId={o.id}
-                        orderNumber={o.order_number}
-                        customerName={o.customer_name}
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </>
-      )}
+        }
+      >
+        <OrdersContent searchParams={props.searchParams} />
+      </Suspense>
     </div>
   );
 }
