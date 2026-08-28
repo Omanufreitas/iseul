@@ -13,6 +13,8 @@ export type OrderListFilters = {
   productId?: string;
   from?: string;
   to?: string;
+  paymentStatus?: string;
+  orderStatus?: string;
   limit?: number;
 };
 
@@ -105,6 +107,14 @@ export async function listOrdersAdmin(filters: OrderListFilters = {}): Promise<A
     if (!Number.isNaN(to.getTime())) {
       query = query.lte("ordered_at", to.toISOString());
     }
+  }
+
+  if (filters.orderStatus) {
+    query = query.eq("status", filters.orderStatus);
+  }
+
+  if (filters.paymentStatus) {
+    query = query.eq("payment_status", filters.paymentStatus);
   }
 
   const q = filters.q?.trim();

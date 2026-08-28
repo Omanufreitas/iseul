@@ -1,7 +1,10 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Mail } from "lucide-react";
+import { Mail, Search } from "lucide-react";
+import { AdminEmptyState } from "@/components/admin/ui/AdminEmptyState";
+import { StatCard } from "@/components/admin/ui/StatCard";
 import { fadeUp, stagger } from "@/lib/motion";
 import type { WaitlistSubscriber } from "@/lib/waitlist";
 
@@ -17,6 +20,16 @@ function formatDate(iso: string) {
 }
 
 export function AdminWaitlistPanel({ subscribers }: Props) {
+  const [query, setQuery] = useState("");
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return subscribers;
+    return subscribers.filter(
+      (s) => s.email.toLowerCase().includes(q) || s.source.toLowerCase().includes(q),
+    );
+  }, [subscribers, query]);
+
   return (
     <div className="space-y-6">
       <motion.div
@@ -25,27 +38,45 @@ export function AdminWaitlistPanel({ subscribers }: Props) {
         variants={stagger(0.05)}
         className="grid gap-3 sm:grid-cols-2"
       >
-        <motion.div variants={fadeUp} className="rounded-2xl border border-iseul-line/80 bg-white p-5 shadow-card">
-          <p className="text-xs font-medium uppercase tracking-wide text-iseul-muted">Total inscritos</p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums">{subscribers.length}</p>
+        <motion.div variants={fadeUp}>
+          <StatCard label="Total inscritos" value={subscribers.length} icon={Mail} />
         </motion.div>
-        <motion.div variants={fadeUp} className="rounded-2xl border border-iseul-line/80 bg-white p-5 shadow-card">
-          <p className="text-xs font-medium uppercase tracking-wide text-iseul-muted">Última inscrição</p>
-          <p className="mt-1 text-sm font-medium text-iseul-ink">
-            {subscribers[0] ? formatDate(subscribers[0].created_at) : "—"}
-          </p>
+        <motion.div variants={fadeUp}>
+          <StatCard
+            label="Última inscrição"
+            value={subscribers[0] ? formatDate(subscribers[0].created_at) : "—"}
+          />
         </motion.div>
       </motion.div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="overflow-hidden rounded-2xl border border-iseul-line/80 bg-white shadow-card"
-      >
-        {subscribers.length === 0 ? (
-          <div className="px-6 py-16 text-center text-sm text-iseul-muted">
-            Ninguém se inscreveu ainda. Os e-mails da landing aparecem aqui.
+      <div className="overflow-hidden rounded-2xl border border-iseul-line/80 bg-white shadow-card">
+        <div className="border-b px-4 py-4 sm:px-5">
+          <label className="block">
+            <span className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-neutral-600">
+              <Search className="h-3.5 w-3.5" />
+              Buscar inscrito
+            </span>
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="E-mail ou origem…"
+              className="w-full max-w-md rounded-xl border border-iseul-line bg-neutral-50/50 px-3.5 py-2.5 text-sm focus:border-iseul-accent focus:bg-white focus:outline-none focus:ring-2 focus:ring-iseul-dew"
+            />
+          </label>
+        </div>
+
+        {filtered.length === 0 ? (
+          <div className="p-6">
+            <AdminEmptyState
+              icon={Mail}
+              title={subscribers.length === 0 ? "Ninguém se inscreveu ainda" : "Nenhum resultado"}
+              description={
+                subscribers.length === 0
+                  ? "Os e-mails da landing aparecem aqui."
+                  : "Tente outro termo de busca."
+              }
+            />
           </div>
         ) : (
           <>
@@ -59,8 +90,8 @@ export function AdminWaitlistPanel({ subscribers }: Props) {
                   </tr>
                 </thead>
                 <tbody>
-                  {subscribers.map((row) => (
-                    <tr key={row.id} className="border-b border-iseul-line/70 last:border-0">
+                  {filtered.map((row) => (
+                    <tr key={row.id} className="border-b border-iseul-line/70 last:border-0 hover:bg-iseul-dew/20">
                       <td className="px-5 py-4 font-medium text-iseul-ink">{row.email}</td>
                       <td className="px-5 py-4 capitalize text-iseul-muted">{row.source}</td>
                       <td className="px-5 py-4 text-iseul-muted">{formatDate(row.created_at)}</td>
@@ -71,7 +102,7 @@ export function AdminWaitlistPanel({ subscribers }: Props) {
             </div>
 
             <div className="divide-y divide-iseul-line md:hidden">
-              {subscribers.map((row) => (
+              {filtered.map((row) => (
                 <div key={row.id} className="flex items-start gap-3 px-4 py-4">
                   <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-iseul-dew text-iseul-accent">
                     <Mail className="h-4 w-4" />
@@ -87,7 +118,7 @@ export function AdminWaitlistPanel({ subscribers }: Props) {
             </div>
           </>
         )}
-      </motion.div>
+      </div>
     </div>
   );
 }

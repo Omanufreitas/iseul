@@ -21,6 +21,7 @@ import {
 import {
   ArrowDownRight,
   ArrowUpRight,
+  AlertCircle,
   Eye,
   EyeOff,
   Minus,
@@ -205,6 +206,7 @@ export function DashboardView({ initialData }: Props) {
       format: "currency" as const,
       icon: Wallet,
       accent: "from-iseul-accent/15 to-iseul-dew/30",
+      href: "/admin/pedidos?payment=aprovado",
     },
     {
       label: "Pedidos",
@@ -213,6 +215,7 @@ export function DashboardView({ initialData }: Props) {
       format: "number" as const,
       icon: ShoppingBag,
       accent: "from-amber-50 to-iseul-dew/20",
+      href: "/admin/pedidos",
     },
     {
       label: "Ticket médio",
@@ -231,8 +234,33 @@ export function DashboardView({ initialData }: Props) {
       accent: "from-violet-50 to-iseul-dew/20",
       hideTrend: true,
       sub: kpis.productsOutOfStock > 0 ? `${kpis.productsOutOfStock} esgotados` : undefined,
+      href: "/admin/produtos",
     },
   ];
+
+  const attentionItems = [
+    kpis.pendingPayments > 0
+      ? {
+          label: `${kpis.pendingPayments} pedido(s) aguardando pagamento`,
+          href: "/admin/pedidos?payment=pendente",
+          tone: "amber" as const,
+        }
+      : null,
+    kpis.productsOutOfStock > 0
+      ? {
+          label: `${kpis.productsOutOfStock} produto(s) esgotados no catálogo`,
+          href: "/admin/produtos",
+          tone: "amber" as const,
+        }
+      : null,
+    kpis.productsLowStock > 0
+      ? {
+          label: `${kpis.productsLowStock} produto(s) com estoque baixo`,
+          href: "/admin/produtos",
+          tone: "neutral" as const,
+        }
+      : null,
+  ].filter(Boolean) as { label: string; href: string; tone: "amber" | "neutral" }[];
 
   return (
     <div className="relative">
@@ -285,55 +313,78 @@ export function DashboardView({ initialData }: Props) {
             className="mt-8 space-y-6"
           >
             <motion.div variants={fadeUp} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {kpisList.map((kpi) => (
-                <motion.div
-                  key={kpi.label}
-                  whileHover={{ y: -3, transition: { duration: 0.2 } }}
-                  className={cn(
-                    "relative overflow-hidden rounded-2xl border border-iseul-line/80 bg-gradient-to-br p-5 shadow-card",
-                    kpi.accent
-                  )}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="grid h-10 w-10 place-items-center rounded-xl bg-white/80 shadow-sm">
-                      <kpi.icon className="h-5 w-5 text-iseul-accent" />
+              {kpisList.map((kpi) => {
+                const card = (
+                  <motion.div
+                    whileHover={{ y: -3, transition: { duration: 0.2 } }}
+                    className={cn(
+                      "relative h-full overflow-hidden rounded-2xl border border-iseul-line/80 bg-gradient-to-br p-5 shadow-card",
+                      kpi.accent,
+                      kpi.href && "cursor-pointer",
+                    )}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="grid h-10 w-10 place-items-center rounded-xl bg-white/80 shadow-sm">
+                        <kpi.icon className="h-5 w-5 text-iseul-accent" />
+                      </div>
+                      {!kpi.hideTrend && !(hideValues && kpi.format === "currency") && (
+                        <TrendBadge current={kpi.value} previous={kpi.prev} />
+                      )}
                     </div>
-                    {!kpi.hideTrend && !(hideValues && kpi.format === "currency") && (
-                      <TrendBadge current={kpi.value} previous={kpi.prev} />
-                    )}
-                  </div>
-                  <p className="mt-4 text-xs font-medium uppercase tracking-wide text-iseul-muted">
-                    {kpi.label}
-                  </p>
-                  <p className="mt-1 text-2xl font-semibold tabular-nums text-iseul-ink">
-                    {hideValues && kpi.format === "currency" ? (
-                      MASKED_CURRENCY
-                    ) : kpi.format === "currency" ? (
-                      <CountUp
-                        value={kpi.value}
-                        prefix="R$ "
-                        decimals={2}
-                        duration={1.2}
-                        active={!pending}
-                      />
-                    ) : (
-                      <CountUp value={kpi.value} duration={1} active={!pending} />
-                    )}
-                  </p>
-                  {kpi.sub && <p className="mt-1 text-xs text-amber-700">{kpi.sub}</p>}
-                </motion.div>
-              ))}
+                    <p className="mt-4 text-xs font-medium uppercase tracking-wide text-iseul-muted">
+                      {kpi.label}
+                    </p>
+                    <p className="mt-1 text-2xl font-semibold tabular-nums text-iseul-ink">
+                      {hideValues && kpi.format === "currency" ? (
+                        MASKED_CURRENCY
+                      ) : kpi.format === "currency" ? (
+                        <CountUp
+                          value={kpi.value}
+                          prefix="R$ "
+                          decimals={2}
+                          duration={1.2}
+                          active={!pending}
+                        />
+                      ) : (
+                        <CountUp value={kpi.value} duration={1} active={!pending} />
+                      )}
+                    </p>
+                    {kpi.sub && <p className="mt-1 text-xs text-amber-700">{kpi.sub}</p>}
+                  </motion.div>
+                );
+
+                return kpi.href ? (
+                  <Link key={kpi.label} href={kpi.href} className="block">
+                    {card}
+                  </Link>
+                ) : (
+                  card
+                );
+              })}
             </motion.div>
 
-            {kpis.pendingPayments > 0 && (
+            {attentionItems.length > 0 && (
               <motion.div
                 variants={fadeUp}
-                className="rounded-xl border border-amber-200/80 bg-gradient-to-r from-amber-50 to-white px-4 py-3 text-sm text-amber-900"
+                className="overflow-hidden rounded-2xl border border-amber-200/80 bg-gradient-to-r from-amber-50/80 to-white shadow-card"
               >
-                {kpis.pendingPayments} pedido(s) aguardando pagamento no período.{" "}
-                <Link href="/admin/pedidos" className="font-medium underline">
-                  Ver pedidos
-                </Link>
+                <div className="flex items-center gap-2 border-b border-amber-200/60 px-4 py-3">
+                  <AlertCircle className="h-4 w-4 text-amber-700" />
+                  <h3 className="text-sm font-semibold text-amber-900">Precisa de atenção</h3>
+                </div>
+                <ul className="divide-y divide-amber-100/80">
+                  {attentionItems.map((item) => (
+                    <li key={item.label}>
+                      <Link
+                        href={item.href}
+                        className="flex items-center justify-between px-4 py-3 text-sm text-amber-900 transition hover:bg-amber-50/80"
+                      >
+                        <span>{item.label}</span>
+                        <span className="text-xs font-medium text-amber-700">Ver →</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
               </motion.div>
             )}
 

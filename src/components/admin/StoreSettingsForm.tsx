@@ -23,7 +23,7 @@ export function StoreSettingsForm({ settings }: { settings: StoreSettings }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-xl space-y-4 rounded-xl border bg-white p-6">
+    <form onSubmit={handleSubmit} className="max-w-xl space-y-4 rounded-2xl border border-iseul-line/80 bg-white p-6 shadow-card">
       <label className="block text-sm">
         <span className="mb-1 block font-medium">Barra de anúncio</span>
         <input

@@ -100,7 +100,7 @@ export function OrderDetailHeader({
         : { label: STATUS_LABELS[status], state: status === "aguardando_pagamento" ? "pending" : "neutral" };
 
   return (
-    <div className="rounded-xl border bg-white p-5">
+    <div className="rounded-2xl border border-iseul-line/80 bg-white p-5 shadow-card">
       <Link
         href="/admin/pedidos"
         className="text-sm text-neutral-500 transition hover:text-iseul-ink"

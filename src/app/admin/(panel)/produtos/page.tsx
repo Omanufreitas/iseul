@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ProductsAdminPanel } from "@/components/admin/ProductsAdminPanel";
+import { PageHeader } from "@/components/admin/ui/PageHeader";
 import { listAllProductsAdmin } from "@/lib/catalog";
 
 export default async function AdminProductsPage() {
@@ -7,22 +8,20 @@ export default async function AdminProductsPage() {
 
   return (
     <div>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Produtos</h1>
-          <p className="text-sm text-neutral-500">Gerencie catálogo, estoque e preços</p>
-        </div>
-        <Link
-          href="/admin/produtos/novo"
-          className="rounded-lg bg-iseul-accent px-4 py-2 text-center text-sm font-medium text-white"
-        >
-          + Novo produto
-        </Link>
-      </div>
+      <PageHeader
+        title="Produtos"
+        description="Gerencie catálogo, estoque e preços"
+        action={
+          <Link
+            href="/admin/produtos/novo"
+            className="rounded-xl bg-iseul-accent px-4 py-2.5 text-center text-sm font-medium text-white shadow-sm transition hover:bg-iseul-accent/90"
+          >
+            + Novo produto
+          </Link>
+        }
+      />
 
-      <div className="mt-6">
-        <ProductsAdminPanel products={products} />
-      </div>
+      <ProductsAdminPanel products={products} />
     </div>
   );
 }

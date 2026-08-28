@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { OrderActionsPanel } from "@/components/admin/OrderActionsPanel";
+import { OrderAlertsBanner } from "@/components/admin/OrderAlertsBanner";
 import { OrderDetailHeader } from "@/components/admin/OrderDetailHeader";
 import { OrderIntegrationsPanel } from "@/components/admin/OrderIntegrationsPanel";
 import { getOrderById } from "@/lib/admin-orders";
@@ -43,9 +44,17 @@ export default async function AdminOrderDetailPage({ params }: Props) {
         melhorEnvioLabelUrl={order.melhor_envio_label_url}
       />
 
+      <OrderAlertsBanner
+        paymentStatus={order.payment_status}
+        blingSyncStatus={order.bling_sync_status}
+        blingSyncError={order.bling_sync_error}
+        melhorEnvioStatus={order.melhor_envio_status}
+        melhorEnvioError={order.melhor_envio_error}
+      />
+
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="space-y-6">
-          <div className="rounded-xl border bg-white p-5">
+          <div className="rounded-2xl border border-iseul-line/80 bg-white p-5 shadow-card">
             <h2 className="font-semibold text-iseul-ink">Itens</h2>
             <ul className="mt-3 divide-y text-sm">
               {items.map((item) => (
@@ -85,7 +94,7 @@ export default async function AdminOrderDetailPage({ params }: Props) {
             </dl>
           </div>
 
-          <div className="rounded-xl border bg-white p-5">
+          <div className="rounded-2xl border border-iseul-line/80 bg-white p-5 shadow-card">
             <h2 className="font-semibold text-iseul-ink">Cliente e entrega</h2>
             <dl className="mt-4 space-y-2 text-sm">
               <div className="flex justify-between gap-4">

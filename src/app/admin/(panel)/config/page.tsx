@@ -1,8 +1,10 @@
 import { requireAdmin } from "@/actions/admin/auth";
 import { listCouponsAdmin } from "@/actions/admin/coupons";
+import { ConfigAdminLayout } from "@/components/admin/ConfigAdminLayout";
 import { CouponsAdminPanel } from "@/components/admin/CouponsAdminPanel";
 import { IntegrationsPanel } from "@/components/admin/IntegrationsPanel";
 import { StoreSettingsForm } from "@/components/admin/StoreSettingsForm";
+import { PageHeader } from "@/components/admin/ui/PageHeader";
 import { getStoreSettings } from "@/lib/catalog";
 import { isOwnerAdmin } from "@/lib/admin-access";
 
@@ -25,19 +27,17 @@ export default async function AdminConfigPage({
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold">Configurações</h1>
+      <PageHeader
+        title="Configurações"
+        description="Loja, cupons e integrações em um só lugar"
+      />
 
-      <div className={`mt-6 grid gap-6 ${owner ? "lg:grid-cols-2" : "max-w-xl"}`}>
-        <div className="space-y-6">
-          <div>
-            <h2 className="mb-4 font-medium">Loja</h2>
-            <StoreSettingsForm settings={settings} />
-          </div>
-          <CouponsAdminPanel coupons={coupons} />
-        </div>
-
-        {owner && <IntegrationsPanel blingMessage={blingMessage} />}
-      </div>
+      <ConfigAdminLayout
+        owner={owner}
+        store={<StoreSettingsForm settings={settings} />}
+        coupons={<CouponsAdminPanel coupons={coupons} />}
+        integrations={owner ? <IntegrationsPanel blingMessage={blingMessage} /> : undefined}
+      />
     </div>
   );
 }
