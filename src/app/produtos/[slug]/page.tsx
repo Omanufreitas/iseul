@@ -6,6 +6,7 @@ import { CartDrawer } from "@/components/store/CartDrawer";
 import { ProductDetailMotion } from "@/components/store/ProductDetailMotion";
 import { ProductPageContent } from "@/components/store/ProductPageContent";
 import { getProductBySlug, getStoreSettings } from "@/lib/catalog";
+import { buildAnnounceBarText } from "@/lib/store-announcement";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -22,7 +23,7 @@ export default async function ProductPage({ params }: Props) {
 
   return (
     <>
-      <AnnounceBar text={settings.announcement} />
+      <AnnounceBar text={buildAnnounceBarText(settings)} />
       <StoreHeader settings={settings} />
       <CartDrawer settings={settings} />
 

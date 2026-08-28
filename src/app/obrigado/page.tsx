@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AnnounceBar, StoreHeader } from "@/components/store/HeaderFooter";
 import { LandingFooter } from "@/components/store/landing/LandingHeaderFooter";
 import { getStoreSettings } from "@/lib/catalog";
+import { buildAnnounceBarText } from "@/lib/store-announcement";
 import { syncOrderByReference } from "@/lib/orders/fulfill";
 import { isSupabaseConfigured } from "@/lib/config";
 
@@ -21,7 +22,7 @@ export default async function ObrigadoPage({ searchParams }: Props) {
 
   return (
     <>
-      <AnnounceBar text={settings.announcement} />
+      <AnnounceBar text={buildAnnounceBarText(settings)} />
       <StoreHeader settings={settings} />
       <div className="mx-auto max-w-lg px-6 py-24 text-center">
         <div className="mx-auto mb-6 grid h-16 w-16 place-items-center rounded-full bg-iseul-dew text-2xl text-iseul-accent">

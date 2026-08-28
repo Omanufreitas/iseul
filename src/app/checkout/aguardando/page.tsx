@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AnnounceBar, StoreHeader } from "@/components/store/HeaderFooter";
 import { LandingFooter } from "@/components/store/landing/LandingHeaderFooter";
 import { getStoreSettings } from "@/lib/catalog";
+import { buildAnnounceBarText } from "@/lib/store-announcement";
 import { syncOrderByReference } from "@/lib/orders/fulfill";
 import { isSupabaseConfigured } from "@/lib/config";
 
@@ -21,7 +22,7 @@ export default async function AguardandoPage({ searchParams }: Props) {
 
   return (
     <>
-      <AnnounceBar text={settings.announcement} />
+      <AnnounceBar text={buildAnnounceBarText(settings)} />
       <StoreHeader settings={settings} />
       <div className="mx-auto max-w-lg px-6 py-24 text-center">
         <h1 className="font-serif text-3xl">Aguardando pagamento</h1>

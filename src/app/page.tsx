@@ -13,6 +13,7 @@ import { WaitlistSection } from "@/components/store/landing/WaitlistSection";
 import { LandingContactSection } from "@/components/store/landing/LandingContactSection";
 import { DewDivider } from "@/components/store/landing/DewDivider";
 import { listProducts, getStoreSettings } from "@/lib/catalog";
+import { buildAnnounceBarText } from "@/lib/store-announcement";
 import { CONTACT_EMAIL, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 
 export default async function HomePage() {
@@ -34,7 +35,7 @@ export default async function HomePage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
       />
-      <LandingAnnounceBar text="Frete grátis acima de R$199 · Estoque no Brasil, envio em 24h úteis · Originais e lacrados" />
+      <LandingAnnounceBar text={buildAnnounceBarText(settings)} />
       <BrandMarquee />
       <LandingHeader />
 

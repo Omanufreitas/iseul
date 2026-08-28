@@ -6,7 +6,7 @@ import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { useCart } from "@/context/cart-context";
 import { useClientReady } from "@/hooks/use-client-ready";
 import { backdropFade, slideDown, slideFromRight } from "@/lib/motion";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 import type { StoreSettings } from "@/types";
 
 const NAV_LINKS = [
@@ -215,7 +215,9 @@ export function StoreFooter({ settings }: { settings: StoreSettings }) {
             <h5 className="mb-3 text-xs font-semibold uppercase tracking-widest text-iseul-paper">
               Ajuda
             </h5>
-            <p className="py-1">Frete grátis acima de R$199</p>
+            <p className="py-1">
+              Frete grátis acima de {formatCurrency(settings.free_shipping_threshold)}
+            </p>
             <p className="py-1">Envio em até 24h úteis</p>
           </div>
           <div>

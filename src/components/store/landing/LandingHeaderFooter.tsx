@@ -111,10 +111,10 @@ export function LandingFooter() {
   );
 }
 
-export function PolicyHeader() {
+export function PolicyHeader({ announceText }: { announceText: string }) {
   return (
     <>
-      <LandingAnnounceBar text="Frete grátis acima de R$199 · Estoque no Brasil, envio em 24h úteis · Originais e lacrados" />
+      <LandingAnnounceBar text={announceText} />
       <BrandMarquee />
       <header className="sticky top-0 z-40 border-b border-iseul-line bg-[color-mix(in_srgb,#FAF8F4_90%,transparent)] backdrop-blur-[12px]">
         <div className="wrap flex h-16 items-center gap-[22px]">

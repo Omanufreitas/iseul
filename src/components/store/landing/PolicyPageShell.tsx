@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { LandingFooter, PolicyHeader } from "@/components/store/landing/LandingHeaderFooter";
+import { getStoreSettings } from "@/lib/catalog";
+import { buildAnnounceBarText } from "@/lib/store-announcement";
 import { SITE_URL } from "@/lib/site";
 
 type Props = {
@@ -7,10 +9,12 @@ type Props = {
   children: React.ReactNode;
 };
 
-export function PolicyPageShell({ title, children }: Props) {
+export async function PolicyPageShell({ title, children }: Props) {
+  const settings = await getStoreSettings();
+
   return (
     <>
-      <PolicyHeader />
+      <PolicyHeader announceText={buildAnnounceBarText(settings)} />
       <main>
         <div className="capa border-b border-iseul-line bg-iseul-areia py-[52px] pb-11">
           <div className="doc mx-auto max-w-[720px] px-6">
