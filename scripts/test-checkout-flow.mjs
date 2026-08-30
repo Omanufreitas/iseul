@@ -56,7 +56,10 @@ function asaasBase() {
 async function testAsaasCheckout(items, shipping = 0) {
   const body = {
     billingTypes: ["PIX", "CREDIT_CARD"],
-    chargeTypes: ["DETACHED"],
+    chargeTypes: ["DETACHED", "INSTALLMENT"],
+    installment: {
+      maxInstallmentCount: 3,
+    },
     minutesToExpire: 120,
     externalReference: "test-" + Date.now(),
     callback: {

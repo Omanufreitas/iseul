@@ -53,6 +53,9 @@ const CONFIRMED_PAYMENT_STATUSES = new Set([
   "AUTHORIZED",
 ]);
 
+/** Máximo de parcelas no cartão (sem juros — conforme promessa no site). */
+export const ASAAS_MAX_INSTALLMENTS = 3;
+
 function asaasApiBase(): string {
   const env = process.env.ASAAS_ENV?.trim().toLowerCase();
   if (env === "sandbox") return "https://api-sandbox.asaas.com";
@@ -183,7 +186,10 @@ export async function createStoreAsaasCheckout(
 
   const body = {
     billingTypes: ["PIX", "CREDIT_CARD"],
-    chargeTypes: ["DETACHED"],
+    chargeTypes: ["DETACHED", "INSTALLMENT"],
+    installment: {
+      maxInstallmentCount: ASAAS_MAX_INSTALLMENTS,
+    },
     minutesToExpire: 120,
     externalReference: orderId,
     callback: {
