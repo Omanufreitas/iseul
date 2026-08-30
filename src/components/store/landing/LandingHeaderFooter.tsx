@@ -2,6 +2,7 @@ import Link from "next/link";
 import { BrandMarquee } from "@/components/store/landing/BrandMarquee";
 import { LandingHeaderCart } from "@/components/store/landing/LandingHeaderCart";
 import { PaymentMethodsBar } from "@/components/store/landing/PaymentMethodsBar";
+import { SiteLockBadge } from "@/components/store/landing/SiteLockBadge";
 import { CONTACT_EMAIL, LEGAL_LINE, SITE_URL } from "@/lib/site";
 import { INSTAGRAM_HANDLE, INSTAGRAM_URL } from "@/lib/constants";
 
@@ -76,8 +77,9 @@ export function LandingFooter() {
             </Link>
           </nav>
         </div>
-        <div className="mt-8 border-t border-white/10 pt-6">
+        <div className="mt-8 flex flex-wrap items-start justify-between gap-6 border-t border-white/10 pt-6">
           <PaymentMethodsBar />
+          <SiteLockBadge />
         </div>
         <div className="fbot mt-[26px] flex flex-wrap justify-between gap-3 border-t border-white/10 pt-4 text-[11.5px] text-[#847D72]">
           <span>{LEGAL_LINE}</span>
