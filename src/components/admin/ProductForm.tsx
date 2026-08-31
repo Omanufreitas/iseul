@@ -46,6 +46,9 @@ export function ProductForm({ product }: Props) {
   const [variants, setVariants] = useState<ProductVariantInput[]>(
     variantsFromProduct(product?.variants)
   );
+  const [categoryLabel, setCategoryLabel] = useState(
+    product?.category_label ?? CATEGORIES.find((c) => c.slug === (product?.category_slug ?? "serum"))?.label ?? "Sérum & ampola"
+  );
   const blobUrlsRef = useRef<string[]>([]);
 
   useEffect(() => {
@@ -58,6 +61,11 @@ export function ProductForm({ product }: Props) {
     setImageUrls(next);
     setSelectedIndex(0);
     setVariants(variantsFromProduct(product?.variants));
+    setCategoryLabel(
+      product?.category_label ??
+        CATEGORIES.find((c) => c.slug === (product?.category_slug ?? "serum"))?.label ??
+        "Sérum & ampola"
+    );
   }, [
     product?.id,
     product?.image_url,
@@ -198,7 +206,7 @@ export function ProductForm({ product }: Props) {
         unit: String(fd.get("unit") || "UN"),
         brand: String(fd.get("brand") || ""),
         category_slug: categorySlug,
-        category_label: category?.label ?? categorySlug,
+        category_label: String(fd.get("category_label") || category?.label || categorySlug).trim(),
         price: Number(fd.get("price")),
         compare_at_price: fd.get("compare_at_price") ? Number(fd.get("compare_at_price")) : null,
         pitch: String(fd.get("pitch") || ""),
@@ -272,13 +280,34 @@ export function ProductForm({ product }: Props) {
               />
             </Field>
             <Field label="Categoria *">
-              <select name="category_slug" required defaultValue={product?.category_slug ?? "serum"} className={inputClass}>
+              <select
+                name="category_slug"
+                required
+                defaultValue={product?.category_slug ?? "serum"}
+                className={inputClass}
+                onChange={(e) => {
+                  const selected = CATEGORIES.find((c) => c.slug === e.target.value);
+                  if (selected && selected.slug !== "all") {
+                    setCategoryLabel(selected.label);
+                  }
+                }}
+              >
                 {CATEGORIES.filter((c) => c.slug !== "all").map((c) => (
                   <option key={c.slug} value={c.slug}>
                     {c.label}
                   </option>
                 ))}
               </select>
+            </Field>
+            <Field label="Nome da categoria (editável)" className="md:col-span-2">
+              <input
+                name="category_label"
+                required
+                value={categoryLabel}
+                onChange={(e) => setCategoryLabel(e.target.value)}
+                placeholder="Ex.: Sérum & ampola"
+                className={inputClass}
+              />
             </Field>
           </Section>
 

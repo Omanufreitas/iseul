@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { deleteCoupon, saveCoupon } from "@/actions/admin/coupons";
+import { AdminExportButton } from "@/components/admin/AdminExportButton";
 import type { Coupon } from "@/types";
 
 type Props = {
@@ -18,10 +19,18 @@ export function CouponsAdminPanel({ coupons: initialCoupons }: Props) {
     discount_percent: 10,
     active: true,
     max_uses: "",
+    first_purchase_only: false,
   });
 
   function resetForm() {
-    setForm({ code: "", name: "", discount_percent: 10, active: true, max_uses: "" });
+    setForm({
+      code: "",
+      name: "",
+      discount_percent: 10,
+      active: true,
+      max_uses: "",
+      first_purchase_only: false,
+    });
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -33,6 +42,7 @@ export function CouponsAdminPanel({ coupons: initialCoupons }: Props) {
         discount_percent: Number(form.discount_percent),
         active: form.active,
         max_uses: form.max_uses ? Number(form.max_uses) : null,
+        first_purchase_only: form.first_purchase_only,
       });
 
       if ("error" in result && result.error) {
@@ -61,11 +71,17 @@ export function CouponsAdminPanel({ coupons: initialCoupons }: Props) {
 
   return (
     <div className="space-y-6 rounded-xl border bg-white p-6">
-      <div>
-        <h2 className="text-lg font-semibold">Cupons de desconto</h2>
-        <p className="mt-1 text-sm text-neutral-500">
-          Código usado no checkout. O desconto é aplicado sobre o subtotal dos produtos.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold">Cupons de desconto</h2>
+          <p className="mt-1 text-sm text-neutral-500">
+            Código usado no checkout. O desconto é aplicado sobre o subtotal dos produtos.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <AdminExportButton table="coupons" />
+          <AdminExportButton table="customers" label="Exportar clientes" />
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2">
@@ -120,6 +136,14 @@ export function CouponsAdminPanel({ coupons: initialCoupons }: Props) {
           />
           Cupom ativo
         </label>
+        <label className="flex items-center gap-2 text-sm md:col-span-2">
+          <input
+            type="checkbox"
+            checked={form.first_purchase_only}
+            onChange={(e) => setForm({ ...form, first_purchase_only: e.target.checked })}
+          />
+          Válido apenas na primeira compra (por e-mail)
+        </label>
         <div className="md:col-span-2">
           <button
             type="submit"
@@ -140,6 +164,7 @@ export function CouponsAdminPanel({ coupons: initialCoupons }: Props) {
                 <th className="py-2 pr-4">Nome</th>
                 <th className="py-2 pr-4">Desconto</th>
                 <th className="py-2 pr-4">Usos</th>
+                <th className="py-2 pr-4">1ª compra</th>
                 <th className="py-2 pr-4">Status</th>
                 <th className="py-2" />
               </tr>
@@ -154,6 +179,7 @@ export function CouponsAdminPanel({ coupons: initialCoupons }: Props) {
                     {coupon.used_count}
                     {coupon.max_uses != null ? ` / ${coupon.max_uses}` : ""}
                   </td>
+                  <td className="py-3 pr-4">{coupon.first_purchase_only ? "Sim" : "—"}</td>
                   <td className="py-3 pr-4">{coupon.active ? "Ativo" : "Inativo"}</td>
                   <td className="py-3 text-right">
                     <button

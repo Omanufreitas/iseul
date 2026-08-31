@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Crown, Shield, UserCircle } from "lucide-react";
+import { AdminExportButton } from "@/components/admin/AdminExportButton";
 import { adminUserRoleLabel, type AdminUserRole } from "@/lib/admin-access";
 import { fadeUp, stagger } from "@/lib/motion";
 import { cn } from "@/lib/utils";
@@ -46,6 +47,9 @@ function Avatar({ name }: { name: string }) {
 export function AdminUsersPanel({ users, currentEmail }: Props) {
   return (
     <div className="space-y-6">
+      <div className="flex justify-end">
+        <AdminExportButton table="users" />
+      </div>
       <motion.div
         initial="hidden"
         animate="show"

@@ -6,6 +6,7 @@ import { useMemo, useState, useTransition } from "react";
 import { Package, RotateCcw, Search, SlidersHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import { deleteProduct, toggleProductActive } from "@/actions/admin/products";
+import { AdminExportButton } from "@/components/admin/AdminExportButton";
 import { BlingProductBadge } from "@/components/admin/BlingProductBadge";
 import { AdminEmptyState } from "@/components/admin/ui/AdminEmptyState";
 import { StatCard } from "@/components/admin/ui/StatCard";
@@ -80,14 +81,17 @@ export function ProductsAdminPanel({ products }: Props) {
 
       <div className="overflow-hidden rounded-2xl border border-iseul-line/80 bg-white shadow-card">
         <div className="border-b bg-gradient-to-r from-iseul-dew/60 via-white to-white px-4 py-4 sm:px-5">
-          <div className="flex items-center gap-2">
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-iseul-accent/10 text-iseul-accent">
-              <SlidersHorizontal className="h-4 w-4" />
-            </span>
-            <div>
-              <h2 className="text-sm font-semibold text-iseul-ink">Filtros</h2>
-              <p className="text-xs text-iseul-muted">{filtered.length} de {products.length} produtos</p>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <span className="grid h-9 w-9 place-items-center rounded-xl bg-iseul-accent/10 text-iseul-accent">
+                <SlidersHorizontal className="h-4 w-4" />
+              </span>
+              <div>
+                <h2 className="text-sm font-semibold text-iseul-ink">Filtros</h2>
+                <p className="text-xs text-iseul-muted">{filtered.length} de {products.length} produtos</p>
+              </div>
             </div>
+            <AdminExportButton table="products" />
           </div>
         </div>
         <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4 lg:items-end sm:p-5">

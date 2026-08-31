@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { quoteShipping } from "@/actions/shipping";
 import { createCheckoutOrder } from "@/actions/checkout";
+import { validateCartItems } from "@/actions/cart";
 import { validateCouponCode } from "@/actions/admin/coupons";
 import { useCart, cartItemKey } from "@/context/cart-context";
 import { formatCurrency, maskCep, maskCpf, maskPhone } from "@/lib/utils";
@@ -39,7 +40,7 @@ function formatShippingLabel(option: ShippingQuoteOption): string {
 }
 
 export function CheckoutForm({ settings }: { settings: StoreSettings }) {
-  const { items, subtotal, clearCart } = useCart();
+  const { items, subtotal, clearCart, replaceItems } = useCart();
   const [pending, startTransition] = useTransition();
   const [shipping, setShipping] = useState<number | null>(null);
   const [shippingOptions, setShippingOptions] = useState<ShippingQuoteOption[]>([]);
@@ -68,7 +69,9 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
     city: "",
     state: "SP",
     city_ibge: 0,
+    marketing_opt_in: true,
   });
+  const lastValidatedCart = useRef("");
 
   const cepDigits = form.zip.replace(/\D/g, "");
   const cartItems = useMemo(
@@ -80,6 +83,48 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
       })),
     [items]
   );
+
+  const cartSignature = useMemo(
+    () => items.map((item) => `${cartItemKey(item)}:${item.quantity}`).join("|"),
+    [items]
+  );
+
+  useEffect(() => {
+    if (!items.length || lastValidatedCart.current === cartSignature) return;
+
+    let cancelled = false;
+    validateCartItems(
+      items.map((item) => ({
+        productId: item.productId,
+        variantId: item.variantId ?? null,
+        quantity: item.quantity,
+      }))
+    ).then((result) => {
+      if (cancelled) return;
+
+      const validKeys = new Set(
+        result.valid.map((item) =>
+          item.variantId ? `${item.productId}:${item.variantId}` : item.productId
+        )
+      );
+      const nextItems = items.filter((item) => validKeys.has(cartItemKey(item)));
+
+      if (nextItems.length !== items.length) {
+        replaceItems(nextItems);
+        return;
+      }
+
+      lastValidatedCart.current = cartSignature;
+
+      if (result.errors.length) {
+        toast.error(result.errors[0]);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [cartSignature, items, replaceItems]);
 
   useEffect(() => {
     if (cepDigits.length !== 8) {
@@ -231,7 +276,7 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
     }
     setCouponLoading(true);
     try {
-      const result = await validateCouponCode(code, subtotal);
+      const result = await validateCouponCode(code, subtotal, form.email.trim() || null);
       if ("error" in result && result.error) {
         toast.error(result.error);
         setAppliedCoupon(null);
@@ -265,17 +310,19 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
 
         <fieldset className="space-y-4 rounded-iseul border border-iseul-line bg-iseul-card p-6">
           <legend className="px-2 font-semibold">Identificação</legend>
-          {[
-            ["full_name", "Nome completo", "text"],
-            ["email", "E-mail", "email"],
-          ].map(([key, label, type]) => (
+          {(
+            [
+              ["full_name", "Nome completo", "text"],
+              ["email", "E-mail", "email"],
+            ] as const
+          ).map(([key, label, type]) => (
             <label key={key} className="block text-sm">
               <span className="mb-1 block text-iseul-muted">{label}</span>
               <input
                 required
                 type={type}
                 className="w-full rounded-lg border border-iseul-line bg-iseul-paper px-3 py-2.5"
-                value={form[key as keyof typeof form]}
+                value={form[key]}
                 onChange={(e) => setForm({ ...form, [key]: e.target.value })}
               />
             </label>
@@ -300,6 +347,20 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
               />
             </label>
           </div>
+          <label className="flex items-start gap-3 rounded-lg border border-iseul-line/80 bg-iseul-paper px-3 py-3 text-sm">
+            <input
+              type="checkbox"
+              checked={form.marketing_opt_in}
+              onChange={(e) => setForm({ ...form, marketing_opt_in: e.target.checked })}
+              className="mt-1"
+            />
+            <span>
+              Quero receber ofertas e novidades por e-mail
+              <span className="mt-0.5 block text-xs text-iseul-muted">
+                Salvamos seu nome e e-mail para enviar promoções da Iseul.
+              </span>
+            </span>
+          </label>
         </fieldset>
 
         <fieldset className="space-y-4 rounded-iseul border border-iseul-line bg-iseul-card p-6">

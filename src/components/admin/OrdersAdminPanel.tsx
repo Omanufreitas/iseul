@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { DateRangePicker } from "@/components/admin/dashboard/DateRangePicker";
 import { OrderListActions } from "@/components/admin/OrderListActions";
+import { AdminExportButton } from "@/components/admin/AdminExportButton";
 import { AdminEmptyState } from "@/components/admin/ui/AdminEmptyState";
 import { StatCard } from "@/components/admin/ui/StatCard";
 import { getAllDateRange } from "@/lib/date-presets";
@@ -332,11 +333,14 @@ export function OrdersAdminPanel({ orders, products, filters }: Props) {
         )}
       </div>
 
-      <p className="text-sm text-iseul-muted">
-        {orders.length === 0
-          ? "Nenhum pedido encontrado com os filtros atuais."
-          : `${orders.length} pedido${orders.length === 1 ? "" : "s"} exibidos`}
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-iseul-muted">
+          {orders.length === 0
+            ? "Nenhum pedido encontrado com os filtros atuais."
+            : `${orders.length} pedido${orders.length === 1 ? "" : "s"} exibidos`}
+        </p>
+        <AdminExportButton table="orders" />
+      </div>
 
       {orders.length === 0 ? (
         <AdminEmptyState
@@ -361,6 +365,9 @@ export function OrdersAdminPanel({ orders, products, filters }: Props) {
                     <div className="mt-2 truncate text-xs text-iseul-accent">
                       {formatItemsPreview(o.items)}
                     </div>
+                    {o.coupon_code && (
+                      <div className="mt-1 text-xs text-iseul-muted">Cupom: {o.coupon_code}</div>
+                    )}
                   </div>
                   <div className="shrink-0 text-right">
                     <div className="font-medium">{formatCurrency(o.total)}</div>
@@ -390,12 +397,13 @@ export function OrdersAdminPanel({ orders, products, filters }: Props) {
 
           <div className="hidden overflow-hidden rounded-2xl border border-iseul-line/80 bg-white shadow-card lg:block">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[960px] text-left text-sm">
+              <table className="w-full min-w-[1060px] text-left text-sm">
                 <thead className="border-b bg-iseul-paper/60 text-xs uppercase tracking-wide text-iseul-muted">
                   <tr>
                     <th className="px-4 py-3 font-medium">#</th>
                     <th className="px-4 py-3 font-medium">Cliente</th>
                     <th className="px-4 py-3 font-medium">Produtos</th>
+                    <th className="px-4 py-3 font-medium">Cupom</th>
                     <th className="px-4 py-3 font-medium">Total</th>
                     <th className="px-4 py-3 font-medium">Pagamento</th>
                     <th className="px-4 py-3 font-medium">Status</th>
@@ -430,6 +438,9 @@ export function OrdersAdminPanel({ orders, products, filters }: Props) {
                         >
                           {formatItemsPreview(o.items)}
                         </div>
+                      </td>
+                      <td className="px-4 py-3 font-mono text-xs text-iseul-muted">
+                        {o.coupon_code ?? "—"}
                       </td>
                       <td className="px-4 py-3 font-medium">{formatCurrency(o.total)}</td>
                       <td className="px-4 py-3">

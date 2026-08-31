@@ -54,6 +54,11 @@ export function ProductPageContent({ product, variants, settings }: Props) {
   function handleAdd() {
     if (!inStock) return;
 
+    if (activeVariants.length > 0 && !selectedVariant) {
+      toast.error("Selecione uma variação");
+      return;
+    }
+
     const name =
       selectedVariant != null
         ? `${product.name} — ${selectedVariant.label}`

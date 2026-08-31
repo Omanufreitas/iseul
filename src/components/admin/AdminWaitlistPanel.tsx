@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Mail, Search } from "lucide-react";
 import { AdminEmptyState } from "@/components/admin/ui/AdminEmptyState";
+import { AdminExportButton } from "@/components/admin/AdminExportButton";
 import { StatCard } from "@/components/admin/ui/StatCard";
 import { fadeUp, stagger } from "@/lib/motion";
 import type { WaitlistSubscriber } from "@/lib/waitlist";
@@ -32,22 +33,25 @@ export function AdminWaitlistPanel({ subscribers }: Props) {
 
   return (
     <div className="space-y-6">
-      <motion.div
-        initial="hidden"
-        animate="show"
-        variants={stagger(0.05)}
-        className="grid gap-3 sm:grid-cols-2"
-      >
-        <motion.div variants={fadeUp}>
-          <StatCard label="Total inscritos" value={subscribers.length} icon={Mail} />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <motion.div
+          initial="hidden"
+          animate="show"
+          variants={stagger(0.05)}
+          className="grid flex-1 gap-3 sm:grid-cols-2"
+        >
+          <motion.div variants={fadeUp}>
+            <StatCard label="Total inscritos" value={subscribers.length} icon={Mail} />
+          </motion.div>
+          <motion.div variants={fadeUp}>
+            <StatCard
+              label="Última inscrição"
+              value={subscribers[0] ? formatDate(subscribers[0].created_at) : "—"}
+            />
+          </motion.div>
         </motion.div>
-        <motion.div variants={fadeUp}>
-          <StatCard
-            label="Última inscrição"
-            value={subscribers[0] ? formatDate(subscribers[0].created_at) : "—"}
-          />
-        </motion.div>
-      </motion.div>
+        <AdminExportButton table="subscribers" />
+      </div>
 
       <div className="overflow-hidden rounded-2xl border border-iseul-line/80 bg-white shadow-card">
         <div className="border-b px-4 py-4 sm:px-5">

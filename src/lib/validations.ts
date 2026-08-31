@@ -19,6 +19,7 @@ export const checkoutAddressSchema = z.object({
     .number()
     .int()
     .positive("CEP não encontrado. Verifique o CEP informado."),
+  marketing_opt_in: z.boolean().optional().default(false),
 });
 
 export const createCheckoutSchema = z.object({
@@ -55,6 +56,7 @@ export const couponFormSchema = z.object({
   discount_percent: z.number().min(1).max(100),
   active: z.boolean(),
   max_uses: z.number().int().min(1).nullable().optional(),
+  first_purchase_only: z.boolean().optional().default(false),
 });
 
 export const waitlistEmailSchema = z.object({

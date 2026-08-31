@@ -40,6 +40,7 @@ export async function saveCoupon(raw: unknown) {
     discount_percent: parsed.data.discount_percent,
     active: parsed.data.active,
     max_uses: parsed.data.max_uses ?? null,
+    first_purchase_only: parsed.data.first_purchase_only ?? false,
     updated_at: new Date().toISOString(),
   };
 
@@ -69,7 +70,11 @@ export async function deleteCoupon(id: string) {
   return { success: true };
 }
 
-export async function validateCouponCode(code: string, subtotal: number) {
+export async function validateCouponCode(
+  code: string,
+  subtotal: number,
+  customerEmail?: string | null
+) {
   if (isMockCatalogEnabled() || !isSupabaseConfigured()) {
     return { error: "Cupons indisponíveis no momento." };
   }
@@ -83,6 +88,24 @@ export async function validateCouponCode(code: string, subtotal: number) {
 
   const coupon = mapDbCoupon(data);
   if (!isCouponValidNow(coupon)) return { error: "Cupom expirado ou indisponível." };
+
+  if (coupon.first_purchase_only) {
+    const email = customerEmail?.trim().toLowerCase();
+    if (!email) {
+      return { error: "Informe seu e-mail antes de aplicar este cupom." };
+    }
+
+    const { count, error } = await admin
+      .from("orders")
+      .select("id", { count: "exact", head: true })
+      .eq("customer_email", email)
+      .eq("payment_status", "aprovado");
+
+    if (error) return { error: error.message };
+    if ((count ?? 0) > 0) {
+      return { error: "Este cupom é válido apenas na primeira compra." };
+    }
+  }
 
   const discount = couponDiscountAmount(subtotal, coupon.discount_percent);
   return {

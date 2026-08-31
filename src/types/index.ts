@@ -21,6 +21,7 @@ export type Coupon = {
   valid_until: string | null;
   max_uses: number | null;
   used_count: number;
+  first_purchase_only: boolean;
   created_at?: string;
 };
 
@@ -57,6 +58,7 @@ export type Product = {
   created_at?: string;
   updated_at?: string;
   variants?: ProductVariant[];
+  has_variants?: boolean;
 };
 
 export type StoreSettings = {
@@ -99,6 +101,7 @@ export type Order = {
   shipping: number;
   discount: number;
   total: number;
+  coupon_code: string | null;
   shipping_method: string | null;
   shipping_service_id: string | null;
   tracking_code: string | null;

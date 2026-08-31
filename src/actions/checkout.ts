@@ -11,6 +11,7 @@ import { isMockCatalogEnabled, isSupabaseConfigured } from "@/lib/config";
 import { RESERVATION_MINUTES } from "@/lib/constants";
 import { releaseExpiredReservations } from "@/lib/orders/fulfill";
 import { quoteShippingForCheckout, shippingPricesMatch } from "@/lib/shipping";
+import { subscribeWaitlist } from "@/lib/waitlist";
 
 async function getCheckoutRequestOrigin(): Promise<string | undefined> {
   const h = await headers();
@@ -105,7 +106,11 @@ export async function createCheckoutOrder(raw: unknown) {
   let discount = 0;
   let couponCode: string | null = null;
   if (parsed.data.coupon_code?.trim()) {
-    const couponResult = await validateCouponCode(parsed.data.coupon_code, subtotal);
+    const couponResult = await validateCouponCode(
+      parsed.data.coupon_code,
+      subtotal,
+      address.email
+    );
     if ("error" in couponResult && couponResult.error) {
       return { error: couponResult.error };
     }
@@ -144,6 +149,8 @@ export async function createCheckoutOrder(raw: unknown) {
     address_city: address.city,
     address_state: address.state.toUpperCase(),
     address_zip: address.zip.replace(/\D/g, ""),
+    marketing_opt_in: Boolean(address.marketing_opt_in),
+    marketing_opt_in_at: address.marketing_opt_in ? new Date().toISOString() : null,
   };
 
   let customerId: string | null = null;
@@ -179,6 +186,14 @@ export async function createCheckoutOrder(raw: unknown) {
       return { error: custErr?.message ?? "Erro ao salvar cliente" };
     } else {
       customerId = created.id;
+    }
+  }
+
+  if (address.marketing_opt_in) {
+    try {
+      await subscribeWaitlist(address.email.trim().toLowerCase(), "checkout");
+    } catch {
+      /* não bloqueia checkout */
     }
   }
 

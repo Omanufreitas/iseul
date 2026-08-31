@@ -23,7 +23,11 @@ export type AdminOrderListItem = {
   order_number: number;
   customer_name: string;
   customer_email: string;
+  subtotal: number;
+  shipping: number;
+  discount: number;
   total: number;
+  coupon_code: string | null;
   status: string;
   payment_status: string;
   ordered_at: string;
@@ -35,7 +39,11 @@ type OrderRow = {
   order_number: number;
   customer_name: string;
   customer_email: string;
+  subtotal: number;
+  shipping: number;
+  discount: number;
   total: number;
+  coupon_code: string | null;
   status: string;
   payment_status: string;
   ordered_at: string;
@@ -48,7 +56,11 @@ function mapOrderRow(row: OrderRow): AdminOrderListItem {
     order_number: Number(row.order_number),
     customer_name: row.customer_name,
     customer_email: row.customer_email,
+    subtotal: Number(row.subtotal),
+    shipping: Number(row.shipping),
+    discount: Number(row.discount),
     total: Number(row.total),
+    coupon_code: row.coupon_code ?? null,
     status: row.status,
     payment_status: row.payment_status,
     ordered_at: row.ordered_at,
@@ -85,7 +97,7 @@ export async function listOrdersAdmin(filters: OrderListFilters = {}): Promise<A
   let query = admin
     .from("orders")
     .select(
-      `id, order_number, customer_name, customer_email, total, status, payment_status, ordered_at,
+      `id, order_number, customer_name, customer_email, subtotal, shipping, discount, total, coupon_code, status, payment_status, ordered_at,
        order_items ( product_id, product_name )`,
     )
     .order("ordered_at", { ascending: false })
@@ -164,6 +176,7 @@ export async function getOrderById(id: string): Promise<AdminOrderDetail | null>
       shipping: Number(order.shipping),
       discount: Number(order.discount),
       total: Number(order.total),
+      coupon_code: order.coupon_code ?? null,
       shipping_method: order.shipping_method ?? null,
       shipping_service_id: order.shipping_service_id ?? null,
       tracking_code: order.tracking_code ?? null,

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { m, useReducedMotion } from "framer-motion";
 import { useCart } from "@/context/cart-context";
@@ -22,11 +23,18 @@ export function ProductCard({
   visible?: boolean;
 }) {
   const { addItem } = useCart();
+  const router = useRouter();
   const reduce = useReducedMotion();
   const hot = getHotProductIds(allProducts);
   const discount = discountPercent(product.price, product.compare_at_price);
 
   function handleAdd() {
+    if (product.has_variants) {
+      toast.info("Selecione uma variação na página do produto");
+      router.push(`/produtos/${product.slug}`);
+      return;
+    }
+
     addItem({
       productId: product.id,
       slug: product.slug,

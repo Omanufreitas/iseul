@@ -11,6 +11,7 @@ export function mapDbCoupon(row: Record<string, unknown>): Coupon {
     valid_until: row.valid_until ? String(row.valid_until) : null,
     max_uses: row.max_uses != null ? Number(row.max_uses) : null,
     used_count: Number(row.used_count ?? 0),
+    first_purchase_only: Boolean(row.first_purchase_only),
     created_at: row.created_at ? String(row.created_at) : undefined,
   };
 }

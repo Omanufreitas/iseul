@@ -51,7 +51,29 @@ export async function listProducts(options?: {
   if (error || !data) return getMockProducts();
 
   const products = data.map((row) => mapDbProduct(row));
-  return sortProducts(products, options?.sort ?? "sold");
+  return attachVariantFlags(sortProducts(products, options?.sort ?? "sold"));
+}
+
+async function attachVariantFlags(products: Product[]): Promise<Product[]> {
+  if (isMockCatalogEnabled() || !isSupabaseConfigured() || products.length === 0) {
+    return products;
+  }
+
+  const supabase = createServerStoreClient();
+  const ids = products.map((p) => p.id).filter((id) => !id.startsWith("seed-"));
+  if (!ids.length) return products;
+
+  const { data } = await supabase
+    .from("product_variants")
+    .select("product_id")
+    .in("product_id", ids)
+    .eq("active", true);
+
+  const withVariants = new Set((data ?? []).map((row) => String(row.product_id)));
+  return products.map((product) => ({
+    ...product,
+    has_variants: withVariants.has(product.id),
+  }));
 }
 
 function sortProducts(products: Product[], sort: string): Product[] {
