@@ -408,7 +408,7 @@ export function OrdersAdminPanel({ orders, products, filters }: Props) {
                     <th className="px-4 py-3 font-medium">Pagamento</th>
                     <th className="px-4 py-3 font-medium">Status</th>
                     <th className="px-4 py-3 font-medium">Data</th>
-                    <th className="px-4 py-3 text-right font-medium">Ações</th>
+                    <th className="min-w-[168px] px-4 py-3 text-right font-medium">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -459,7 +459,7 @@ export function OrdersAdminPanel({ orders, products, filters }: Props) {
                       <td className="px-4 py-3 text-xs text-iseul-muted">
                         {new Date(o.ordered_at).toLocaleString("pt-BR")}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 text-right whitespace-nowrap">
                         <OrderListActions
                           orderId={o.id}
                           orderNumber={o.order_number}

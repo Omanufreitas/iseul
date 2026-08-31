@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
+import { Eye, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { deleteOrder } from "@/actions/admin/orders";
+import { cn } from "@/lib/utils";
 
 type Props = {
   orderId: string;
@@ -12,6 +14,9 @@ type Props = {
   customerName: string;
   layout?: "row" | "stack";
 };
+
+const actionBase =
+  "inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full px-2.5 py-1.5 text-[11px] font-medium transition whitespace-nowrap";
 
 export function OrderListActions({ orderId, orderNumber, customerName, layout = "row" }: Props) {
   const router = useRouter();
@@ -40,19 +45,32 @@ export function OrderListActions({ orderId, orderNumber, customerName, layout = 
   const stack = layout === "stack";
 
   return (
-    <div className={stack ? "mt-3 flex flex-wrap gap-2" : "flex flex-wrap items-center justify-end gap-2"}>
+    <div
+      className={cn(
+        "items-center",
+        stack ? "mt-3 flex flex-wrap gap-2" : "inline-flex gap-1.5",
+      )}
+    >
       <Link
         href={`/admin/pedidos/${encodeURIComponent(orderId)}`}
-        className="rounded-lg border px-3 py-1.5 text-xs font-medium transition hover:bg-neutral-50"
+        className={cn(
+          actionBase,
+          "border border-iseul-line/80 bg-white text-neutral-700 shadow-sm hover:border-iseul-accent2 hover:bg-iseul-dew/40 hover:text-iseul-accent",
+        )}
       >
+        <Eye className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
         Saiba mais
       </Link>
       <button
         type="button"
         onClick={handleDelete}
         disabled={pending}
-        className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 transition hover:bg-red-100 disabled:opacity-60"
+        className={cn(
+          actionBase,
+          "border border-red-200/80 bg-red-50 text-red-700 hover:border-red-300 hover:bg-red-100 disabled:opacity-60",
+        )}
       >
+        <Trash2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
         {pending ? "Excluindo…" : "Excluir"}
       </button>
     </div>
