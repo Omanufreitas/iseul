@@ -1,6 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/client";
 
-const BLING_TOKEN_URL = "https://www.bling.com.br/Api/v3/oauth/token";
+const BLING_TOKEN_URL = "https://api.bling.com.br/Api/v3/oauth/token";
 const REFRESH_BUFFER_MS = 5 * 60 * 1000;
 
 type BlingTokenRow = {

@@ -14,7 +14,7 @@ export function getBlingAuthorizeUrl(state: string): string | null {
     state,
   });
 
-  return `https://www.bling.com.br/Api/v3/oauth/authorize?${params.toString()}`;
+  return `https://api.bling.com.br/Api/v3/oauth/authorize?${params.toString()}`;
 }
 
 export async function exchangeBlingAuthorizationCode(code: string): Promise<{
@@ -29,7 +29,7 @@ export async function exchangeBlingAuthorizationCode(code: string): Promise<{
   }
 
   const basic = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
-  const res = await fetch("https://www.bling.com.br/Api/v3/oauth/token", {
+  const res = await fetch("https://api.bling.com.br/Api/v3/oauth/token", {
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",

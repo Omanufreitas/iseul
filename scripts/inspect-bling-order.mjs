@@ -12,7 +12,7 @@ async function getToken() {
 }
 
 async function blingGet(path, token) {
-  const res = await fetch(`https://www.bling.com.br/Api/v3${path}`, {
+  const res = await fetch(`https://api.bling.com.br/Api/v3${path}`, {
     headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
   });
   const text = await res.text();

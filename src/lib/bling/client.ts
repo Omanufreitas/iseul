@@ -4,7 +4,7 @@ import {
   hasBlingAppCredentials,
 } from "@/lib/bling/token-store";
 
-const BLING_API = "https://www.bling.com.br/Api/v3";
+const BLING_API = "https://api.bling.com.br/Api/v3";
 
 export function isBlingConfigured(): boolean {
   return hasBlingAppCredentials() || !!process.env.BLING_API_KEY?.trim();
