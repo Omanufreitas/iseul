@@ -9,6 +9,8 @@ import { validateCartItems } from "@/actions/cart";
 import { validateCouponCode } from "@/actions/admin/coupons";
 import { useCart, cartItemKey } from "@/context/cart-context";
 import { formatCurrency, maskCep, maskCpf, maskPhone } from "@/lib/utils";
+import { cardUnitPrice, pixUnitPrice, type CheckoutPaymentMethod } from "@/lib/pricing";
+import { couponDiscountAmount } from "@/lib/coupons";
 import type { ShippingQuoteOption, ShippingQuoteResult } from "@/lib/shipping";
 import type { StoreSettings } from "@/types";
 
@@ -53,8 +55,10 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
     code: string;
     name: string;
     discount: number;
+    discount_percent: number;
   } | null>(null);
   const [couponLoading, setCouponLoading] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<CheckoutPaymentMethod>("pix");
   const lastLookupCep = useRef("");
   const [form, setForm] = useState({
     full_name: "",
@@ -242,6 +246,7 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
         shipping_option_id: selectedShippingId,
         shipping_price: shipping,
         coupon_code: appliedCoupon?.code,
+        payment_method: paymentMethod,
       });
 
       if ("error" in result && result.error) {
@@ -257,8 +262,26 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
   }
 
   const ship = shipping;
-  const discount = appliedCoupon?.discount ?? 0;
-  const total = Math.max(0, subtotal - discount + (ship ?? 0));
+  const pixSubtotal = items.reduce(
+    (sum, item) =>
+      sum +
+      pixUnitPrice(item.price, item.listPrice ?? item.price, settings.pix_discount_percent) *
+        item.quantity,
+    0
+  );
+  const cardSubtotal = items.reduce(
+    (sum, item) =>
+      sum +
+      cardUnitPrice(item.price, item.listPrice ?? item.price) * item.quantity,
+    0
+  );
+  const chargeSubtotal = paymentMethod === "pix" ? pixSubtotal : cardSubtotal;
+  const discount = appliedCoupon
+    ? couponDiscountAmount(chargeSubtotal, appliedCoupon.discount_percent)
+    : 0;
+  const pixTotal = Math.max(0, pixSubtotal - (appliedCoupon ? couponDiscountAmount(pixSubtotal, appliedCoupon.discount_percent) : 0) + (ship ?? 0));
+  const cardTotal = Math.max(0, cardSubtotal - (appliedCoupon ? couponDiscountAmount(cardSubtotal, appliedCoupon.discount_percent) : 0) + (ship ?? 0));
+  const total = paymentMethod === "pix" ? pixTotal : cardTotal;
   const canSubmit =
     !pending &&
     cepDigits.length === 8 &&
@@ -287,6 +310,7 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
           code: result.code,
           name: result.name,
           discount: result.discount,
+          discount_percent: result.discount_percent ?? 0,
         });
         toast.success(`Cupom ${result.code} aplicado`);
       }
@@ -465,6 +489,61 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
         </fieldset>
 
         <fieldset className="space-y-3 rounded-iseul border border-iseul-line bg-iseul-card p-6">
+          <legend className="px-2 font-semibold">Forma de pagamento</legend>
+          <ul className="space-y-2">
+            {(
+              [
+                {
+                  id: "pix" as const,
+                  title: "Pix",
+                  detail:
+                    settings.pix_discount_percent > 0
+                      ? `${settings.pix_discount_percent}% de desconto`
+                      : "Pagamento à vista",
+                  amount: pixTotal,
+                },
+                {
+                  id: "credit_card" as const,
+                  title: "Cartão de crédito",
+                  detail: "Até 3x sem juros",
+                  amount: cardTotal,
+                },
+              ] as const
+            ).map((option) => {
+              const selected = paymentMethod === option.id;
+              return (
+                <li key={option.id}>
+                  <label
+                    className={`flex cursor-pointer items-center justify-between gap-3 rounded-lg border px-4 py-3 text-sm transition ${
+                      selected
+                        ? "border-iseul-accent bg-iseul-paper"
+                        : "border-iseul-line bg-white hover:border-iseul-accent/40"
+                    }`}
+                  >
+                    <span className="flex min-w-0 items-start gap-3">
+                      <input
+                        type="radio"
+                        name="payment_method"
+                        checked={selected}
+                        onChange={() => setPaymentMethod(option.id)}
+                        className="mt-1"
+                      />
+                      <span className="min-w-0">
+                        <span className="block font-medium">{option.title}</span>
+                        <span className="block text-xs text-iseul-muted">{option.detail}</span>
+                      </span>
+                    </span>
+                    <span className="shrink-0 font-medium">
+                      {ship == null ? "—" : formatCurrency(option.amount)}
+                    </span>
+                  </label>
+                </li>
+              );
+            })}
+          </ul>
+        </fieldset>
+
+        <fieldset className="space-y-3 rounded-iseul border border-iseul-line bg-iseul-card p-6">
           <legend className="px-2 font-semibold">Cupom de desconto</legend>
           <div className="flex gap-2">
             <input
@@ -545,9 +624,19 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
               <span>−{formatCurrency(discount)}</span>
             </div>
           )}
-          <div className="flex justify-between font-serif text-xl">
-            <span>Total</span>
-            <span>{formatCurrency(total)}</span>
+          <div className="space-y-1 border-t border-iseul-line pt-4">
+            <div className="flex justify-between text-sm text-iseul-muted">
+              <span>Total no Pix</span>
+              <span>{ship == null ? "—" : formatCurrency(pixTotal)}</span>
+            </div>
+            <div className="flex justify-between text-sm text-iseul-muted">
+              <span>Total no cartão</span>
+              <span>{ship == null ? "—" : formatCurrency(cardTotal)}</span>
+            </div>
+            <div className="flex justify-between font-serif text-xl">
+              <span>Total ({paymentMethod === "pix" ? "Pix" : "cartão"})</span>
+              <span>{ship == null ? "—" : formatCurrency(total)}</span>
+            </div>
           </div>
         </div>
       </aside>

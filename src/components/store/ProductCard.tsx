@@ -41,6 +41,7 @@ export function ProductCard({
       name: product.name,
       brand: product.brand,
       price: product.price,
+      listPrice: product.compare_at_price ?? product.price,
       image_url: product.image_url,
       image_fallback_url: product.image_fallback_url,
     });

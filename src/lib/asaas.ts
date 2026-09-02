@@ -131,12 +131,13 @@ export function pickConfirmedAsaasPayment(payments: AsaasPayment[]): AsaasPaymen
   );
 }
 
-/** Checkout avulso (PIX + cartão) para pedidos da loja. */
+/** Checkout avulso (PIX ou cartão) para pedidos da loja. */
 export async function createStoreAsaasCheckout(
   orderId: string,
   payer: CheckoutPayer,
   items: CheckoutItem[],
   shipping: number,
+  billingTypes: Array<"PIX" | "CREDIT_CARD">,
   requestOrigin?: string | null
 ): Promise<{ ok: true; initPoint: string; checkoutId: string } | { ok: false; error: string }> {
   if (!isAsaasConfigured()) {
@@ -185,11 +186,15 @@ export async function createStoreAsaasCheckout(
   }
 
   const body = {
-    billingTypes: ["PIX", "CREDIT_CARD"],
-    chargeTypes: ["DETACHED", "INSTALLMENT"],
-    installment: {
-      maxInstallmentCount: ASAAS_MAX_INSTALLMENTS,
-    },
+    billingTypes,
+    chargeTypes: billingTypes.includes("CREDIT_CARD")
+      ? (["DETACHED", "INSTALLMENT"] as const)
+      : (["DETACHED"] as const),
+    installment: billingTypes.includes("CREDIT_CARD")
+      ? {
+          maxInstallmentCount: ASAAS_MAX_INSTALLMENTS,
+        }
+      : undefined,
     minutesToExpire: 120,
     externalReference: orderId,
     callback: {

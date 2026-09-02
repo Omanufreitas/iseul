@@ -2,6 +2,7 @@ import {
   forceRefreshBlingAccessToken,
   getBlingAccessToken,
   hasBlingAppCredentials,
+  blingReconnectHint,
 } from "@/lib/bling/token-store";
 
 const BLING_API = "https://api.bling.com.br/Api/v3";
@@ -30,13 +31,30 @@ export async function blingFetch<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<{ ok: true; data: T } | { ok: false; error: string }> {
-  let token = await getBlingAccessToken();
-  if (!token) return { ok: false, error: "Bling não configurado (tokens ausentes)" };
+  let token: string | null;
+  try {
+    token = await getBlingAccessToken();
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    return { ok: false, error: message.includes("Reconecte") ? message : `${message} — ${blingReconnectHint()}` };
+  }
+
+  if (!token) {
+    if (hasBlingAppCredentials()) {
+      return { ok: false, error: `Bling desconectado — ${blingReconnectHint()}` };
+    }
+    return { ok: false, error: "Bling não configurado (tokens ausentes)" };
+  }
 
   let res = await blingRequest(path, token, options);
 
   if (res.status === 401 && hasBlingAppCredentials()) {
-    token = (await forceRefreshBlingAccessToken()) ?? token;
+    try {
+      token = (await forceRefreshBlingAccessToken()) ?? token;
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      return { ok: false, error: message.includes("Reconecte") ? message : `${message} — ${blingReconnectHint()}` };
+    }
     res = await blingRequest(path, token, options);
   }
 

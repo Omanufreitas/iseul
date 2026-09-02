@@ -139,6 +139,8 @@ export type CartItem = {
   name: string;
   brand: string;
   price: number;
+  /** Preço cheio (cartão) — compare_at_price no catálogo. */
+  listPrice?: number;
   image_url: string;
   image_fallback_url: string | null;
   quantity: number;

@@ -34,11 +34,10 @@ export async function IntegrationsPanel({ blingMessage }: Props) {
           blingTokenLabel = "Conectado · renovação automática";
         } catch {
           blingNeedsReconnect = true;
-          blingConnected = false;
           blingTokenLabel = "Token expirado — reconecte abaixo";
         }
       } else if (hasApp) {
-        blingTokenLabel = "App configurado · autorize abaixo";
+        blingTokenLabel = "Desconectado — autorize abaixo";
       } else if (process.env.BLING_API_KEY?.trim()) {
         blingTokenOk = true;
         blingTokenLabel = "Access token via env";
@@ -91,6 +90,12 @@ export async function IntegrationsPanel({ blingMessage }: Props) {
             <p className="mt-2 text-xs text-red-700">
               A autorização do Bling expirou ou foi revogada. Clique em &quot;Reconectar Bling&quot; e
               autorize de novo no site do Bling (mesma conta de sempre).
+            </p>
+          )}
+          {!blingConnected && hasApp && !blingNeedsReconnect && (
+            <p className="mt-2 text-xs text-red-700">
+              Nenhum token salvo no momento (pode ter expirado após um deploy). Clique em
+              &quot;Conectar conta Bling&quot; uma vez — depois o site renova sozinho.
             </p>
           )}
           {blingConnected && (

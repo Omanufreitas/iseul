@@ -36,6 +36,7 @@ export const createCheckoutSchema = z.object({
   shipping_option_id: z.number().int(),
   shipping_price: z.number().min(0),
   coupon_code: z.string().optional(),
+  payment_method: z.enum(["pix", "credit_card"]),
 });
 
 export const productVariantSchema = z.object({

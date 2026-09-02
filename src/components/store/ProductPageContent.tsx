@@ -73,6 +73,7 @@ export function ProductPageContent({ product, variants, settings }: Props) {
         name,
         brand: product.brand,
         price: displayProduct.price,
+        listPrice: displayProduct.compare_at_price ?? displayProduct.price,
         image_url: displayProduct.image_url,
         image_fallback_url: product.image_fallback_url,
       },

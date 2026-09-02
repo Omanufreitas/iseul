@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/client";
 
 const BLING_TOKEN_URL = "https://api.bling.com.br/Api/v3/oauth/token";
 const REFRESH_BUFFER_MS = 5 * 60 * 1000;
+const PEER_REFRESH_WAIT_MS = 500;
 
 type BlingTokenRow = {
   access_token: string;
@@ -127,23 +128,43 @@ function isTokenValid(expiresAt: string): boolean {
   return new Date(expiresAt).getTime() - Date.now() > REFRESH_BUFFER_MS;
 }
 
-async function clearBlingTokens(): Promise<void> {
-  const admin = createAdminClient();
-  await admin.from("bling_oauth_tokens").delete().eq("id", 1);
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Outra instância serverless pode ter renovado o token enquanto esta falhava. */
+async function waitForPeerRefresh(staleRefreshToken: string): Promise<string | null> {
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    await sleep(PEER_REFRESH_WAIT_MS * (attempt + 1));
+    const latest = await loadTokensFromDb();
+    if (!latest) return null;
+    if (latest.refresh_token !== staleRefreshToken && isTokenValid(latest.expires_at)) {
+      return latest.access_token;
+    }
+  }
+  return null;
+}
+
+async function refreshWithToken(refreshToken: string): Promise<string> {
+  const refreshed = await requestTokenRefresh(refreshToken);
+  await saveBlingTokensToDb(refreshed);
+  return refreshed.access_token;
 }
 
 /**
  * Bling rotaciona refresh_token a cada uso. Em serverless, duas instâncias
  * podem refrescar ao mesmo tempo — a segunda recebe invalid_grant com token antigo.
+ * Nunca apagamos tokens do banco aqui: apagar deixava a loja "sem tokens" até reconectar.
  */
 async function refreshAndPersist(refreshToken: string): Promise<string> {
   try {
-    const refreshed = await requestTokenRefresh(refreshToken);
-    await saveBlingTokensToDb(refreshed);
-    return refreshed.access_token;
+    return await refreshWithToken(refreshToken);
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     if (!isInvalidGrantError(message)) throw e;
+
+    const peerToken = await waitForPeerRefresh(refreshToken);
+    if (peerToken) return peerToken;
 
     const latest = await loadTokensFromDb();
     if (latest?.refresh_token && latest.refresh_token !== refreshToken) {
@@ -151,17 +172,14 @@ async function refreshAndPersist(refreshToken: string): Promise<string> {
         return latest.access_token;
       }
       try {
-        const refreshed = await requestTokenRefresh(latest.refresh_token);
-        await saveBlingTokensToDb(refreshed);
-        return refreshed.access_token;
+        return await refreshWithToken(latest.refresh_token);
       } catch (retryErr) {
         const retryMsg = retryErr instanceof Error ? retryErr.message : String(retryErr);
         if (!isInvalidGrantError(retryMsg)) throw retryErr;
       }
     }
 
-    await clearBlingTokens();
-    throw new Error(`${message.slice(0, 200)} — ${blingReconnectHint()}`);
+    throw new Error(`Bling refresh token inválido ou expirado — ${blingReconnectHint()}`);
   }
 }
 

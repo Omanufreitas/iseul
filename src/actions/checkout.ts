@@ -5,13 +5,19 @@ import { createCheckoutSchema } from "@/lib/validations";
 import { createAdminClient } from "@/lib/supabase/client";
 import { createStoreAsaasCheckout } from "@/lib/asaas";
 import { normalizeStoreOrigin } from "@/lib/store-url";
-import { getProductById, getVariantById } from "@/lib/catalog";
+import { getProductById, getStoreSettings, getVariantById } from "@/lib/catalog";
 import { validateCouponCode } from "@/actions/admin/coupons";
 import { isMockCatalogEnabled, isSupabaseConfigured } from "@/lib/config";
 import { RESERVATION_MINUTES } from "@/lib/constants";
 import { releaseExpiredReservations } from "@/lib/orders/fulfill";
 import { quoteShippingForCheckout, shippingPricesMatch } from "@/lib/shipping";
 import { subscribeWaitlist } from "@/lib/waitlist";
+import { couponDiscountAmount } from "@/lib/coupons";
+import {
+  asaasBillingTypes,
+  cardUnitPrice,
+  pixUnitPrice,
+} from "@/lib/pricing";
 
 async function getCheckoutRequestOrigin(): Promise<string | undefined> {
   const h = await headers();
@@ -40,7 +46,9 @@ export async function createCheckoutOrder(raw: unknown) {
 
   await releaseExpiredReservations();
   const admin = createAdminClient();
-  const { items, address, shipping_price, shipping_option_id } = parsed.data;
+  const settings = await getStoreSettings();
+  const pixDiscountPercent = settings.pix_discount_percent;
+  const { items, address, shipping_price, shipping_option_id, payment_method } = parsed.data;
 
   type PreparedItem = {
     product_id: string;
@@ -49,7 +57,9 @@ export async function createCheckoutOrder(raw: unknown) {
     product_name: string;
     product_brand: string;
     quantity: number;
-    unit_price: number;
+    pix_unit_price: number;
+    card_unit_price: number;
+    charge_unit_price: number;
     line_total: number;
   };
 
@@ -62,7 +72,8 @@ export async function createCheckoutOrder(raw: unknown) {
     }
 
     const variants = product.variants ?? [];
-    let unitPrice = product.price;
+    let salePrice = product.price;
+    let compareAtPrice = product.compare_at_price;
     let availableStock = product.stock;
     let variantId: string | null = null;
     let variantLabel: string | null = null;
@@ -78,7 +89,8 @@ export async function createCheckoutOrder(raw: unknown) {
       if (!variant || !variant.active || variant.product_id !== product.id) {
         return { error: `Variação indisponível: ${product.name}` };
       }
-      unitPrice = variant.price;
+      salePrice = variant.price;
+      compareAtPrice = variant.compare_at_price ?? product.compare_at_price;
       availableStock = variant.stock;
       variantId = variant.id;
       variantLabel = variant.label;
@@ -89,6 +101,11 @@ export async function createCheckoutOrder(raw: unknown) {
       return { error: `Estoque insuficiente: ${productName}` };
     }
 
+    const pixPrice = pixUnitPrice(salePrice, compareAtPrice, pixDiscountPercent);
+    const cardPrice = cardUnitPrice(salePrice, compareAtPrice);
+    const chargeUnitPrice =
+      payment_method === "pix" ? pixPrice : cardPrice;
+
     prepared.push({
       product_id: product.id.startsWith("seed-") ? product.id : product.id,
       variant_id: variantId,
@@ -96,27 +113,38 @@ export async function createCheckoutOrder(raw: unknown) {
       product_name: productName,
       product_brand: product.brand,
       quantity: item.quantity,
-      unit_price: unitPrice,
-      line_total: unitPrice * item.quantity,
+      pix_unit_price: pixPrice,
+      card_unit_price: cardPrice,
+      charge_unit_price: chargeUnitPrice,
+      line_total: chargeUnitPrice * item.quantity,
     });
   }
 
-  const subtotal = prepared.reduce((s, r) => s + r.line_total, 0);
+  const pixSubtotal = prepared.reduce((s, r) => s + r.pix_unit_price * r.quantity, 0);
+  const cardSubtotal = prepared.reduce((s, r) => s + r.card_unit_price * r.quantity, 0);
+  const chargeSubtotal =
+    payment_method === "pix" ? pixSubtotal : cardSubtotal;
 
   let discount = 0;
   let couponCode: string | null = null;
+  let couponPercent: number | null = null;
   if (parsed.data.coupon_code?.trim()) {
     const couponResult = await validateCouponCode(
       parsed.data.coupon_code,
-      subtotal,
+      pixSubtotal,
       address.email
     );
     if ("error" in couponResult && couponResult.error) {
       return { error: couponResult.error };
     }
     if ("discount" in couponResult && couponResult.discount != null) {
-      discount = couponResult.discount;
       couponCode = couponResult.code ?? null;
+      couponPercent = couponResult.discount_percent ?? null;
+      if (couponPercent != null) {
+        discount = couponDiscountAmount(chargeSubtotal, couponPercent);
+      } else {
+        discount = couponResult.discount;
+      }
     }
   }
 
@@ -135,7 +163,7 @@ export async function createCheckoutOrder(raw: unknown) {
   const shippingMethod =
     [selectedShipping?.company, selectedShipping?.name].filter(Boolean).join(" ") || null;
 
-  const total = Math.max(0, subtotal - discount + shippingQuote.price);
+  const total = Math.max(0, chargeSubtotal - discount + shippingQuote.price);
   const cpf = address.cpf.replace(/\D/g, "");
 
   const customerPatch = {
@@ -203,8 +231,8 @@ export async function createCheckoutOrder(raw: unknown) {
       customer_id: customerId,
       status: "aguardando_pagamento",
       payment_status: "pendente",
-      payment_method: "asaas",
-      subtotal,
+      payment_method: payment_method === "pix" ? "asaas_pix" : "asaas_cartao",
+      subtotal: chargeSubtotal,
       shipping: shippingQuote.price,
       discount,
       total,
@@ -241,8 +269,8 @@ export async function createCheckoutOrder(raw: unknown) {
       product_name: row.product_name,
       product_brand: row.product_brand,
       quantity: row.quantity,
-      unit_price: row.unit_price,
-      line_total: row.line_total,
+      unit_price: row.charge_unit_price,
+      line_total: row.charge_unit_price * row.quantity,
     });
     if (itemErr) {
       await admin.from("orders").delete().eq("id", order.id);
@@ -263,10 +291,10 @@ export async function createCheckoutOrder(raw: unknown) {
   }
 
   const asaasItems = prepared.map((oi) => {
-    let unitPrice = oi.unit_price;
-    if (discount > 0 && subtotal > 0) {
-      const ratio = discount / subtotal;
-      unitPrice = Math.round(oi.unit_price * (1 - ratio) * 100) / 100;
+    let unitPrice = oi.charge_unit_price;
+    if (discount > 0 && chargeSubtotal > 0) {
+      const ratio = discount / chargeSubtotal;
+      unitPrice = Math.round(oi.charge_unit_price * (1 - ratio) * 100) / 100;
     }
     return {
       title: oi.product_name,
@@ -294,6 +322,7 @@ export async function createCheckoutOrder(raw: unknown) {
     },
     asaasItems,
     shippingQuote.price,
+    asaasBillingTypes(payment_method),
     requestOrigin
   );
 
