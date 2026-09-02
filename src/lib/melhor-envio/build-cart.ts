@@ -155,7 +155,6 @@ export function resolveServiceIdFromCheckoutFallback(
   const methodLower = shippingMethod.toLowerCase();
   if (/\bsedex\b/.test(methodLower)) return 2;
   if (/\bpac\b/.test(methodLower)) return 1;
-  if (/jadlog/.test(methodLower)) return 3;
 
   return null;
 }
@@ -220,7 +219,9 @@ export async function matchServiceIdFromQuote(input: {
   shippingPrice: number;
 }): Promise<number | null> {
   const { melhorEnvioFetch } = await import("./client");
-  const { getMelhorEnvioAvailableServiceIds } = await import("@/lib/melhor-envio");
+  const { getMelhorEnvioAvailableServiceIds, isAllowedCheckoutCarrierName } = await import(
+    "@/lib/melhor-envio"
+  );
 
   const services = await getMelhorEnvioAvailableServiceIds();
 
@@ -257,7 +258,14 @@ export async function matchServiceIdFromQuote(input: {
     },
   });
 
-  const data = Array.isArray(raw) ? raw.filter((row) => !row.error && row.id != null) : [];
+  const data = Array.isArray(raw)
+    ? raw.filter(
+        (row) =>
+          !row.error &&
+          row.id != null &&
+          isAllowedCheckoutCarrierName(row.company?.name)
+      )
+    : [];
 
   const methodLower = input.shippingMethod.toLowerCase();
   const match = data.find((o) => {
@@ -285,9 +293,9 @@ export async function matchServiceIdFromQuote(input: {
     if (sedex?.id) return sedex.id;
   }
 
-  if (/\bjadlog\b/i.test(methodLower)) {
-    const jadlog = data.find((o) => /jadlog/i.test(o.company?.name ?? o.name));
-    if (jadlog?.id) return jadlog.id;
+  if (/\btotal\b/i.test(methodLower)) {
+    const totalExpress = data.find((o) => /total/i.test(o.company?.name ?? o.name));
+    if (totalExpress?.id) return totalExpress.id;
   }
 
   return data[0]?.id ?? null;

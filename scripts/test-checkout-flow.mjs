@@ -58,7 +58,7 @@ async function testAsaasCheckout(items, shipping = 0) {
     billingTypes: ["PIX", "CREDIT_CARD"],
     chargeTypes: ["DETACHED", "INSTALLMENT"],
     installment: {
-      maxInstallmentCount: 3,
+      maxInstallmentCount: 12,
     },
     minutesToExpire: 120,
     externalReference: "test-" + Date.now(),

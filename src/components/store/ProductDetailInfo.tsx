@@ -104,7 +104,7 @@ export function ProductDetailInfo({ product, settings }: Props) {
           </li>
           <li className="flex gap-2">
             <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-iseul-accent" />
-            Parcelamento em até 3x sem juros no cartão.
+            Parcelamento em até 12x no cartão.
           </li>
           <li className="flex gap-2">
             <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-iseul-accent" />

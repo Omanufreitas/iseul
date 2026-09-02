@@ -139,7 +139,7 @@ export function ProductPageContent({ product, variants, settings }: Props) {
             )}
             <p className="mt-2 text-sm text-iseul-muted">
               ou {formatCurrency(displayProduct.compare_at_price ?? displayProduct.price)} sem cupom
-              em outros métodos · 3x de {formatCurrency(displayProduct.price / 3)} sem juros
+              em outros métodos · até 12x no cartão
             </p>
             <p className="mt-2 text-sm text-iseul-muted">
               Estoque: {displayProduct.stock}

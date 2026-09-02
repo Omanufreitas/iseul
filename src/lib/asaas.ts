@@ -53,8 +53,8 @@ const CONFIRMED_PAYMENT_STATUSES = new Set([
   "AUTHORIZED",
 ]);
 
-/** Máximo de parcelas no cartão (sem juros — conforme promessa no site). */
-export const ASAAS_MAX_INSTALLMENTS = 3;
+/** Máximo de parcelas no cartão (juros configurados no painel Asaas). */
+export const ASAAS_MAX_INSTALLMENTS = 12;
 
 function asaasApiBase(): string {
   const env = process.env.ASAAS_ENV?.trim().toLowerCase();

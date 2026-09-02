@@ -14,13 +14,13 @@ export function isPacShippingOption(option: MelhorEnvioQuoteOption): boolean {
   return /\bpac\b/.test(label) || option.id === 1;
 }
 
-export function isJadlogShippingOption(option: MelhorEnvioQuoteOption): boolean {
-  return shippingLabel(option).includes("jadlog");
+export function isTotalExpressShippingOption(option: MelhorEnvioQuoteOption): boolean {
+  return shippingLabel(option).includes("total");
 }
 
 /** Transportadoras elegíveis para frete grátis (nunca SEDEX). */
 export function isFreeShippingEligibleOption(option: MelhorEnvioQuoteOption): boolean {
-  return isPacShippingOption(option) || isJadlogShippingOption(option);
+  return isPacShippingOption(option) || isTotalExpressShippingOption(option);
 }
 
 export function pickCheapestFreeShippingOption(

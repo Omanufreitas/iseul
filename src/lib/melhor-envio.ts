@@ -66,6 +66,21 @@ export function normalizePostalCode(cep: string): string {
   return cep.replace(/\D/g, "").slice(0, 8);
 }
 
+export function isAllowedCheckoutCarrierName(companyName: string | undefined): boolean {
+  const name = (companyName ?? "").toLowerCase();
+  return name.includes("correios") || name.includes("total");
+}
+
+export function isAllowedCheckoutShippingOption(option: MelhorEnvioQuoteOption): boolean {
+  return isAllowedCheckoutCarrierName(option.company);
+}
+
+export function filterAllowedCheckoutShippingOptions(
+  options: MelhorEnvioQuoteOption[]
+): MelhorEnvioQuoteOption[] {
+  return options.filter(isAllowedCheckoutShippingOption);
+}
+
 function parseQuotePrice(value: string | undefined): number | null {
   if (!value) return null;
   const n = Number(value.replace(",", "."));
@@ -75,6 +90,7 @@ function parseQuotePrice(value: string | undefined): number | null {
 type MelhorEnvioServiceRow = {
   id: number;
   status?: string;
+  company?: { id?: number; name?: string };
 };
 
 const SERVICE_IDS_CACHE_MS = 60 * 60 * 1000;
@@ -111,7 +127,12 @@ export async function getMelhorEnvioAvailableServiceIds(): Promise<string | null
   if (!Array.isArray(data)) return null;
 
   const ids = data
-    .filter((row) => row.status === "available" && row.id != null)
+    .filter(
+      (row) =>
+        row.status === "available" &&
+        row.id != null &&
+        isAllowedCheckoutCarrierName(row.company?.name)
+    )
     .map((row) => row.id)
     .join(",");
 
@@ -146,7 +167,7 @@ function mapRawQuotes(data: MelhorEnvioRawQuote[]): MelhorEnvioQuoteOption[] {
         deliveryDays: row.custom_delivery_time ?? row.delivery_time ?? 0,
       };
     })
-    .filter((row) => Number.isFinite(row.price));
+    .filter((row) => Number.isFinite(row.price) && isAllowedCheckoutCarrierName(row.company));
 }
 
 export async function calculateMelhorEnvioQuotes(

@@ -505,7 +505,7 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
                 {
                   id: "credit_card" as const,
                   title: "Cartão de crédito",
-                  detail: "Até 3x sem juros",
+                  detail: "Até 12x no cartão",
                   amount: cardTotal,
                 },
               ] as const
