@@ -1,6 +1,11 @@
 import { isAsaasConfigured, isSupabaseConfigured } from "@/lib/config";
 import { isBlingConfigured } from "@/lib/bling/client";
-import { getBlingTokenExpiry, hasBlingAppCredentials, isBlingOAuthConnected } from "@/lib/bling/token-store";
+import {
+  getBlingAccessToken,
+  getBlingTokenExpiry,
+  hasBlingAppCredentials,
+  isBlingOAuthConnected,
+} from "@/lib/bling/token-store";
 import { getBlingRedirectUri } from "@/lib/bling/oauth";
 import { BlingConnectForm } from "@/components/admin/BlingConnectForm";
 
@@ -14,6 +19,7 @@ export async function IntegrationsPanel({ blingMessage }: Props) {
   let blingTokenLabel = "Pendente";
   let blingTokenOk = false;
   let blingConnected = false;
+  let blingNeedsReconnect = false;
   let accessExpiresAt: string | null = null;
 
   if (blingReady && isSupabaseConfigured()) {
@@ -22,8 +28,15 @@ export async function IntegrationsPanel({ blingMessage }: Props) {
       accessExpiresAt = await getBlingTokenExpiry();
 
       if (blingConnected) {
-        blingTokenOk = true;
-        blingTokenLabel = "Conectado · renovação automática";
+        try {
+          await getBlingAccessToken();
+          blingTokenOk = true;
+          blingTokenLabel = "Conectado · renovação automática";
+        } catch {
+          blingNeedsReconnect = true;
+          blingConnected = false;
+          blingTokenLabel = "Token expirado — reconecte abaixo";
+        }
       } else if (hasApp) {
         blingTokenLabel = "App configurado · autorize abaixo";
       } else if (process.env.BLING_API_KEY?.trim()) {
@@ -74,6 +87,12 @@ export async function IntegrationsPanel({ blingMessage }: Props) {
             Após pagamento: cria pedido de venda no Bling e chama a API de emissão de NF-e
             (POST /nfe + envio à SEFAZ).
           </p>
+          {blingNeedsReconnect && (
+            <p className="mt-2 text-xs text-red-700">
+              A autorização do Bling expirou ou foi revogada. Clique em &quot;Reconectar Bling&quot; e
+              autorize de novo no site do Bling (mesma conta de sempre).
+            </p>
+          )}
           {blingConnected && (
             <p className="mt-2 text-xs text-neutral-500">
               Você autorizou uma vez. O access token do Bling expira em algumas horas, mas o site

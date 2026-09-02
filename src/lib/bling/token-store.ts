@@ -81,6 +81,15 @@ async function seedTokensFromEnv(): Promise<BlingTokenRow | null> {
   }
 }
 
+function isInvalidGrantError(message: string): boolean {
+  return /invalid_grant/i.test(message);
+}
+
+/** Mensagem amigável quando o refresh token expirou ou foi revogado. */
+export function blingReconnectHint(): string {
+  return "Reconecte o Bling em Admin → Configurações → Integrações → Reconectar Bling.";
+}
+
 async function requestTokenRefresh(refreshToken: string): Promise<BlingTokenRow> {
   const clientId = process.env.BLING_CLIENT_ID?.trim();
   const clientSecret = process.env.BLING_CLIENT_SECRET?.trim();
@@ -118,10 +127,42 @@ function isTokenValid(expiresAt: string): boolean {
   return new Date(expiresAt).getTime() - Date.now() > REFRESH_BUFFER_MS;
 }
 
+async function clearBlingTokens(): Promise<void> {
+  const admin = createAdminClient();
+  await admin.from("bling_oauth_tokens").delete().eq("id", 1);
+}
+
+/**
+ * Bling rotaciona refresh_token a cada uso. Em serverless, duas instâncias
+ * podem refrescar ao mesmo tempo — a segunda recebe invalid_grant com token antigo.
+ */
 async function refreshAndPersist(refreshToken: string): Promise<string> {
-  const refreshed = await requestTokenRefresh(refreshToken);
-  await saveBlingTokensToDb(refreshed);
-  return refreshed.access_token;
+  try {
+    const refreshed = await requestTokenRefresh(refreshToken);
+    await saveBlingTokensToDb(refreshed);
+    return refreshed.access_token;
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    if (!isInvalidGrantError(message)) throw e;
+
+    const latest = await loadTokensFromDb();
+    if (latest?.refresh_token && latest.refresh_token !== refreshToken) {
+      if (isTokenValid(latest.expires_at)) {
+        return latest.access_token;
+      }
+      try {
+        const refreshed = await requestTokenRefresh(latest.refresh_token);
+        await saveBlingTokensToDb(refreshed);
+        return refreshed.access_token;
+      } catch (retryErr) {
+        const retryMsg = retryErr instanceof Error ? retryErr.message : String(retryErr);
+        if (!isInvalidGrantError(retryMsg)) throw retryErr;
+      }
+    }
+
+    await clearBlingTokens();
+    throw new Error(`${message.slice(0, 200)} — ${blingReconnectHint()}`);
+  }
 }
 
 async function ensureValidAccessToken(force = false): Promise<string | null> {
