@@ -220,6 +220,9 @@ export async function matchServiceIdFromQuote(input: {
   shippingPrice: number;
 }): Promise<number | null> {
   const { melhorEnvioFetch } = await import("./client");
+  const { getMelhorEnvioAvailableServiceIds } = await import("@/lib/melhor-envio");
+
+  const services = await getMelhorEnvioAvailableServiceIds();
 
   let totalWeightKg = 0;
   let maxLength = 30;
@@ -250,6 +253,7 @@ export async function matchServiceIdFromQuote(input: {
         quantity: item.quantity,
         insurance_value: 0,
       })),
+      ...(services ? { services } : {}),
     },
   });
 

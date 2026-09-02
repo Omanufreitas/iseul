@@ -72,49 +72,65 @@ function parseQuotePrice(value: string | undefined): number | null {
   return Number.isFinite(n) && n >= 0 ? n : null;
 }
 
-export async function calculateMelhorEnvioQuotes(
-  destinationPostalCode: string,
-  products: MelhorEnvioProductInput[]
-): Promise<MelhorEnvioQuoteOption[]> {
+type MelhorEnvioServiceRow = {
+  id: number;
+  status?: string;
+};
+
+const SERVICE_IDS_CACHE_MS = 60 * 60 * 1000;
+let cachedServiceIds: { ids: string; at: number } | null = null;
+
+function melhorEnvioUserAgent(): string {
+  return process.env.MELHOR_ENVIO_USER_AGENT?.trim() ?? `Iseul (${CONTACT_EMAIL})`;
+}
+
+/** IDs das transportadoras habilitadas na conta (cache 1h). */
+export async function getMelhorEnvioAvailableServiceIds(): Promise<string | null> {
+  if (cachedServiceIds && Date.now() - cachedServiceIds.at < SERVICE_IDS_CACHE_MS) {
+    return cachedServiceIds.ids;
+  }
+
   const token = (await getMelhorEnvioAccessToken())?.trim();
-  if (!token) return [];
+  if (!token) return null;
 
-  const from = getMelhorEnvioOriginPostalCode();
-  const to = normalizePostalCode(destinationPostalCode);
-  if (from.length !== 8 || to.length !== 8 || products.length === 0) return [];
-
-  const userAgent =
-    process.env.MELHOR_ENVIO_USER_AGENT?.trim() ??
-    `Iseul (${CONTACT_EMAIL})`;
-
-  const res = await fetch(`${apiBaseUrl()}/api/v2/me/shipment/calculate`, {
-    method: "POST",
+  const res = await fetch(`${apiBaseUrl()}/api/v2/me/shipment/services`, {
     headers: {
       Accept: "application/json",
-      "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
-      "User-Agent": userAgent,
+      "User-Agent": melhorEnvioUserAgent(),
     },
-    body: JSON.stringify({
-      from: { postal_code: from },
-      to: { postal_code: to },
-      products,
-      options: {
-        receipt: false,
-        own_hand: false,
-      },
-    }),
     cache: "no-store",
   });
 
   if (!res.ok) {
-    console.error("[melhor-envio] calculate failed", res.status, await res.text().catch(() => ""));
-    return [];
+    console.error("[melhor-envio] services failed", res.status, await res.text().catch(() => ""));
+    return null;
   }
 
-  const data = (await res.json()) as MelhorEnvioRawQuote[] | { message?: string };
-  if (!Array.isArray(data)) return [];
+  const data = (await res.json()) as MelhorEnvioServiceRow[];
+  if (!Array.isArray(data)) return null;
 
+  const ids = data
+    .filter((row) => row.status === "available" && row.id != null)
+    .map((row) => row.id)
+    .join(",");
+
+  if (ids) {
+    cachedServiceIds = { ids, at: Date.now() };
+  }
+
+  return ids || null;
+}
+
+function normalizeCalculateResponse(data: unknown): MelhorEnvioRawQuote[] {
+  if (Array.isArray(data)) return data;
+  if (data && typeof data === "object" && "id" in data) {
+    return [data as MelhorEnvioRawQuote];
+  }
+  return [];
+}
+
+function mapRawQuotes(data: MelhorEnvioRawQuote[]): MelhorEnvioQuoteOption[] {
   return data
     .filter((row) => !row.error && row.id != null && row.name)
     .map((row) => {
@@ -131,6 +147,49 @@ export async function calculateMelhorEnvioQuotes(
       };
     })
     .filter((row) => Number.isFinite(row.price));
+}
+
+export async function calculateMelhorEnvioQuotes(
+  destinationPostalCode: string,
+  products: MelhorEnvioProductInput[]
+): Promise<MelhorEnvioQuoteOption[]> {
+  const token = (await getMelhorEnvioAccessToken())?.trim();
+  if (!token) return [];
+
+  const from = getMelhorEnvioOriginPostalCode();
+  const to = normalizePostalCode(destinationPostalCode);
+  if (from.length !== 8 || to.length !== 8 || products.length === 0) return [];
+
+  const services = await getMelhorEnvioAvailableServiceIds();
+
+  const res = await fetch(`${apiBaseUrl()}/api/v2/me/shipment/calculate`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+      "User-Agent": melhorEnvioUserAgent(),
+    },
+    body: JSON.stringify({
+      from: { postal_code: from },
+      to: { postal_code: to },
+      products,
+      ...(services ? { services } : {}),
+      options: {
+        receipt: false,
+        own_hand: false,
+      },
+    }),
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    console.error("[melhor-envio] calculate failed", res.status, await res.text().catch(() => ""));
+    return [];
+  }
+
+  const data = normalizeCalculateResponse(await res.json());
+  return mapRawQuotes(data);
 }
 
 export function pickCheapestQuote(quotes: MelhorEnvioQuoteOption[]): MelhorEnvioQuoteOption | null {
