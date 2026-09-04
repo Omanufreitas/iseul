@@ -10,6 +10,7 @@ import { validateCouponCode } from "@/actions/admin/coupons";
 import { isMockCatalogEnabled, isSupabaseConfigured } from "@/lib/config";
 import { RESERVATION_MINUTES } from "@/lib/constants";
 import { releaseExpiredReservations } from "@/lib/orders/fulfill";
+import { getAvailableStock } from "@/lib/inventory";
 import { quoteShippingForCheckout, shippingPricesMatch } from "@/lib/shipping";
 import { subscribeWaitlist } from "@/lib/waitlist";
 import { couponDiscountAmount } from "@/lib/coupons";
@@ -74,7 +75,6 @@ export async function createCheckoutOrder(raw: unknown) {
     const variants = product.variants ?? [];
     let salePrice = product.price;
     let compareAtPrice = product.compare_at_price;
-    let availableStock = product.stock;
     let variantId: string | null = null;
     let variantLabel: string | null = null;
     let productName = product.name;
@@ -91,14 +91,19 @@ export async function createCheckoutOrder(raw: unknown) {
       }
       salePrice = variant.price;
       compareAtPrice = variant.compare_at_price ?? product.compare_at_price;
-      availableStock = variant.stock;
       variantId = variant.id;
       variantLabel = variant.label;
       productName = `${product.name} — ${variant.label}`;
     }
 
+    const availableStock = await getAvailableStock(product.id, variantId);
     if (availableStock < item.quantity) {
-      return { error: `Estoque insuficiente: ${productName}` };
+      return {
+        error:
+          availableStock <= 0
+            ? `${productName} está esgotado. Atualize a sacola e tente novamente.`
+            : `Estoque insuficiente para ${productName}: restam ${availableStock} unidade(s).`,
+      };
     }
 
     const pixPrice = pixUnitPrice(salePrice, compareAtPrice, pixDiscountPercent);

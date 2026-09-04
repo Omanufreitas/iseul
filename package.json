@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test": "vitest run",
     "seed:products": "node scripts/seed-products.mjs",
     "seed:admin": "node scripts/seed-admin.mjs",
     "vercel:env": "vercel env pull .env.local --yes",
@@ -41,6 +42,7 @@
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "typescript": "^5",
-    "vercel": "^59.1.4"
+    "vercel": "^59.1.4",
+    "vitest": "^3.2.4"
   }
 }

@@ -35,6 +35,12 @@ export function ProductCard({
       return;
     }
 
+    if (product.stock <= 0) {
+      toast.error("Produto esgotado");
+      router.push(`/produtos/${product.slug}`);
+      return;
+    }
+
     addItem({
       productId: product.id,
       slug: product.slug,
@@ -140,10 +146,11 @@ export function ProductCard({
           <m.button
             type="button"
             onClick={handleAdd}
+            disabled={product.stock <= 0}
             whileTap={reduce ? undefined : { scale: 0.96 }}
-            className="whitespace-nowrap rounded-full border border-iseul-ink px-3.5 py-2 text-[12.5px] font-medium transition-colors duration-200 hover:bg-iseul-ink hover:text-iseul-paper"
+            className="whitespace-nowrap rounded-full border border-iseul-ink px-3.5 py-2 text-[12.5px] font-medium transition-colors duration-200 hover:bg-iseul-ink hover:text-iseul-paper disabled:cursor-not-allowed disabled:border-iseul-line disabled:text-iseul-muted disabled:hover:bg-transparent"
           >
-            Adicionar
+            {product.stock <= 0 ? "Esgotado" : "Adicionar"}
           </m.button>
         </div>
       </m.div>

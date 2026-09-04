@@ -1,18 +1,50 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { toast } from "sonner";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
+import { validateCartItems } from "@/actions/cart";
 import { useCart, cartItemKey } from "@/context/cart-context";
 import { formatCurrency } from "@/lib/utils";
 import { backdropFade, slideFromRight, stagger, fadeUp } from "@/lib/motion";
 import type { StoreSettings } from "@/types";
 
 export function CartDrawer({ settings }: { settings: StoreSettings }) {
-  const { items, isOpen, closeCart, setQuantity, removeItem, subtotal } = useCart();
+  const router = useRouter();
+  const { items, isOpen, closeCart, setQuantity, removeItem, replaceItems, subtotal } = useCart();
+  const [checkingOut, setCheckingOut] = useState(false);
   const reduce = useReducedMotion();
   const threshold = settings.free_shipping_threshold;
   const falta = threshold - subtotal;
   const progress = Math.min(100, (subtotal / threshold) * 100);
+
+  async function handleCheckout() {
+    if (checkingOut) return;
+    setCheckingOut(true);
+    try {
+      const result = await validateCartItems(
+        items.map((item) => ({
+          productId: item.productId,
+          variantId: item.variantId ?? null,
+          quantity: item.quantity,
+        }))
+      );
+
+      replaceItems(result.syncedItems);
+
+      if (result.errors.length > 0 || result.syncedItems.length === 0) {
+        if (result.errors[0]) toast.error(result.errors[0]);
+        return;
+      }
+
+      closeCart();
+      router.push("/checkout");
+    } finally {
+      setCheckingOut(false);
+    }
+  }
 
   return (
     <AnimatePresence>
@@ -164,13 +196,14 @@ export function CartDrawer({ settings }: { settings: StoreSettings }) {
                   <span>Frete</span>
                   <span>Calculado no checkout</span>
                 </div>
-                <Link
-                  href="/checkout"
-                  onClick={closeCart}
-                  className="block w-full rounded-full bg-iseul-ink py-3.5 text-center text-sm font-medium text-iseul-paper transition-colors duration-300 hover:bg-iseul-accent"
+                <button
+                  type="button"
+                  onClick={() => void handleCheckout()}
+                  disabled={checkingOut}
+                  className="block w-full rounded-full bg-iseul-ink py-3.5 text-center text-sm font-medium text-iseul-paper transition-colors duration-300 hover:bg-iseul-accent disabled:opacity-60"
                 >
-                  Finalizar compra
-                </Link>
+                  {checkingOut ? "Verificando estoque..." : "Finalizar compra"}
+                </button>
               </m.div>
             )}
           </m.aside>

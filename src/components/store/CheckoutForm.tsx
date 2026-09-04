@@ -58,6 +58,8 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
     discount_percent: number;
   } | null>(null);
   const [couponLoading, setCouponLoading] = useState(false);
+  const [cartIssues, setCartIssues] = useState<string[]>([]);
+  const [cartValidated, setCartValidated] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<CheckoutPaymentMethod>("pix");
   const lastLookupCep = useRef("");
   const [form, setForm] = useState({
@@ -94,9 +96,15 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
   );
 
   useEffect(() => {
-    if (!items.length || lastValidatedCart.current === cartSignature) return;
+    if (!items.length) {
+      setCartValidated(true);
+      return;
+    }
+    if (lastValidatedCart.current === cartSignature) return;
 
     let cancelled = false;
+    setCartValidated(false);
+
     validateCartItems(
       items.map((item) => ({
         productId: item.productId,
@@ -113,12 +121,16 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
       );
       const nextItems = items.filter((item) => validKeys.has(cartItemKey(item)));
 
-      if (nextItems.length !== items.length) {
+      if (result.syncedItems.length) {
+        replaceItems(result.syncedItems);
+      } else if (nextItems.length !== items.length) {
         replaceItems(nextItems);
         return;
       }
 
+      setCartIssues(result.errors);
       lastValidatedCart.current = cartSignature;
+      setCartValidated(true);
 
       if (result.errors.length) {
         toast.error(result.errors[0]);
@@ -217,6 +229,9 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
     return (
       <div className="mx-auto max-w-lg py-20 text-center">
         <h1 className="font-serif text-3xl">Sacola vazia</h1>
+        {cartIssues.length > 0 && (
+          <p className="mt-4 text-sm text-red-600">{cartIssues[0]}</p>
+        )}
         <Link href="/#catalogo" className="mt-6 inline-block text-iseul-accent underline">
           Voltar ao catálogo
         </Link>
@@ -226,6 +241,10 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (cartIssues.length > 0) {
+      toast.error(cartIssues[0] ?? "Atualize a sacola antes de continuar.");
+      return;
+    }
     if (cepDigits.length !== 8) {
       toast.error("Informe um CEP válido");
       return;
@@ -284,6 +303,8 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
   const total = paymentMethod === "pix" ? pixTotal : cardTotal;
   const canSubmit =
     !pending &&
+    cartValidated &&
+    cartIssues.length === 0 &&
     cepDigits.length === 8 &&
     cepValid === true &&
     form.city_ibge > 0 &&
@@ -331,6 +352,14 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
           <h1 className="font-serif text-3xl md:text-4xl">Checkout</h1>
           <p className="mt-2 text-sm text-iseul-muted">Pagamento seguro via Asaas (PIX ou cartão)</p>
         </div>
+
+        {cartIssues.length > 0 && (
+          <div className="rounded-iseul border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+            {cartIssues.map((issue) => (
+              <p key={issue}>{issue}</p>
+            ))}
+          </div>
+        )}
 
         <fieldset className="space-y-4 rounded-iseul border border-iseul-line bg-iseul-card p-6">
           <legend className="px-2 font-semibold">Identificação</legend>

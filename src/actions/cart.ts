@@ -1,6 +1,8 @@
 "use server";
 
 import { getProductById } from "@/lib/catalog";
+import { getAvailableStock, stockErrorMessage } from "@/lib/inventory";
+import type { CartItem } from "@/types";
 
 export type CartValidationItem = {
   productId: string;
@@ -10,6 +12,7 @@ export type CartValidationItem = {
 
 export async function validateCartItems(items: CartValidationItem[]) {
   const valid: CartValidationItem[] = [];
+  const syncedItems: CartItem[] = [];
   const removed: string[] = [];
   const errors: string[] = [];
 
@@ -22,6 +25,12 @@ export async function validateCartItems(items: CartValidationItem[]) {
     }
 
     const variants = (product.variants ?? []).filter((v) => v.active);
+    let unitPrice = product.price;
+    let listPrice = product.compare_at_price ?? product.price;
+    let variantLabel: string | null = null;
+    let name = product.name;
+    let variantId: string | null = item.variantId ?? null;
+
     if (variants.length > 0) {
       if (!item.variantId) {
         removed.push(item.productId);
@@ -34,15 +43,35 @@ export async function validateCartItems(items: CartValidationItem[]) {
         errors.push(`Variação indisponível: ${product.name}`);
         continue;
       }
-      if (variant.stock < item.quantity) {
-        errors.push(`Estoque insuficiente: ${product.name} — ${variant.label}`);
-      }
-    } else if (product.stock < item.quantity) {
-      errors.push(`Estoque insuficiente: ${product.name}`);
+      unitPrice = variant.price;
+      listPrice = variant.compare_at_price ?? product.compare_at_price ?? variant.price;
+      variantLabel = variant.label;
+      name = `${product.name} — ${variant.label}`;
+      variantId = variant.id;
+    }
+
+    const available = await getAvailableStock(product.id, variantId);
+    if (available < item.quantity) {
+      removed.push(variantId ? `${item.productId}:${variantId}` : item.productId);
+      errors.push(stockErrorMessage(name, available, item.quantity));
+      continue;
     }
 
     valid.push(item);
+    syncedItems.push({
+      productId: product.id,
+      variantId,
+      variantLabel,
+      slug: product.slug,
+      name,
+      brand: product.brand,
+      price: unitPrice,
+      listPrice,
+      image_url: product.image_url,
+      image_fallback_url: product.image_fallback_url,
+      quantity: item.quantity,
+    });
   }
 
-  return { valid, removed, errors: [...new Set(errors)] };
+  return { valid, syncedItems, removed, errors: [...new Set(errors)] };
 }

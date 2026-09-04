@@ -14,24 +14,26 @@ export function isPacShippingOption(option: MelhorEnvioQuoteOption): boolean {
   return /\bpac\b/.test(label) || option.id === 1;
 }
 
+export function isMiniEnviosShippingOption(option: MelhorEnvioQuoteOption): boolean {
+  if (isSedexOption(option)) return false;
+  const label = shippingLabel(option);
+  return /\bmini\b/.test(label);
+}
+
 export function isTotalExpressShippingOption(option: MelhorEnvioQuoteOption): boolean {
   return shippingLabel(option).includes("total");
 }
 
-/** Transportadoras elegíveis para frete grátis (nunca SEDEX). */
+/** Transportadoras elegíveis para frete grátis (economia; nunca SEDEX). */
 export function isFreeShippingEligibleOption(option: MelhorEnvioQuoteOption): boolean {
-  return isPacShippingOption(option) || isTotalExpressShippingOption(option);
+  return (
+    isPacShippingOption(option) ||
+    isMiniEnviosShippingOption(option) ||
+    isTotalExpressShippingOption(option)
+  );
 }
 
-export function pickCheapestFreeShippingOption(
-  options: MelhorEnvioQuoteOption[]
-): MelhorEnvioQuoteOption | null {
-  const eligible = options.filter(isFreeShippingEligibleOption);
-  if (eligible.length === 0) return null;
-  return [...eligible].sort((a, b) => a.price - b.price)[0] ?? null;
-}
-
-/** Zera só a opção mais barata elegível; demais permanecem pagas. */
+/** Zera todas as opções econômicas elegíveis; SEDEX continua pago. */
 export function applyFreeShipping(
   options: MelhorEnvioQuoteOption[],
   subtotal: number,
@@ -39,17 +41,15 @@ export function applyFreeShipping(
 ): MelhorEnvioQuoteOption[] {
   if (subtotal < freeThreshold || options.length === 0) return options;
 
-  const cheapest =
-    pickCheapestFreeShippingOption(options) ??
-    options.find(isPacShippingOption) ??
-    options.find((o) => !isSedexOption(o)) ??
-    [...options].sort((a, b) => a.price - b.price)[0] ??
-    null;
-
-  if (!cheapest) return options;
+  const hasEligible = options.some(isFreeShippingEligibleOption);
+  if (!hasEligible) {
+    const fallback = options.find((o) => !isSedexOption(o));
+    if (!fallback) return options;
+    return options.map((opt) => (opt.id === fallback.id ? { ...opt, price: 0 } : opt));
+  }
 
   return options.map((opt) =>
-    opt.id === cheapest.id ? { ...opt, price: 0 } : opt
+    isFreeShippingEligibleOption(opt) ? { ...opt, price: 0 } : opt
   );
 }
 
@@ -57,5 +57,11 @@ export function pickDefaultShippingOption(
   options: MelhorEnvioQuoteOption[]
 ): MelhorEnvioQuoteOption | null {
   if (!options.length) return null;
+
+  const freeOptions = options.filter((o) => o.price === 0);
+  if (freeOptions.length > 0) {
+    return [...freeOptions].sort((a, b) => a.deliveryDays - b.deliveryDays)[0] ?? freeOptions[0];
+  }
+
   return options.reduce((best, current) => (current.price < best.price ? current : best));
 }

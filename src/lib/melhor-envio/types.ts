@@ -17,6 +17,8 @@ export type MelhorEnvioAddress = {
 
 export type MelhorEnvioCartPayload = {
   service: number;
+  /** Obrigatório para transportadoras como Total Express. */
+  agency?: number;
   from: MelhorEnvioAddress;
   to: MelhorEnvioAddress;
   products: Array<{
@@ -36,6 +38,7 @@ export type MelhorEnvioCartPayload = {
     own_hand: boolean;
     reverse: boolean;
     non_commercial: boolean;
+    agency_id?: number;
   };
 };
 

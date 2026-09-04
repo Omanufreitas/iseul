@@ -143,7 +143,11 @@ export function OrderActionsPanel({
                   onClick={handleGenerateLabel}
                   className="w-full rounded-lg bg-iseul-pine px-4 py-2.5 text-sm font-medium text-white hover:bg-iseul-pine/90 disabled:opacity-60"
                 >
-                  {labelPending ? "Gerando..." : "Gerar etiqueta"}
+                  {labelPending
+                    ? "Gerando..."
+                    : melhorEnvioError
+                      ? "Tentar gerar etiqueta novamente"
+                      : "Gerar etiqueta"}
                 </button>
               )}
             </div>

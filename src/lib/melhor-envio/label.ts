@@ -3,6 +3,7 @@ import { CONTACT_EMAIL } from "@/lib/site";
 import { createAdminClient } from "@/lib/supabase/client";
 import { getMelhorEnvioOriginPostalCode } from "@/lib/melhor-envio";
 import { buildCartPayload, resolveMelhorEnvioServiceId } from "./build-cart";
+import { resolveMelhorEnvioAgencyId } from "./agency";
 import { isMelhorEnvioConfigured, melhorEnvioFetch, MelhorEnvioError } from "./client";
 import type {
   MelhorEnvioCartResponse,
@@ -128,11 +129,8 @@ function isValidMelhorEnvioServiceId(id: number): boolean {
   return Number.isFinite(id) && id > 0;
 }
 
-function shouldResetMelhorEnvioAttempt(status: string | null, error: string | null): boolean {
-  if (status === "error") {
-    return /service selecionado é inválido|service.*inválido/i.test(error ?? "");
-  }
-  return false;
+function shouldResetMelhorEnvioAttempt(status: string | null): boolean {
+  return status === "error";
 }
 
 function validateShipper(shipper: ShipperSettings): string | null {
@@ -173,18 +171,20 @@ export async function generateMelhorEnvioLabelForOrder(orderId: string): Promise
 
   if (error || !order) throw new MelhorEnvioError("Pedido não encontrado");
 
-  if (shouldResetMelhorEnvioAttempt(order.melhor_envio_status, order.melhor_envio_error)) {
+  if (shouldResetMelhorEnvioAttempt(order.melhor_envio_status)) {
     await admin
       .from("orders")
       .update({
         melhor_envio_cart_id: null,
         melhor_envio_order_id: null,
+        melhor_envio_label_url: null,
         melhor_envio_status: null,
         melhor_envio_error: null,
       })
       .eq("id", orderId);
     order.melhor_envio_cart_id = null;
     order.melhor_envio_order_id = null;
+    order.melhor_envio_label_url = null;
     order.melhor_envio_status = null;
     order.melhor_envio_error = null;
   }
@@ -272,6 +272,13 @@ export async function generateMelhorEnvioLabelForOrder(orderId: string): Promise
     throw new MelhorEnvioError("CPF ou CNPJ do destinatário ausente no pedido");
   }
 
+  const agencyId = await resolveMelhorEnvioAgencyId({
+    serviceId,
+    shippingMethod: shippingLabel,
+    originState: shipper.state,
+    originCity: shipper.city,
+  });
+
   const cartPayload = buildCartPayload({
     serviceId,
     shipper,
@@ -291,6 +298,7 @@ export async function generateMelhorEnvioLabelForOrder(orderId: string): Promise
     items,
     variantDims,
     insuranceValue: Number(order.subtotal ?? 0),
+    agencyId,
   });
 
   let meOrderId = order.melhor_envio_order_id as string | null;

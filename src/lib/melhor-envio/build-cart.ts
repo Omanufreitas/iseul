@@ -94,6 +94,7 @@ export function buildCartPayload(input: {
   items: OrderItemRow[];
   variantDims: Map<string, VariantDims>;
   insuranceValue: number;
+  agencyId?: number | null;
 }): MelhorEnvioCartPayload {
   const products = input.items.map((item) => ({
     name: item.product_name.slice(0, 128),
@@ -117,6 +118,7 @@ export function buildCartPayload(input: {
 
   return {
     service: input.serviceId,
+    ...(input.agencyId ? { agency: input.agencyId } : {}),
     from: shipperFromSettings(input.shipper),
     to: toMeAddress(input.recipient),
     products,
@@ -134,6 +136,7 @@ export function buildCartPayload(input: {
       own_hand: false,
       reverse: false,
       non_commercial: false,
+      ...(input.agencyId ? { agency_id: input.agencyId } : {}),
     },
   };
 }

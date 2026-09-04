@@ -11,6 +11,7 @@ import {
   normalizePostalCode,
   type MelhorEnvioQuoteOption,
 } from "@/lib/melhor-envio";
+import { getAvailableStock } from "@/lib/inventory";
 import { shippingForCep } from "@/lib/utils";
 
 export type ShippingQuoteItem = {
@@ -47,10 +48,12 @@ function buildMelhorEnvioProducts(
 }
 
 function buildFallbackOptions(cep: string, subtotal: number, freeThreshold: number): MelhorEnvioQuoteOption[] {
-  const pacPrice = subtotal >= freeThreshold ? 24.9 : shippingForCep(cep, subtotal, freeThreshold);
+  const paidPac = shippingForCep(cep, subtotal, freeThreshold);
+  const pacPrice = subtotal >= freeThreshold ? 0 : paidPac;
+  const sedexPrice = Math.round((paidPac + 15) * 100) / 100;
   return [
     { id: 1, name: "PAC", company: "Correios", price: pacPrice, deliveryDays: 8 },
-    { id: 2, name: "SEDEX", company: "Correios", price: Math.round((pacPrice + 15) * 100) / 100, deliveryDays: 3 },
+    { id: 2, name: "SEDEX", company: "Correios", price: sedexPrice, deliveryDays: 3 },
   ];
 }
 
@@ -66,7 +69,7 @@ async function resolveCartSubtotal(items: ShippingQuoteItem[]) {
 
     const variants = product.variants ?? [];
     let unitPrice = product.price;
-    let availableStock = product.stock;
+    let variantId: string | null = item.variantId ?? null;
 
     if (variants.length > 0) {
       if (!item.variantId) {
@@ -77,11 +80,17 @@ async function resolveCartSubtotal(items: ShippingQuoteItem[]) {
         return { error: `Variação indisponível: ${product.name}` as const };
       }
       unitPrice = variant.price;
-      availableStock = variant.stock;
+      variantId = variant.id;
     }
 
+    const availableStock = await getAvailableStock(product.id, variantId);
     if (availableStock < item.quantity) {
-      return { error: `Estoque insuficiente: ${product.name}` as const };
+      return {
+        error:
+          availableStock <= 0
+            ? (`${product.name} está esgotado.` as const)
+            : (`Estoque insuficiente: ${product.name}` as const),
+      };
     }
 
     resolved.push({ productId: product.id, quantity: item.quantity, unitPrice });
