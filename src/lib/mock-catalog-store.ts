@@ -42,6 +42,7 @@ function seedToProduct(row: SeedProduct, slug: string): Product {
     active: true,
     featured: false,
     sort_order: 0,
+    skin_types: [],
   };
 }
 

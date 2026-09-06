@@ -10,6 +10,7 @@ import {
   type DashboardRange,
 } from "@/lib/dashboard-dates";
 import { createAdminClient } from "@/lib/supabase/client";
+import { isCancelledOrder, isPendingPayment } from "@/lib/order-payment";
 
 export { parseDashboardRange, toDateInputValue, pctChange } from "@/lib/dashboard-dates";
 export type { DashboardRange } from "@/lib/dashboard-dates";
@@ -219,8 +220,12 @@ export async function fetchDashboardData(
   ]);
 
   const orderList = orders ?? [];
-  const currentOrders = orderList.filter((o) => inRange(o.ordered_at, range.from, range.to));
-  const prevOrders = orderList.filter((o) => inRange(o.ordered_at, range.prevFrom, range.prevTo));
+  const currentOrders = orderList.filter(
+    (o) => inRange(o.ordered_at, range.from, range.to) && !isCancelledOrder(o)
+  );
+  const prevOrders = orderList.filter(
+    (o) => inRange(o.ordered_at, range.prevFrom, range.prevTo) && !isCancelledOrder(o)
+  );
 
   const approvedCurrent = currentOrders.filter((o) => o.payment_status === "aprovado");
   const approvedPrev = prevOrders.filter((o) => o.payment_status === "aprovado");
@@ -228,13 +233,17 @@ export async function fetchDashboardData(
   const revenue = approvedCurrent.reduce((s, o) => s + Number(o.total), 0);
   const revenuePrev = approvedPrev.reduce((s, o) => s + Number(o.total), 0);
 
-  const pendingPayments = currentOrders.filter((o) => o.payment_status === "pendente").length;
+  const pendingPayments = orderList.filter(
+    (o) => inRange(o.ordered_at, range.from, range.to) && isPendingPayment(o)
+  ).length;
 
   const statusCounts = new Map<string, number>();
   const paymentCounts = new Map<string, number>();
   for (const o of currentOrders) {
     statusCounts.set(o.status, (statusCounts.get(o.status) ?? 0) + 1);
-    paymentCounts.set(o.payment_status, (paymentCounts.get(o.payment_status) ?? 0) + 1);
+    const paymentKey =
+      isCancelledOrder(o) && o.payment_status === "pendente" ? "cancelado" : o.payment_status;
+    paymentCounts.set(paymentKey, (paymentCounts.get(paymentKey) ?? 0) + 1);
   }
 
   const ordersByStatus: StatusSlice[] = [...statusCounts.entries()]

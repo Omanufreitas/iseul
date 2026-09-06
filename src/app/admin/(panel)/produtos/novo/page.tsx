@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { ProductForm } from "@/components/admin/ProductForm";
+import { listProductCategories } from "@/lib/categories";
 
-export default function NewProductPage() {
+export default async function NewProductPage() {
+  const categories = await listProductCategories();
+
   return (
     <div className="space-y-6">
       <div>
@@ -11,7 +14,7 @@ export default function NewProductPage() {
         <h1 className="mt-2 text-2xl font-semibold">Novo produto</h1>
         <p className="mt-1 text-sm text-neutral-500">Cadastre um item no catálogo Iseul</p>
       </div>
-      <ProductForm />
+      <ProductForm categories={categories} />
     </div>
   );
 }

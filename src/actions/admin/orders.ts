@@ -19,19 +19,26 @@ export async function updateOrderFulfillment(
   if (isMockCatalogEnabled()) return { error: "Pedidos disponíveis apenas com Supabase." };
 
   const admin = createAdminClient();
-  const { error } = await admin
-    .from("orders")
-    .update({
-      status: input.status,
-      tracking_code: input.tracking_code?.trim() || null,
-      notes: input.notes?.trim() || null,
-    })
-    .eq("id", orderId);
+  const updates: Record<string, string | null> = {
+    status: input.status,
+    tracking_code: input.tracking_code?.trim() || null,
+    notes: input.notes?.trim() || null,
+  };
+  if (input.status === "cancelado") {
+    updates.payment_status = "cancelado";
+  }
+
+  const { error } = await admin.from("orders").update(updates).eq("id", orderId);
 
   if (error) return { error: error.message };
 
+  if (input.status === "cancelado") {
+    await admin.from("stock_reservations").delete().eq("order_id", orderId);
+  }
+
   revalidatePath("/admin/pedidos");
   revalidatePath(`/admin/pedidos/${orderId}`);
+  revalidatePath("/admin");
   return { success: true };
 }
 

@@ -38,7 +38,9 @@ export function ProductDetailInfo({ product, settings }: Props) {
             Sobre o produto
           </h2>
         </div>
-        <p className="px-5 py-4 text-[15px] leading-relaxed text-iseul-muted">{product.full_name}</p>
+        <p className="whitespace-pre-line px-5 py-4 text-[15px] leading-relaxed text-iseul-muted">
+          {product.full_name}
+        </p>
       </div>
 
       <div className="overflow-hidden rounded-iseul border border-iseul-line bg-iseul-card shadow-card">

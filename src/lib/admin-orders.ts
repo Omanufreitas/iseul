@@ -171,6 +171,7 @@ export async function getOrderById(id: string): Promise<AdminOrderDetail | null>
       bling_sync_status: order.bling_sync_status ?? null,
       bling_sync_error: order.bling_sync_error ?? null,
       nfe_number: order.nfe_number ?? null,
+      nfe_key: order.nfe_key ?? null,
       nfe_url: order.nfe_url ?? null,
       subtotal: Number(order.subtotal),
       shipping: Number(order.shipping),

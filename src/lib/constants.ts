@@ -11,6 +11,17 @@ export const CATEGORIES = [
 
 export type CategorySlug = (typeof CATEGORIES)[number]["slug"];
 
+export const SKIN_TYPES = [
+  { slug: "oleosa", label: "Pele oleosa" },
+  { slug: "seca", label: "Pele seca" },
+  { slug: "mista", label: "Pele mista" },
+  { slug: "normal", label: "Pele normal" },
+  { slug: "sensivel", label: "Pele sensível" },
+  { slug: "todos", label: "Todos os tipos de pele" },
+] as const;
+
+export type SkinTypeSlug = (typeof SKIN_TYPES)[number]["slug"];
+
 export const ROUTINE_STEPS = [
   {
     n: "01",

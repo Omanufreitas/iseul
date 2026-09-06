@@ -22,6 +22,7 @@ export async function getStoreSettings(): Promise<StoreSettings> {
 
 export async function listProducts(options?: {
   category?: string;
+  skinType?: string;
   sort?: "sold" | "price_asc" | "price_desc" | "new";
   includeInactive?: boolean;
 }): Promise<Product[]> {
@@ -32,6 +33,13 @@ export async function listProducts(options?: {
     }
     if (options?.category && options.category !== "all") {
       list = list.filter((p) => p.category_slug === options.category);
+    }
+    if (options?.skinType && options.skinType !== "all") {
+      list = list.filter(
+        (p) =>
+          p.skin_types?.includes(options.skinType!) ||
+          p.skin_types?.includes("todos")
+      );
     }
     return sortProducts(list, options?.sort ?? "sold");
   }
@@ -50,7 +58,13 @@ export async function listProducts(options?: {
   const { data, error } = await query;
   if (error || !data) return getMockProducts();
 
-  const products = data.map((row) => mapDbProduct(row));
+  let products = data.map((row) => mapDbProduct(row));
+  if (options?.skinType && options.skinType !== "all") {
+    products = products.filter(
+      (p) =>
+        p.skin_types.includes(options.skinType!) || p.skin_types.includes("todos")
+    );
+  }
   return attachVariantFlags(sortProducts(products, options?.sort ?? "sold"));
 }
 

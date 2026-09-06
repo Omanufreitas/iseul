@@ -124,7 +124,7 @@ async function markOrderFailed(orderId: string) {
   const admin = createAdminClient();
   await admin
     .from("orders")
-    .update({ payment_status: "recusado", status: "cancelado" })
+    .update({ payment_status: "cancelado", status: "cancelado" })
     .eq("id", orderId)
     .eq("payment_status", "pendente");
   await admin.from("stock_reservations").delete().eq("order_id", orderId);

@@ -126,8 +126,8 @@ export async function exportAdminTable(table: AdminExportTable) {
   if (table === "subscribers") {
     const subscribers = await listWaitlistSubscribers();
     const csv = rowsToCsv(
-      ["email", "origem", "data"],
-      subscribers.map((s) => [s.email, s.source, s.created_at]),
+      ["nome", "email", "telefone", "origem", "data"],
+      subscribers.map((s) => [s.name, s.email, s.phone, s.source, s.created_at]),
     );
     return { csv, filename: `iseul-inscritos-${stamp}.csv` };
   }

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { toast } from "sonner";
+import { AdminSelect } from "@/components/admin/ui/AdminSelect";
 import { updateOrderStatus } from "@/actions/admin/products";
 import type { OrderStatus } from "@/types";
 
@@ -38,18 +39,18 @@ export function OrderStatusForm({ orderId, currentStatus }: Props) {
   return (
     <div className="rounded-xl border bg-white p-5">
       <h2 className="font-semibold">Status do pedido</h2>
-      <select
+      <AdminSelect
+        wrapperClassName="mt-3 sm:max-w-xs"
         defaultValue={currentStatus}
         disabled={pending}
         onChange={(e) => handleChange(e.target.value)}
-        className="mt-3 w-full rounded-lg border px-3 py-2.5 text-sm disabled:opacity-60 sm:max-w-xs"
       >
         {STATUS_OPTIONS.map((opt) => (
           <option key={opt.value} value={opt.value}>
             {opt.label}
           </option>
         ))}
-      </select>
+      </AdminSelect>
       {pending && <p className="mt-2 text-xs text-neutral-500">Salvando...</p>}
     </div>
   );

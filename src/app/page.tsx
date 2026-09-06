@@ -5,7 +5,6 @@ import { BrandMarquee } from "@/components/store/landing/BrandMarquee";
 import { LandingAnnounceBar, LandingPageMotion } from "@/components/store/landing/LandingPageMotion";
 import { LandingHero } from "@/components/store/landing/LandingHero";
 import { LandingTrustBar } from "@/components/store/landing/LandingTrustBar";
-import { SelectionSection } from "@/components/store/landing/SelectionSection";
 import { LandingCatalogSection } from "@/components/store/landing/LandingCatalogSection";
 import { LandingRoutineSection } from "@/components/store/landing/LandingRoutineSection";
 import { LandingAboutSection } from "@/components/store/landing/LandingAboutSection";
@@ -13,11 +12,16 @@ import { WaitlistSection } from "@/components/store/landing/WaitlistSection";
 import { LandingContactSection } from "@/components/store/landing/LandingContactSection";
 import { DewDivider } from "@/components/store/landing/DewDivider";
 import { listProducts, getStoreSettings } from "@/lib/catalog";
+import { listProductCategories } from "@/lib/categories";
 import { buildAnnounceBarText } from "@/lib/store-announcement";
 import { CONTACT_EMAIL, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 
 export default async function HomePage() {
-  const [products, settings] = await Promise.all([listProducts(), getStoreSettings()]);
+  const [products, settings, categories] = await Promise.all([
+    listProducts(),
+    getStoreSettings(),
+    listProductCategories(),
+  ]);
 
   const organizationJsonLd = {
     "@context": "https://schema.org",
@@ -43,9 +47,8 @@ export default async function HomePage() {
         <LandingHero />
         <LandingTrustBar />
         <DewDivider />
-        <SelectionSection />
         <Suspense fallback={null}>
-          <LandingCatalogSection products={products} />
+          <LandingCatalogSection products={products} categories={categories} />
         </Suspense>
         <LandingRoutineSection />
         <LandingAboutSection />

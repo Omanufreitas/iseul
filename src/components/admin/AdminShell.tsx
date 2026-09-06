@@ -30,7 +30,7 @@ type NavLink = {
 
 const baseLinks: NavLink[] = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/inscritos", label: "Inscritos", icon: Mail },
+  { href: "/admin/inscritos", label: "Interessados", icon: Mail },
   { href: "/admin/produtos", label: "Produtos", icon: Package },
   { href: "/admin/pedidos", label: "Pedidos", icon: ShoppingBag, badgeKey: "pendingOrders" as const },
   { href: "/admin/config", label: "Configurações", icon: Settings },

@@ -17,9 +17,17 @@ import { DateRangePicker } from "@/components/admin/dashboard/DateRangePicker";
 import { OrderListActions } from "@/components/admin/OrderListActions";
 import { AdminExportButton } from "@/components/admin/AdminExportButton";
 import { AdminEmptyState } from "@/components/admin/ui/AdminEmptyState";
+import { AdminSelect } from "@/components/admin/ui/AdminSelect";
 import { StatCard } from "@/components/admin/ui/StatCard";
 import { getAllDateRange } from "@/lib/date-presets";
 import type { AdminOrderListItem, OrderListFilters } from "@/lib/admin-orders";
+import {
+  isCancelledOrder,
+  isPendingPayment,
+  paymentStatusBadgeClass,
+  paymentStatusLabel,
+  resolvePaymentStatus,
+} from "@/lib/order-payment";
 import { cn, formatCurrency } from "@/lib/utils";
 
 type ProductOption = { id: string; name: string };
@@ -34,6 +42,7 @@ const PAYMENT_OPTIONS = [
   { value: "", label: "Todos pagamentos" },
   { value: "aprovado", label: "Aprovado" },
   { value: "pendente", label: "Pendente" },
+  { value: "cancelado", label: "Cancelado" },
   { value: "recusado", label: "Recusado" },
 ];
 
@@ -133,9 +142,9 @@ export function OrdersAdminPanel({ orders, products, filters }: Props) {
 
   const stats = useMemo(
     () => ({
-      total: orders.length,
+      total: orders.filter((o) => !isCancelledOrder(o)).length,
       paid: orders.filter((o) => o.payment_status === "aprovado").length,
-      pending: orders.filter((o) => o.payment_status !== "aprovado").length,
+      pending: orders.filter((o) => isPendingPayment(o)).length,
       revenue: orders
         .filter((o) => o.payment_status === "aprovado")
         .reduce((sum, o) => sum + o.total, 0),
@@ -221,14 +230,13 @@ export function OrdersAdminPanel({ orders, products, filters }: Props) {
               <Package className="h-3.5 w-3.5" />
               Produto
             </span>
-            <select
+            <AdminSelect
               value={productId}
               onChange={(e) => {
                 const value = e.target.value;
                 setProductId(value);
                 pushFilters({ productId: value || undefined });
               }}
-              className="w-full rounded-xl border border-iseul-line bg-neutral-50/50 px-3.5 py-2.5 text-sm transition focus:border-iseul-accent focus:bg-white focus:outline-none focus:ring-2 focus:ring-iseul-dew"
             >
               <option value="">Todos os produtos</option>
               {products.map((p) => (
@@ -236,45 +244,43 @@ export function OrdersAdminPanel({ orders, products, filters }: Props) {
                   {p.name}
                 </option>
               ))}
-            </select>
+            </AdminSelect>
           </label>
 
           <label className="block">
             <span className="mb-1.5 text-xs font-medium text-neutral-600">Pagamento</span>
-            <select
+            <AdminSelect
               value={paymentStatus}
               onChange={(e) => {
                 const value = e.target.value;
                 setPaymentStatus(value);
                 pushFilters({ paymentStatus: value || undefined });
               }}
-              className="w-full rounded-xl border border-iseul-line bg-neutral-50/50 px-3.5 py-2.5 text-sm transition focus:border-iseul-accent focus:bg-white focus:outline-none focus:ring-2 focus:ring-iseul-dew"
             >
               {PAYMENT_OPTIONS.map((o) => (
                 <option key={o.value || "all"} value={o.value}>
                   {o.label}
                 </option>
               ))}
-            </select>
+            </AdminSelect>
           </label>
 
           <label className="block">
             <span className="mb-1.5 text-xs font-medium text-neutral-600">Status do pedido</span>
-            <select
+            <AdminSelect
               value={orderStatus}
               onChange={(e) => {
                 const value = e.target.value;
                 setOrderStatus(value);
                 pushFilters({ orderStatus: value || undefined });
               }}
-              className="w-full rounded-xl border border-iseul-line bg-neutral-50/50 px-3.5 py-2.5 text-sm transition focus:border-iseul-accent focus:bg-white focus:outline-none focus:ring-2 focus:ring-iseul-dew"
             >
               {STATUS_OPTIONS.map((o) => (
                 <option key={o.value || "all"} value={o.value}>
                   {o.label}
                 </option>
               ))}
-            </select>
+            </AdminSelect>
           </label>
 
           <div className="xl:col-span-3">
@@ -351,7 +357,9 @@ export function OrdersAdminPanel({ orders, products, filters }: Props) {
       ) : (
         <>
           <div className="space-y-3 lg:hidden">
-            {orders.map((o) => (
+            {orders.map((o) => {
+              const payment = resolvePaymentStatus(o);
+              return (
               <Link
                 key={o.id}
                 href={`/admin/pedidos/${encodeURIComponent(o.id)}`}
@@ -380,19 +388,18 @@ export function OrdersAdminPanel({ orders, products, filters }: Props) {
                   <span
                     className={cn(
                       "rounded-full px-2 py-0.5 text-xs",
-                      o.payment_status === "aprovado"
-                        ? "bg-green-100 text-green-800"
-                        : "bg-amber-100 text-amber-800",
+                      paymentStatusBadgeClass(payment),
                     )}
                   >
-                    {o.payment_status}
+                    {paymentStatusLabel(payment)}
                   </span>
                   <span className="text-xs text-neutral-400">
                     {new Date(o.ordered_at).toLocaleString("pt-BR")}
                   </span>
                 </div>
               </Link>
-            ))}
+            );
+            })}
           </div>
 
           <div className="hidden overflow-hidden rounded-2xl border border-iseul-line/80 bg-white shadow-card lg:block">
@@ -412,7 +419,9 @@ export function OrdersAdminPanel({ orders, products, filters }: Props) {
                   </tr>
                 </thead>
                 <tbody>
-                  {orders.map((o) => (
+                  {orders.map((o) => {
+                    const payment = resolvePaymentStatus(o);
+                    return (
                     <tr
                       key={o.id}
                       className="group border-b last:border-0 hover:bg-iseul-dew/20"
@@ -447,12 +456,10 @@ export function OrdersAdminPanel({ orders, products, filters }: Props) {
                         <span
                           className={cn(
                             "rounded-full px-2 py-0.5 text-xs",
-                            o.payment_status === "aprovado"
-                              ? "bg-green-100 text-green-800"
-                              : "bg-amber-100 text-amber-800",
+                            paymentStatusBadgeClass(payment),
                           )}
                         >
-                          {o.payment_status}
+                          {paymentStatusLabel(payment)}
                         </span>
                       </td>
                       <td className="px-4 py-3 capitalize">{o.status.replace(/_/g, " ")}</td>
@@ -467,7 +474,8 @@ export function OrdersAdminPanel({ orders, products, filters }: Props) {
                         />
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

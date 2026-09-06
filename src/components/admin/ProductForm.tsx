@@ -4,10 +4,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
+import { AdminSelect } from "@/components/admin/ui/AdminSelect";
 import { saveProduct } from "@/actions/admin/products";
 import { uploadProductImage } from "@/actions/admin/upload-product-image";
 import { DeleteProductButton } from "@/components/admin/DeleteProductButton";
-import { CATEGORIES } from "@/lib/constants";
+import { CATEGORIES, SKIN_TYPES } from "@/lib/constants";
+import type { ProductCategory } from "@/lib/categories";
 import {
   BLING_DEFAULT_NCM,
   BLING_PRODUCT_UNITS,
@@ -27,9 +29,10 @@ import type { Product } from "@/types";
 
 type Props = {
   product?: Product;
+  categories?: ProductCategory[];
 };
 
-export function ProductForm({ product }: Props) {
+export function ProductForm({ product, categories = [] }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const initialImages = product
@@ -49,6 +52,18 @@ export function ProductForm({ product }: Props) {
   const [categoryLabel, setCategoryLabel] = useState(
     product?.category_label ?? CATEGORIES.find((c) => c.slug === (product?.category_slug ?? "serum"))?.label ?? "Sérum & ampola"
   );
+  const [categorySlug, setCategorySlug] = useState(product?.category_slug ?? "serum");
+  const [creatingCategory, setCreatingCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [skinTypes, setSkinTypes] = useState<string[]>(product?.skin_types ?? []);
+  const categoryOptions =
+    categories.length > 0
+      ? categories
+      : CATEGORIES.filter((c) => c.slug !== "all").map((c) => ({
+          slug: c.slug,
+          label: c.label,
+          sort_order: 0,
+        }));
   const blobUrlsRef = useRef<string[]>([]);
 
   useEffect(() => {
@@ -66,6 +81,10 @@ export function ProductForm({ product }: Props) {
         CATEGORIES.find((c) => c.slug === (product?.category_slug ?? "serum"))?.label ??
         "Sérum & ampola"
     );
+    setCategorySlug(product?.category_slug ?? "serum");
+    setCreatingCategory(false);
+    setNewCategoryName("");
+    setSkinTypes(product?.skin_types ?? []);
   }, [
     product?.id,
     product?.image_url,
@@ -193,8 +212,18 @@ export function ProductForm({ product }: Props) {
       }
 
       const fd = new FormData(e.currentTarget);
-      const categorySlug = String(fd.get("category_slug"));
-      const category = CATEGORIES.find((c) => c.slug === categorySlug);
+      const resolvedCategorySlug = creatingCategory
+        ? slugify(newCategoryName.trim())
+        : categorySlug;
+      const resolvedCategoryLabel = creatingCategory
+        ? newCategoryName.trim()
+        : String(fd.get("category_label") || categoryLabel).trim();
+      const category = categoryOptions.find((c) => c.slug === resolvedCategorySlug);
+
+      if (creatingCategory && !newCategoryName.trim()) {
+        toast.error("Informe o nome da nova categoria.");
+        return;
+      }
 
       const payload = {
         name: String(fd.get("name")),
@@ -205,8 +234,9 @@ export function ProductForm({ product }: Props) {
         tax_origin: Number(fd.get("tax_origin") ?? 1),
         unit: String(fd.get("unit") || "UN"),
         brand: String(fd.get("brand") || ""),
-        category_slug: categorySlug,
-        category_label: String(fd.get("category_label") || category?.label || categorySlug).trim(),
+        category_slug: resolvedCategorySlug,
+        category_label: resolvedCategoryLabel || category?.label || resolvedCategorySlug,
+        skin_types: skinTypes,
         price: Number(fd.get("price")),
         compare_at_price: fd.get("compare_at_price") ? Number(fd.get("compare_at_price")) : null,
         pitch: String(fd.get("pitch") || ""),
@@ -280,34 +310,88 @@ export function ProductForm({ product }: Props) {
               />
             </Field>
             <Field label="Categoria *">
-              <select
-                name="category_slug"
-                required
-                defaultValue={product?.category_slug ?? "serum"}
-                className={inputClass}
-                onChange={(e) => {
-                  const selected = CATEGORIES.find((c) => c.slug === e.target.value);
-                  if (selected && selected.slug !== "all") {
-                    setCategoryLabel(selected.label);
-                  }
-                }}
-              >
-                {CATEGORIES.filter((c) => c.slug !== "all").map((c) => (
-                  <option key={c.slug} value={c.slug}>
-                    {c.label}
-                  </option>
-                ))}
-              </select>
+              {!creatingCategory ? (
+                <AdminSelect
+                  name="category_slug"
+                  required
+                  value={categorySlug}
+                  onChange={(e) => {
+                    if (e.target.value === "__new__") {
+                      setCreatingCategory(true);
+                      return;
+                    }
+                    const selected = categoryOptions.find((c) => c.slug === e.target.value);
+                    setCategorySlug(e.target.value);
+                    if (selected) setCategoryLabel(selected.label);
+                  }}
+                >
+                  {categoryOptions.map((c) => (
+                    <option key={c.slug} value={c.slug}>
+                      {c.label}
+                    </option>
+                  ))}
+                  <option value="__new__">+ Adicionar categoria</option>
+                </AdminSelect>
+              ) : (
+                <div className="space-y-2">
+                  <input
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                    placeholder="Ex.: Cabelo / Capilar"
+                    className={inputClass}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCreatingCategory(false);
+                      setNewCategoryName("");
+                    }}
+                    className="text-xs text-neutral-500 hover:text-neutral-900"
+                  >
+                    Usar categoria existente
+                  </button>
+                </div>
+              )}
             </Field>
             <Field label="Nome da categoria (editável)" className="md:col-span-2">
               <input
                 name="category_label"
                 required
-                value={categoryLabel}
-                onChange={(e) => setCategoryLabel(e.target.value)}
+                value={creatingCategory ? newCategoryName : categoryLabel}
+                onChange={(e) => {
+                  if (creatingCategory) setNewCategoryName(e.target.value);
+                  else setCategoryLabel(e.target.value);
+                }}
                 placeholder="Ex.: Sérum & ampola"
                 className={inputClass}
               />
+            </Field>
+            <Field label="Tipo de pele" className="md:col-span-2">
+              <div className="flex flex-wrap gap-2">
+                {SKIN_TYPES.map((skin) => {
+                  const checked = skinTypes.includes(skin.slug);
+                  return (
+                    <label
+                      key={skin.slug}
+                      className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-neutral-200 px-3 py-1.5 text-sm has-[:checked]:border-iseul-pine has-[:checked]:bg-iseul-dew/50"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => {
+                          setSkinTypes((prev) =>
+                            checked
+                              ? prev.filter((s) => s !== skin.slug)
+                              : [...prev, skin.slug]
+                          );
+                        }}
+                        className="rounded border-neutral-300"
+                      />
+                      {skin.label}
+                    </label>
+                  );
+                })}
+              </div>
             </Field>
           </Section>
 
@@ -326,27 +410,26 @@ export function ProductForm({ product }: Props) {
               />
             </Field>
             <Field label="Origem fiscal *">
-              <select
+              <AdminSelect
                 name="tax_origin"
                 required
                 defaultValue={String(product?.tax_origin ?? 1)}
-                className={inputClass}
               >
                 {BLING_TAX_ORIGINS.map((o) => (
                   <option key={o.value} value={o.value}>
                     {o.label}
                   </option>
                 ))}
-              </select>
+              </AdminSelect>
             </Field>
             <Field label="Unidade *">
-              <select name="unit" required defaultValue={product?.unit ?? "UN"} className={inputClass}>
+              <AdminSelect name="unit" required defaultValue={product?.unit ?? "UN"}>
                 {BLING_PRODUCT_UNITS.map((u) => (
                   <option key={u} value={u}>
                     {u}
                   </option>
                 ))}
-              </select>
+              </AdminSelect>
             </Field>
             {product && (
               <div className="md:col-span-2 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm">

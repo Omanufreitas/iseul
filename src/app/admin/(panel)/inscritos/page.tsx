@@ -10,8 +10,8 @@ export default async function AdminWaitlistPage() {
   return (
     <div>
       <PageHeader
-        title="Inscritos"
-        description='E-mails coletados na landing "em breve"'
+        title="Interessados"
+        description="Lista de espera da landing e cadastros Avise-me quando chegar por produto"
       />
       <AdminWaitlistPanel subscribers={subscribers} />
     </div>

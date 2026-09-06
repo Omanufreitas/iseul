@@ -17,6 +17,7 @@ import {
 } from "@/lib/product-image";
 import { productFormSchema } from "@/lib/validations";
 import { slugify } from "@/lib/utils";
+import { ensureProductCategory } from "@/lib/categories";
 import { isMockCatalogEnabled } from "@/lib/config";
 import { syncProductToBling } from "@/lib/bling/sync-product";
 import type { Product } from "@/types";
@@ -142,6 +143,7 @@ function toProductPayload(data: ProductFormData, existing?: Product | null) {
     active: data.active,
     featured: data.featured ?? false,
     sort_order: existing?.sort_order ?? 0,
+    skin_types: data.skin_types ?? [],
     bling_product_id: existing?.bling_product_id ?? null,
     bling_sync_status: existing?.bling_sync_status ?? null,
     bling_sync_error: existing?.bling_sync_error ?? null,
@@ -168,6 +170,8 @@ export async function saveProduct(raw: unknown, id?: string) {
   const payload = productToDbPayload(toProductPayload(parsed.data, existing));
   const admin = createAdminClient();
   let savedId = id;
+
+  await ensureProductCategory(parsed.data.category_slug, parsed.data.category_label);
 
   if (id) {
     const { error } = await admin.from("products").update(payload).eq("id", id);
@@ -247,10 +251,20 @@ export async function updateOrderStatus(orderId: string, status: string) {
   if (isMockCatalogEnabled()) return { error: "Pedidos disponíveis apenas com Supabase." };
 
   const admin = createAdminClient();
-  const { error } = await admin.from("orders").update({ status }).eq("id", orderId);
+  const updates: Record<string, string> = { status };
+  if (status === "cancelado") {
+    updates.payment_status = "cancelado";
+  }
+
+  const { error } = await admin.from("orders").update(updates).eq("id", orderId);
   if (error) return { error: error.message };
 
+  if (status === "cancelado") {
+    await admin.from("stock_reservations").delete().eq("order_id", orderId);
+  }
+
   revalidatePath("/admin/pedidos");
+  revalidatePath("/admin");
   return { success: true };
 }
 

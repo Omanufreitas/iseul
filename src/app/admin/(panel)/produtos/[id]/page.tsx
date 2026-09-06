@@ -2,12 +2,16 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ProductForm } from "@/components/admin/ProductForm";
 import { getProductById } from "@/lib/catalog";
+import { listProductCategories } from "@/lib/categories";
 
 type Props = { params: Promise<{ id: string }> };
 
 export default async function EditProductPage({ params }: Props) {
   const { id } = await params;
-  const product = await getProductById(decodeURIComponent(id));
+  const [product, categories] = await Promise.all([
+    getProductById(decodeURIComponent(id)),
+    listProductCategories(),
+  ]);
   if (!product) notFound();
 
   return (
@@ -19,7 +23,7 @@ export default async function EditProductPage({ params }: Props) {
         <h1 className="mt-2 text-2xl font-semibold">Editar produto</h1>
         <p className="mt-1 text-sm text-neutral-500">{product.name}</p>
       </div>
-      <ProductForm product={product} />
+      <ProductForm product={product} categories={categories} />
     </div>
   );
 }

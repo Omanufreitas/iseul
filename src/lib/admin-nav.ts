@@ -20,7 +20,8 @@ export async function fetchAdminNavCounts(): Promise<AdminNavCounts> {
     admin
       .from("orders")
       .select("*", { count: "exact", head: true })
-      .eq("payment_status", "pendente"),
+      .eq("payment_status", "pendente")
+      .neq("status", "cancelado"),
     admin
       .from("orders")
       .select("*", { count: "exact", head: true })

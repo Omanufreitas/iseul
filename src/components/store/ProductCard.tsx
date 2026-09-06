@@ -83,6 +83,11 @@ export function ProductCard({
         className="relative aspect-square overflow-hidden bg-iseul-paper2"
       >
         <div className="absolute left-2.5 top-2.5 z-10 flex flex-col items-start gap-1.5">
+          {product.stock <= 0 && (
+            <span className="inline-flex w-fit rounded-full bg-neutral-700 px-2 py-1 text-[10.5px] font-semibold uppercase tracking-wide text-white">
+              Esgotado
+            </span>
+          )}
           {discount > 0 && (
             <span className="inline-flex w-fit rounded-full bg-iseul-sale px-2 py-1 text-[10.5px] font-semibold uppercase tracking-wide text-white">
               -{discount}%

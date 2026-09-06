@@ -55,6 +55,7 @@ export type Product = {
   active: boolean;
   featured: boolean;
   sort_order: number;
+  skin_types: string[];
   created_at?: string;
   updated_at?: string;
   variants?: ProductVariant[];
@@ -80,7 +81,7 @@ export type OrderStatus =
   | "entregue"
   | "cancelado";
 
-export type PaymentStatus = "pendente" | "aprovado" | "recusado" | "reembolsado";
+export type PaymentStatus = "pendente" | "aprovado" | "recusado" | "reembolsado" | "cancelado";
 
 export type Order = {
   id: string;
@@ -96,6 +97,7 @@ export type Order = {
   bling_sync_status: string | null;
   bling_sync_error: string | null;
   nfe_number: string | null;
+  nfe_key: string | null;
   nfe_url: string | null;
   subtotal: number;
   shipping: number;

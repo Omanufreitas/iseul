@@ -33,6 +33,9 @@ export function mapDbProduct(row: Record<string, unknown>): Product {
     active: Boolean(row.active),
     featured: Boolean(row.featured),
     sort_order: Number(row.sort_order ?? 0),
+    skin_types: Array.isArray(row.skin_types)
+      ? row.skin_types.map(String)
+      : [],
     created_at: row.created_at ? String(row.created_at) : undefined,
     updated_at: row.updated_at ? String(row.updated_at) : undefined,
   };
@@ -73,6 +76,7 @@ export function productToDbPayload(
     active: input.active ?? true,
     featured: input.featured ?? false,
     sort_order: input.sort_order ?? 0,
+    skin_types: input.skin_types ?? [],
   };
 }
 

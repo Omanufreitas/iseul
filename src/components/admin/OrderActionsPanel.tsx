@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
+import { AdminSelect } from "@/components/admin/ui/AdminSelect";
 import { updateOrderFulfillment } from "@/actions/admin/orders";
 import { generateMelhorEnvioLabel, getMelhorEnvioLabelPdfUrl } from "@/actions/melhor-envio";
 import type { OrderStatus } from "@/types";
@@ -101,17 +102,16 @@ export function OrderActionsPanel({
       <div className="mt-4 space-y-4">
         <label className="block text-sm">
           <span className="mb-1 block text-neutral-500">Status do pedido</span>
-          <select
+          <AdminSelect
             value={status}
             onChange={(e) => setStatus(e.target.value as OrderStatus)}
-            className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:border-iseul-pine focus:outline-none focus:ring-1 focus:ring-iseul-pine"
           >
             {STATUS_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
               </option>
             ))}
-          </select>
+          </AdminSelect>
         </label>
 
         {hasShippingAddress && (

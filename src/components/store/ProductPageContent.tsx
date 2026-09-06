@@ -4,9 +4,11 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { ProductDetailGallery } from "@/components/store/ProductDetailGallery";
 import { ProductDetailInfo } from "@/components/store/ProductDetailInfo";
+import { ProductNotifyForm } from "@/components/store/ProductNotifyForm";
 import { MobileProductCta } from "@/components/store/MobileProductCta";
 import { useCart } from "@/context/cart-context";
 import { cn, discountPercent, formatCurrency, stars } from "@/lib/utils";
+import { cardUnitPrice, hasPixAdvantage, pixUnitPrice } from "@/lib/pricing";
 import type { Product, ProductVariant, StoreSettings } from "@/types";
 
 type Props = {
@@ -50,6 +52,17 @@ export function ProductPageContent({ product, variants, settings }: Props) {
   const discount = discountPercent(displayProduct.price, displayProduct.compare_at_price);
   const inStock = displayProduct.stock > 0;
   const maxQty = Math.min(displayProduct.stock, 20);
+  const cardPrice = cardUnitPrice(displayProduct.price, displayProduct.compare_at_price);
+  const pixPrice = pixUnitPrice(
+    displayProduct.price,
+    displayProduct.compare_at_price,
+    settings.pix_discount_percent
+  );
+  const showPixLine = hasPixAdvantage(
+    displayProduct.price,
+    displayProduct.compare_at_price,
+    settings.pix_discount_percent
+  );
 
   function handleAdd() {
     if (!inStock) return;
@@ -132,18 +145,21 @@ export function ProductPageContent({ product, variants, settings }: Props) {
             <div className="font-serif text-4xl text-[#C0392B]">
               {formatCurrency(displayProduct.price)}
             </div>
-            {settings.pix_discount_percent > 0 && (
+            {showPixLine && (
               <p className="mt-1 text-sm font-medium text-[#C0392B]">
-                no Pix com cupom &gt;
+                {formatCurrency(pixPrice)} no Pix com cupom
               </p>
             )}
             <p className="mt-2 text-sm text-iseul-muted">
-              ou {formatCurrency(displayProduct.compare_at_price ?? displayProduct.price)} sem cupom
-              em outros métodos · até 12x no cartão
+              ou {formatCurrency(cardPrice)} sem cupom em outros métodos · até 12x no cartão
             </p>
-            <p className="mt-2 text-sm text-iseul-muted">
-              Estoque: {displayProduct.stock}
-            </p>
+            {!inStock ? (
+              <p className="mt-2 text-sm font-semibold uppercase tracking-wide text-iseul-sale">
+                Esgotado
+              </p>
+            ) : (
+              <p className="mt-2 text-sm text-iseul-muted">Estoque: {displayProduct.stock}</p>
+            )}
           </div>
 
           {activeVariants.length > 0 && (
@@ -199,9 +215,7 @@ export function ProductPageContent({ product, variants, settings }: Props) {
               </button>
             </div>
           ) : (
-            <p className="mt-6 rounded-full border border-iseul-line bg-iseul-card px-6 py-4 text-center text-sm text-iseul-muted">
-              Produto temporariamente indisponível
-            </p>
+            <ProductNotifyForm productId={product.id} productName={product.name} />
           )}
 
           <ProductDetailInfo product={displayProduct} settings={settings} />
