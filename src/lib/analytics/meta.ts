@@ -41,6 +41,15 @@ function trackMetaStandard(event: string, { eventId, ...params }: MetaContentPar
   fbq("track", event, payload);
 }
 
+let lastInitiateCheckoutKey = "";
+let lastInitiateCheckoutAt = 0;
+const INITIATE_CHECKOUT_DEDUP_MS = 10_000;
+
+export function resetMetaInitiateCheckoutForTests() {
+  lastInitiateCheckoutKey = "";
+  lastInitiateCheckoutAt = 0;
+}
+
 export function trackMetaPageView(pathname: string | null | undefined) {
   trackStorefrontPageView(pathname);
 }
@@ -54,6 +63,13 @@ export function trackMetaAddToCart(params: MetaContentParams) {
 }
 
 export function trackMetaInitiateCheckout(params: MetaContentParams) {
+  const key = `${(params.contentIds ?? []).map(String).sort().join(",")}|${params.value ?? 0}|${params.numItems ?? 0}`;
+  const now = Date.now();
+  if (key === lastInitiateCheckoutKey && now - lastInitiateCheckoutAt < INITIATE_CHECKOUT_DEDUP_MS) {
+    return;
+  }
+  lastInitiateCheckoutKey = key;
+  lastInitiateCheckoutAt = now;
   trackMetaStandard("InitiateCheckout", params);
 }
 

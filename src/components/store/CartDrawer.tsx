@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { validateCartItems } from "@/actions/cart";
 import { useCart, cartItemKey } from "@/context/cart-context";
+import { trackMetaInitiateCheckout } from "@/lib/analytics/meta";
 import { formatCurrency } from "@/lib/utils";
 import { backdropFade, slideFromRight, stagger, fadeUp } from "@/lib/motion";
 import type { StoreSettings } from "@/types";
@@ -39,6 +40,11 @@ export function CartDrawer({ settings }: { settings: StoreSettings }) {
         return;
       }
 
+      trackMetaInitiateCheckout({
+        contentIds: result.syncedItems.map((item) => item.productId),
+        value: result.syncedItems.reduce((sum, item) => sum + item.price * item.quantity, 0),
+        numItems: result.syncedItems.reduce((sum, item) => sum + item.quantity, 0),
+      });
       closeCart();
       router.push("/checkout");
     } finally {

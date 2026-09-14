@@ -84,7 +84,6 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
     marketing_opt_in: true,
   });
   const lastValidatedCart = useRef("");
-  const checkoutTracked = useRef(false);
 
   const cepDigits = form.zip.replace(/\D/g, "");
   const cartItems = useMemo(
@@ -150,8 +149,7 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
   }, [cartSignature, items, replaceItems]);
 
   useEffect(() => {
-    if (!hydrated || checkoutTracked.current || items.length === 0) return;
-    checkoutTracked.current = true;
+    if (!hydrated || items.length === 0) return;
     trackMetaInitiateCheckout({
       contentIds: items.map((item) => item.productId),
       value: subtotal,
