@@ -302,11 +302,11 @@ export function IseulAssistant() {
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
         aria-label={open ? "Fechar assistente Iseul" : "Abrir assistente Iseul"}
-        className="group flex flex-col items-end gap-2"
+        className="group flex flex-col items-center gap-1.5"
       >
         {!open ? (
-          <span className="rounded-2xl border border-iseul-line/90 bg-[color-mix(in_srgb,var(--paper)_94%,white)] px-2.5 py-1.5 text-right shadow-[0_8px_20px_rgba(55,81,69,.14)]">
-            <span className="block text-[8px] font-medium uppercase tracking-[0.18em] text-iseul-sage">
+          <span className="rounded-2xl border border-iseul-line/90 bg-[color-mix(in_srgb,var(--paper)_94%,white)] px-2.5 py-1.5 text-center shadow-[0_8px_20px_rgba(55,81,69,.14)]">
+            <span className="block text-[8px] font-medium uppercase tracking-[0.16em] text-iseul-sage">
               Assistente
             </span>
             <span className="mt-0.5 block font-serif italic text-[17px] leading-none text-iseul-ink">
