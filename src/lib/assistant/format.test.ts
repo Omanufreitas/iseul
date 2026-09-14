@@ -21,6 +21,29 @@ Protetor leve, boa para o dia.
     expect(blocks.filter((block) => block.type === "product")).toHaveLength(2);
   });
 
+  it("lê o formato com slug: que o modelo anda gerando", () => {
+    const blocks = parseAssistantBlocks(
+      `Algumas opções:
+
+::produto slug: celimax-the-vita-a-retinal-shot-tightening-booster | Retinal Shot Tightening Booster | R$ 189,00
+0,1% de retinal.
+
+::produto slug: <protetor-solar-serum-fps50-skin1004-hyalucica-water-fit-sun> | Skin1004 FPS50 | R$ 159,00
+Protetor leve.
+`
+    );
+    const products = blocks.filter((block) => block.type === "product");
+    expect(products).toHaveLength(2);
+    expect(products[0]).toMatchObject({
+      slug: "celimax-the-vita-a-retinal-shot-tightening-booster",
+      name: "Retinal Shot Tightening Booster",
+      price: "R$ 189,00",
+    });
+    expect(blocks.some((block) => block.type === "text" && /::produto/i.test(block.text))).toBe(
+      false
+    );
+  });
+
   it("quebra lista colada com slug entre parênteses", () => {
     const blocks = parseAssistantBlocks(
       "Temos uma seleção incrível! Aqui estão alguns destaques: - Sérum Celimax The Vita A Retinal Shot Tightening Booster por R$ 189,00 (/produtos/celimax-the-vita-a-retinal-shot-tightening-booster). - Hidratante Retinal Shot Tightening Dual Cream por R$ 210,00 (/produtos/celimax-retinal-shot-tightening-dual-cream)."

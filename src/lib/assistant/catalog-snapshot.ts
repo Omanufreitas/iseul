@@ -35,15 +35,16 @@ export function formatCatalogSnapshot(products: Product[]): string {
   return products
     .map((product) => {
       const line = toAssistantProductLine(product);
-      return `- ${line.name} (${line.brand}) | ${line.category} | ${line.price} | ${line.stock} | pele: ${line.skin} | slug: ${line.slug} | ${line.pitch}`;
+      return `- ${line.name} (${line.brand}) | ${line.category} | ${line.price} | ${line.stock} | pele: ${line.skin} | /produtos/${line.slug} | ${line.pitch}`;
     })
     .join("\n");
 }
 
 export function formatStoreFacts(settings: StoreSettings): string {
   return [
-    `Frete grátis acima de ${formatCurrency(settings.free_shipping_threshold)}.`,
-    `Pix com cerca de ${settings.pix_discount_percent}% de desconto no checkout.`,
-    "Estoque no Brasil, envio em até 24h úteis.",
+    `Frete grátis somente acima de ${formatCurrency(settings.free_shipping_threshold)}, calculado no checkout pelo CEP.`,
+    "Pedidos com estoque no Brasil saem em até 24 horas úteis após o pagamento, com rastreio por e-mail.",
+    "Pix e cartão são formas de pagamento. Não existe desconto automático de Pix nas páginas da loja.",
+    "Não invente cupom, percentual de desconto, prazo extra nem frete grátis abaixo do valor mínimo.",
   ].join(" ");
 }

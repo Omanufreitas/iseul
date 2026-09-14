@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatCatalogSnapshot, toAssistantProductLine } from "./catalog-snapshot";
+import { formatCatalogSnapshot, formatStoreFacts, toAssistantProductLine } from "./catalog-snapshot";
 import type { Product } from "@/types";
 
 function product(partial: Partial<Product> & Pick<Product, "name" | "slug">): Product {
@@ -49,7 +49,23 @@ describe("assistant catalog snapshot", () => {
       product({ name: "Relief Sun", slug: "relief-sun", stock: 0 }),
     ]);
     expect(text).toContain("esgotado");
-    expect(text).toContain("slug: relief-sun");
+    expect(text).toContain("/produtos/relief-sun");
+    expect(text).not.toContain("slug:");
     expect(text).not.toContain("produto inventado");
+  });
+
+  it("não ensina desconto de Pix", () => {
+    const facts = formatStoreFacts({
+      id: 1,
+      store_name: "Iseul",
+      tagline: "",
+      announcement: "",
+      free_shipping_threshold: 199,
+      pix_discount_percent: 5,
+      trust_rating: 5,
+      trust_rating_label: "",
+    });
+    expect(facts.toLowerCase()).not.toMatch(/pix.*\d+\s*%/);
+    expect(facts).toContain("Não existe desconto automático de Pix");
   });
 });

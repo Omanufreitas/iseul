@@ -4,7 +4,7 @@ export type AssistantBlock =
   | { type: "product"; slug: string; name: string; price?: string; note?: string };
 
 const PRODUCT_LINE =
-  /^::produto\s+([a-z0-9-]+)\s*\|\s*([^|]+?)\s*(?:\|\s*(.+?))?\s*$/i;
+  /^::produto(?:\s+slug:)?\s*<?([a-z0-9-]+)>?\s*(?:\|\s*([^|]+?)\s*(?:\|\s*(.+?))?)?\s*$/i;
 const STEP_LINE = /^::passo\s+(.+)$/i;
 const PRODUCT_MENTION =
   /([^()\n]{6,140}?)\s*(?:por\s+(R\$\s*[\d.]*,\d{2})\s*)?\((?:https?:\/\/(?:www\.)?iseul\.com\.br)?\/produtos\/([a-z0-9-]+)\)/gi;
@@ -12,8 +12,22 @@ const MARKDOWN_PRODUCT =
   /\[([^\]]+)\]\((?:https?:\/\/(?:www\.)?iseul\.com\.br)?\/produtos\/([a-z0-9-]+)\)/g;
 
 function pushText(blocks: AssistantBlock[], text: string) {
-  const cleaned = text.replace(/\s{2,}/g, " ").trim();
+  const cleaned = text
+    .replace(/::produto(?:\s+slug:)?\s*<?[a-z0-9-]+>?/gi, " ")
+    .replace(/::passo\s*[^|\n]*/gi, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
   if (cleaned) blocks.push({ type: "text", text: cleaned });
+}
+
+export function normalizeAssistantMarkup(raw: string): string {
+  return raw
+    .replace(/\r\n/g, "\n")
+    .replace(/\s+(::produto)/gi, "\n$1")
+    .replace(/\s+(::passo)/gi, "\n$1")
+    .replace(/::produto\s+slug\s*:\s*/gi, "::produto ")
+    .replace(/::produto\s+<([a-z0-9-]+)>/gi, "::produto $1")
+    .replace(/::passo\s*:\s*/gi, "::passo ");
 }
 
 function cleanProductName(raw: string): string {
@@ -50,16 +64,16 @@ function parseStructured(raw: string): AssistantBlock[] | null {
       pendingProduct = {
         type: "product",
         slug: product[1],
-        name: product[2].trim(),
+        name: product[2]?.trim() || product[1].replace(/-/g, " "),
         price: product[3]?.trim() || undefined,
       };
       continue;
     }
 
-    const step = trimmed.match(STEP_LINE);
+    const step = trimmed.match(STEP_LINE) ?? trimmed.match(/^(Limpar|Tratar|Selar|Proteger|Limpeza|Tratamento)$/i);
     if (step) {
       flushProduct();
-      blocks.push({ type: "step", title: step[1].trim() });
+      blocks.push({ type: "step", title: (step[1] ?? trimmed).trim() });
       continue;
     }
 
@@ -117,7 +131,8 @@ function parseLooseProducts(raw: string): AssistantBlock[] {
 }
 
 export function parseAssistantBlocks(raw: string): AssistantBlock[] {
-  return parseStructured(raw) ?? parseLooseProducts(raw);
+  const normalized = normalizeAssistantMarkup(raw);
+  return parseStructured(normalized) ?? parseLooseProducts(normalized);
 }
 
 export function productHref(slug: string) {

@@ -45,12 +45,11 @@ function AssistantBlocks({ blocks }: { blocks: AssistantBlock[] }) {
         }
         if (block.type === "step") {
           return (
-            <p
-              key={`s-${index}`}
-              className="pt-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-iseul-muted"
-            >
-              {block.title}
-            </p>
+            <div key={`s-${index}`} className="pt-0.5">
+              <span className="inline-flex rounded-full border border-iseul-line bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-iseul-pine">
+                {block.title}
+              </span>
+            </div>
           );
         }
         return (
