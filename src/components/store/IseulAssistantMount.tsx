@@ -1,7 +1,7 @@
 import { IseulAssistant } from "@/components/store/IseulAssistant";
-import { isOpenAIConfigured } from "@/lib/openai/client";
+import { isIseulAssistantEnabled } from "@/lib/assistant/enabled";
 
 export function IseulAssistantMount() {
-  if (!isOpenAIConfigured()) return null;
+  if (!isIseulAssistantEnabled()) return null;
   return <IseulAssistant />;
 }

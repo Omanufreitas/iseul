@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { consumeAssistantQuota, getClientIp, recordAssistantUse } from "@/lib/assistant/quota";
 import { formatCatalogSnapshot, formatStoreFacts } from "@/lib/assistant/catalog-snapshot";
+import { isIseulAssistantEnabled } from "@/lib/assistant/enabled";
 import { clipChatText } from "@/lib/assistant/payload";
 import { trimAssistantResponse } from "@/lib/assistant/trim";
 import { listProducts, getStoreSettings } from "@/lib/catalog";
-import { getOpenAIChatModel, getOpenAIClient, isOpenAIConfigured } from "@/lib/openai/client";
+import { getOpenAIChatModel, getOpenAIClient } from "@/lib/openai/client";
 import {
   buildAssistantSystemPrompt,
   intentInstruction,
@@ -29,7 +30,7 @@ const schema = z.object({
 
 export async function POST(request: Request) {
   try {
-    if (!isOpenAIConfigured()) {
+    if (!isIseulAssistantEnabled()) {
       return NextResponse.json({ error: "Assistente indisponível." }, { status: 503 });
     }
 
