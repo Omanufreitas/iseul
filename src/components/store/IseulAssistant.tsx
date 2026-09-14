@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import { IseulDropIcon } from "@/components/store/landing/IseulDropIcon";
+import { parseAssistantBlocks, productHref, type AssistantBlock } from "@/lib/assistant/format";
 import { cn } from "@/lib/utils";
 
 type AssistantIntent = "products" | "doubt" | "routine";
@@ -31,52 +32,48 @@ const CHIPS: { intent: AssistantIntent; label: string; message: string }[] = [
   },
 ];
 
-const PRODUCT_PATH = /\/produtos\/[a-z0-9-]+/gi;
-const MARKDOWN_LINK = /\[([^\]]+)\]\((https?:\/\/[^\s)]+|\/produtos\/[a-z0-9-]+)\)/gi;
-
-function renderMessage(content: string) {
-  const nodes: ReactNode[] = [];
-  const md = [...content.matchAll(MARKDOWN_LINK)];
-  let cursor = 0;
-
-  const pushText = (text: string, keyPrefix: string) => {
-    const inner = [...text.matchAll(PRODUCT_PATH)];
-    let last = 0;
-    inner.forEach((match, index) => {
-      const start = match.index ?? 0;
-      if (start > last) nodes.push(<span key={`${keyPrefix}-t-${index}`}>{text.slice(last, start)}</span>);
-      const href = match[0];
-      nodes.push(
-        <Link
-          key={`${keyPrefix}-l-${index}`}
-          href={href}
-          className="underline decoration-iseul-sage/70 underline-offset-2 hover:text-iseul-accent"
-        >
-          {href}
-        </Link>
-      );
-      last = start + href.length;
-    });
-    if (last < text.length) nodes.push(<span key={`${keyPrefix}-end`}>{text.slice(last)}</span>);
-  };
-
-  md.forEach((match, index) => {
-    const start = match.index ?? 0;
-    if (start > cursor) pushText(content.slice(cursor, start), `pre-${index}`);
-    const href = match[2].replace("https://iseul.com.br", "").replace("https://www.iseul.com.br", "");
-    nodes.push(
-      <Link
-        key={`md-${index}`}
-        href={href}
-        className="underline decoration-iseul-sage/70 underline-offset-2 hover:text-iseul-accent"
-      >
-        {match[1]}
-      </Link>
-    );
-    cursor = start + match[0].length;
-  });
-  if (cursor < content.length) pushText(content.slice(cursor), "tail");
-  return nodes.length ? nodes : content;
+function AssistantBlocks({ blocks }: { blocks: AssistantBlock[] }) {
+  return (
+    <div className="space-y-2">
+      {blocks.map((block, index) => {
+        if (block.type === "text") {
+          return (
+            <p key={`t-${index}`} className="text-[14px] leading-relaxed text-iseul-ink">
+              {block.text}
+            </p>
+          );
+        }
+        if (block.type === "step") {
+          return (
+            <p
+              key={`s-${index}`}
+              className="pt-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-iseul-muted"
+            >
+              {block.title}
+            </p>
+          );
+        }
+        return (
+          <Link
+            key={`p-${block.slug}-${index}`}
+            href={productHref(block.slug)}
+            className="block rounded-xl border border-iseul-line/80 bg-white px-3 py-2.5 no-underline shadow-sm transition hover:border-iseul-sage"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <p className="font-medium leading-snug text-iseul-ink">{block.name}</p>
+              {block.price ? (
+                <span className="shrink-0 text-[12px] tabular-nums text-iseul-muted">{block.price}</span>
+              ) : null}
+            </div>
+            {block.note ? (
+              <p className="mt-1 text-[12px] leading-relaxed text-iseul-muted">{block.note}</p>
+            ) : null}
+            <p className="mt-1.5 text-[11px] font-medium text-iseul-accent">Ver produto</p>
+          </Link>
+        );
+      })}
+    </div>
+  );
 }
 
 export function IseulAssistant() {
@@ -180,13 +177,19 @@ export function IseulAssistant() {
               <div
                 key={`${message.role}-${index}`}
                 className={cn(
-                  "max-w-[92%] rounded-2xl px-3.5 py-2.5 text-[14px] leading-relaxed",
-                  message.role === "assistant"
-                    ? "self-start bg-iseul-dew/70 text-iseul-ink"
-                    : "self-end bg-iseul-ink text-iseul-paper"
+                  "max-w-[92%]",
+                  message.role === "assistant" ? "self-start w-full" : "self-end"
                 )}
               >
-                {renderMessage(message.content)}
+                {message.role === "assistant" ? (
+                  <div className="rounded-2xl bg-iseul-dew/55 px-3 py-2.5">
+                    <AssistantBlocks blocks={parseAssistantBlocks(message.content)} />
+                  </div>
+                ) : (
+                  <div className="rounded-2xl bg-iseul-ink px-3.5 py-2.5 text-[14px] leading-relaxed text-iseul-paper">
+                    {message.content}
+                  </div>
+                )}
               </div>
             ))}
             {pending && (
@@ -221,7 +224,7 @@ export function IseulAssistant() {
                   event.preventDefault();
                   void send(input);
                 }}
-                className="flex items-end gap-2"
+                className="flex min-w-0 items-end gap-2"
               >
                 <label className="sr-only" htmlFor="iseul-assistant-input">
                   Mensagem
@@ -239,7 +242,7 @@ export function IseulAssistant() {
                     }
                   }}
                   placeholder="Pergunte sobre um produto…"
-                  className="min-h-[44px] flex-1 resize-none rounded-xl border border-iseul-line bg-white px-3 py-2 text-sm text-iseul-ink outline-none placeholder:text-iseul-muted focus:border-iseul-sage"
+                  className="min-h-[44px] min-w-0 flex-1 resize-none rounded-xl border border-iseul-line bg-white px-3 py-2 text-sm text-iseul-ink outline-none placeholder:text-iseul-muted focus:border-iseul-sage"
                 />
                 <button
                   type="submit"

@@ -11,11 +11,11 @@ export function isAssistantIntent(value: unknown): value is AssistantIntent {
 export function intentInstruction(intent?: AssistantIntent): string {
   switch (intent) {
     case "products":
-      return "A pessoa clicou em Ver produtos. Liste no máximo 6 itens ativos do catálogo (nome, uma linha do pitch, preço, estoque). Termine perguntando de qual ela quer saber mais. Inclua o link /produtos/slug de cada um.";
+      return "A pessoa clicou em Ver produtos. Mostre no máximo 4 itens ativos. Uma frase curta no topo, depois só blocos ::produto. Termine com uma pergunta: de qual ela quer saber mais.";
     case "doubt":
-      return "A pessoa clicou em Tirar uma dúvida. Convide em 2 frases curtas: pode perguntar sobre uso, tipo de pele, rotina, frete, Pix ou prazo. Não despeje o catálogo inteiro.";
+      return "A pessoa clicou em Tirar uma dúvida. Convide em 2 frases curtas. Sem lista de produtos.";
     case "routine":
-      return "A pessoa clicou em Dica de rotina. Explique os 4 passos (limpar, tratar, selar, proteger) e encaixe 1 produto real de cada passo quando houver no catálogo. Se faltar categoria, diga isso e não invente. Pergunte o tipo de pele se ainda não souber.";
+      return "A pessoa clicou em Dica de rotina. Se ainda não souber o tipo de pele, pergunte em 1 frase. Se já souber, use ::passo (Limpar, Tratar, Selar, Proteger) e no máximo 1 ::produto por passo. Não junte tudo num parágrafo.";
     default:
       return "";
   }
@@ -40,11 +40,16 @@ Contato humano: ${CONTACT_EMAIL}
 ROTINA ISEUL:
 ${routine}
 
-FORMATO:
-- Primeira frase já responde.
-- Pergunta simples: 2 a 4 frases. Média: no máximo 6.
-- Sem markdown pesado (#, **, listas numeradas longas). Travessão evite.
-- Quando citar um produto da lista, inclua o caminho /produtos/SLUG.
+FORMATO (obrigatório):
+- Primeira linha: uma frase que já responde.
+- NUNCA escreva lista num parágrafo só. NUNCA mostre slug cru nem URL.
+- Produto sempre neste bloco, um por vez, com quebra de linha:
+
+::produto SLUG | Nome curto | R$ 0,00
+Uma frase de pitch.
+
+- Rotina: use ::passo Limpar (ou Tratar, Selar, Proteger) e em seguida no máximo um ::produto.
+- Não use markdown (#, **, [texto](url), listas 1. 2. 3. no mesmo bloco).
 - Não feche com "estou aqui para ajudar", "qualquer dúvida" ou "fico à disposição".
 
 LIMITES:

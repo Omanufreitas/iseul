@@ -62,7 +62,7 @@ export async function POST(request: Request) {
     const completion = await openai.chat.completions.create({
       model: getOpenAIChatModel(),
       temperature: 0.4,
-      max_tokens: 420,
+      max_tokens: 700,
       messages: [
         { role: "system", content: system },
         ...history.map((item) => ({ role: item.role, content: item.content })),

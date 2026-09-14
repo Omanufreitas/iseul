@@ -21,7 +21,7 @@ describe("assistant prompt", () => {
     expect(prompt).toContain("contato@iseul.com.br");
   });
 
-  it("instrui o chip de produtos a listar no máximo 6", () => {
-    expect(intentInstruction("products")).toContain("no máximo 6");
+  it("instrui o chip de produtos a listar no máximo 4", () => {
+    expect(intentInstruction("products")).toContain("no máximo 4");
   });
 });

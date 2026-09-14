@@ -8,9 +8,9 @@ const FILLER_PATTERNS = [
 ];
 
 export function trimAssistantResponse(text: string): string {
-  let result = text.trim();
+  let result = text.replace(/\r\n/g, "\n").trim();
   for (const pattern of FILLER_PATTERNS) {
-    result = result.replace(pattern, " ").trim();
+    result = result.replace(pattern, "\n").trim();
   }
-  return result.replace(/\s{2,}/g, " ").trim();
+  return result.replace(/[^\S\n]{2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim();
 }
