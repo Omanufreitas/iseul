@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { ProductDetailGallery } from "@/components/store/ProductDetailGallery";
 import { ProductDetailInfo } from "@/components/store/ProductDetailInfo";
 import { ProductNotifyForm } from "@/components/store/ProductNotifyForm";
 import { MobileProductCta } from "@/components/store/MobileProductCta";
 import { useCart } from "@/context/cart-context";
+import { trackMetaViewContent } from "@/lib/analytics/meta";
 import { cn, discountPercent, formatCurrency, stars } from "@/lib/utils";
 import { cardUnitPrice, hasPixAdvantage, pixUnitPrice } from "@/lib/pricing";
 import type { Product, ProductVariant, StoreSettings } from "@/types";
@@ -40,6 +41,14 @@ export function ProductPageContent({ product, variants, settings }: Props) {
     activeVariants[0]?.id ?? null
   );
   const { addItem, openCart } = useCart();
+
+  useEffect(() => {
+    trackMetaViewContent({
+      contentIds: [product.id],
+      contentName: product.name,
+      value: product.price,
+    });
+  }, [product.id, product.name, product.price]);
 
   const selectedVariant =
     activeVariants.find((v) => v.id === selectedVariantId) ?? activeVariants[0] ?? null;

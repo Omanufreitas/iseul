@@ -9,6 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { trackMetaAddToCart } from "@/lib/analytics/meta";
 import { cartItemKey } from "@/lib/cart-key";
 import type { CartItem } from "@/types";
 
@@ -70,6 +71,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
         );
       }
       return [...cleaned, { ...item, quantity: qty }];
+    });
+    trackMetaAddToCart({
+      contentIds: [item.productId],
+      contentName: item.name,
+      value: item.price * qty,
+      numItems: qty,
     });
   }, []);
 

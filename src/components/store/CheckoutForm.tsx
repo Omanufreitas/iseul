@@ -8,6 +8,8 @@ import { createCheckoutOrder } from "@/actions/checkout";
 import { validateCartItems } from "@/actions/cart";
 import { validateCouponCode } from "@/actions/admin/coupons";
 import { useCart, cartItemKey } from "@/context/cart-context";
+import { trackMetaInitiateCheckout } from "@/lib/analytics/meta";
+import { storePurchaseData } from "@/lib/meta-pixel";
 import { formatCurrency, maskCep, maskCpf, maskPhone } from "@/lib/utils";
 import { cardUnitPrice, pixUnitPrice, type CheckoutPaymentMethod } from "@/lib/pricing";
 import { couponDiscountAmount } from "@/lib/coupons";
@@ -78,6 +80,7 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
     marketing_opt_in: true,
   });
   const lastValidatedCart = useRef("");
+  const checkoutTracked = useRef(false);
 
   const cepDigits = form.zip.replace(/\D/g, "");
   const cartItems = useMemo(
@@ -141,6 +144,16 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
       cancelled = true;
     };
   }, [cartSignature, items, replaceItems]);
+
+  useEffect(() => {
+    if (checkoutTracked.current || items.length === 0) return;
+    checkoutTracked.current = true;
+    trackMetaInitiateCheckout({
+      contentIds: items.map((item) => item.productId),
+      value: subtotal,
+      numItems: items.reduce((sum, item) => sum + item.quantity, 0),
+    });
+  }, [items, subtotal]);
 
   useEffect(() => {
     if (cepDigits.length !== 8) {
@@ -274,6 +287,14 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
       }
 
       if ("paymentUrl" in result && result.paymentUrl) {
+        if ("orderId" in result && result.orderId) {
+          storePurchaseData({
+            orderId: result.orderId,
+            value: total,
+            num_items: items.reduce((sum, item) => sum + item.quantity, 0),
+            content_ids: items.map((item) => item.productId),
+          });
+        }
         clearCart();
         window.location.href = result.paymentUrl;
       }

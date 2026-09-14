@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { ObrigadoPixel } from "@/components/analytics/ObrigadoPixel";
 import { AnnounceBar, StoreHeader } from "@/components/store/HeaderFooter";
 import { LandingFooter } from "@/components/store/landing/LandingHeaderFooter";
 import { getStoreSettings } from "@/lib/catalog";
 import { buildAnnounceBarText } from "@/lib/store-announcement";
 import { syncOrderByReference } from "@/lib/orders/fulfill";
+import { getOrderPixelPayload } from "@/lib/orders/pixel";
 import { isSupabaseConfigured } from "@/lib/config";
 
 type Props = { searchParams: Promise<{ order?: string }> };
@@ -20,8 +22,11 @@ export default async function ObrigadoPage({ searchParams }: Props) {
     }
   }
 
+  const pixel = order ? await getOrderPixelPayload(order) : null;
+
   return (
     <>
+      <ObrigadoPixel orderId={order} fallback={pixel} />
       <AnnounceBar text={buildAnnounceBarText(settings)} />
       <StoreHeader settings={settings} />
       <div className="mx-auto max-w-lg px-6 py-24 text-center">
