@@ -49,6 +49,18 @@ describe("buildCartPayload agency", () => {
     expect(payload.options.agency_id).toBe(6139);
   });
 
+  it("inclui NF-e comercial quando invoiceKey informada", () => {
+    const payload = buildCartPayload({
+      ...base,
+      agencyId: 6139,
+      invoiceKey: "50260963829102000134550010000000351805552957",
+    });
+    expect(payload.options.non_commercial).toBe(false);
+    expect(payload.options.invoice?.key).toBe(
+      "50260963829102000134550010000000351805552957"
+    );
+  });
+
   it("omite agency para Correios", () => {
     const payload = buildCartPayload({ ...base, serviceId: 1, agencyId: null });
     expect(payload.agency).toBeUndefined();

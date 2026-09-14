@@ -39,6 +39,7 @@ export type MelhorEnvioCartPayload = {
     reverse: boolean;
     non_commercial: boolean;
     agency_id?: number;
+    invoice?: { key: string };
   };
 };
 
@@ -71,4 +72,5 @@ export type ShipperSettings = {
   city: string;
   state: string;
   zip: string;
+  stateRegister?: string;
 };

@@ -11,8 +11,8 @@
     "seed:products": "node scripts/seed-products.mjs",
     "seed:admin": "node scripts/seed-admin.mjs",
     "vercel:env": "vercel env pull .env.local --yes",
-    "vercel:deploy": "vercel deploy --prod --yes",
-    "vercel:preview": "vercel deploy --yes"
+    "vercel:deploy": "VERCEL_ORG_ID=team_0brqiCAsFBhGLjKqTKZVMVYd VERCEL_PROJECT_ID=prj_3cB4xxSSUj2MW00Hs6s44b2hiGC0 vercel deploy --prod --yes",
+    "vercel:preview": "VERCEL_ORG_ID=team_0brqiCAsFBhGLjKqTKZVMVYd VERCEL_PROJECT_ID=prj_3cB4xxSSUj2MW00Hs6s44b2hiGC0 vercel deploy --yes"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.3",

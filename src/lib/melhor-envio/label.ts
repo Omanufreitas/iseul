@@ -3,8 +3,12 @@ import { CONTACT_EMAIL } from "@/lib/site";
 import { createAdminClient } from "@/lib/supabase/client";
 import { getMelhorEnvioOriginPostalCode } from "@/lib/melhor-envio";
 import { buildCartPayload, resolveMelhorEnvioServiceId } from "./build-cart";
-import { resolveMelhorEnvioAgencyId } from "./agency";
-import { isMelhorEnvioConfigured, melhorEnvioFetch, MelhorEnvioError } from "./client";
+import { resolveMelhorEnvioAgencyId, melhorEnvioRequiresCommercialInvoice } from "./agency";
+import { resolveOrderNfeInvoice } from "@/lib/bling/nfe-invoice";
+import type { OrderNfeInvoice } from "@/lib/bling/nfe-invoice";
+import { isLocalMotoboyDelivery } from "@/lib/local-delivery";
+import { findExistingMelhorEnvioOrderForInvoice } from "./reuse-order";
+import { MelhorEnvioError, isMelhorEnvioConfigured, melhorEnvioFetch } from "./client";
 import type {
   MelhorEnvioCartResponse,
   MelhorEnvioCheckoutResponse,
@@ -62,10 +66,15 @@ export async function fetchMelhorEnvioLabelPdfUrl(meOrderId: string): Promise<st
 }
 
 function isLabelNotReadyYet(e: unknown): boolean {
-  return (
-    e instanceof MelhorEnvioError &&
-    /precisa estar gerado|E-PRT-0011|E-PRT-0007|não processada/i.test(e.message)
-  );
+  if (!(e instanceof MelhorEnvioError)) return false;
+  if (
+    /dce|documento fiscal.*total express|nf-e.*total express|contribuinte de icms/i.test(
+      e.message
+    )
+  ) {
+    return false;
+  }
+  return /precisa estar gerado|E-PRT-0011|E-PRT-0007|não processada/i.test(e.message);
 }
 
 async function fetchLabelPdfUrlWithRetry(
@@ -122,15 +131,56 @@ function mapShipperFromRow(data: Record<string, unknown> | null): ShipperSetting
     city: pickShipperField(d.shipper_city, DEFAULT_SHIPPER.city),
     state: pickShipperField(d.shipper_state, DEFAULT_SHIPPER.state),
     zip: getMelhorEnvioOriginPostalCode(),
+    stateRegister:
+      pickShipperField(d.shipper_state_register, "") ||
+      process.env.MELHOR_ENVIO_SHIPPER_STATE_REGISTER?.trim() ||
+      "",
   };
 }
 
-function isValidMelhorEnvioServiceId(id: number): boolean {
-  return Number.isFinite(id) && id > 0;
-}
 
 function shouldResetMelhorEnvioAttempt(status: string | null): boolean {
   return status === "error";
+}
+
+function resolveInsuranceValue(
+  order: { subtotal: number | null; shipping: number | null },
+  invoice: OrderNfeInvoice | null
+): number {
+  if (invoice?.declaredValue != null && invoice.declaredValue > 0) {
+    return invoice.declaredValue;
+  }
+  return Math.max(0, Number(order.subtotal ?? 0) + Number(order.shipping ?? 0));
+}
+
+function formatMelhorEnvioLabelError(message: string): string {
+  if (
+    /from\.(document|company_document)|to\.(document|company_document)|cpf|cnpj|documento/i.test(
+      message
+    )
+  ) {
+    return "Documento do remetente inválido. Configure o CNPJ da loja em Admin → Configurações.";
+  }
+  if (/já está vinculada a outro envio/i.test(message)) {
+    return "Esta NF-e já está em um envio ativo no Melhor Envio. Se o envio for deste pedido, tente gerar a etiqueta novamente; caso contrário, cancele o envio pendente no painel do Melhor Envio.";
+  }
+  if (/dce|documento fiscal.*total express|nf-e.*total express|contribuinte de icms/i.test(message)) {
+    return "Total Express exige NF-e autorizada (não DCe). Emita a nota no Bling, confirme a IE do remetente em Admin → Configurações e tente novamente.";
+  }
+  if (/precisa estar gerado|E-PRT-0011|E-PRT-0007|não processada/i.test(message)) {
+    return "A etiqueta ainda está sendo processada pelo Melhor Envio. Aguarde alguns segundos e tente novamente.";
+  }
+  return message;
+}
+
+function shouldClearMelhorEnvioIdsOnError(message: string): boolean {
+  if (/precisa estar gerado|E-PRT-0011|E-PRT-0007|não processada/i.test(message)) {
+    return false;
+  }
+  if (/dce|documento fiscal|contribuinte de icms|nf-e/i.test(message)) {
+    return true;
+  }
+  return true;
 }
 
 function validateShipper(shipper: ShipperSettings): string | null {
@@ -170,6 +220,12 @@ export async function generateMelhorEnvioLabelForOrder(orderId: string): Promise
     .maybeSingle();
 
   if (error || !order) throw new MelhorEnvioError("Pedido não encontrado");
+
+  if (isLocalMotoboyDelivery(order.shipping_service_id, order.shipping_method)) {
+    throw new MelhorEnvioError(
+      "Entrega local por motoboy — não gera etiqueta no Melhor Envio. Atualize o status e o rastreio manualmente."
+    );
+  }
 
   if (shouldResetMelhorEnvioAttempt(order.melhor_envio_status)) {
     await admin
@@ -279,6 +335,73 @@ export async function generateMelhorEnvioLabelForOrder(orderId: string): Promise
     originCity: shipper.city,
   });
 
+  let invoice: OrderNfeInvoice | null = null;
+  if (melhorEnvioRequiresCommercialInvoice(serviceId, shippingLabel, shipper.document)) {
+    try {
+      invoice = await resolveOrderNfeInvoice(orderId);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "NF-e indisponível para este pedido.";
+      throw new MelhorEnvioError(msg);
+    }
+  }
+
+  let meOrderId = order.melhor_envio_order_id as string | null;
+  let adoptedGeneratedOrder = false;
+
+  if (!meOrderId && invoice?.key) {
+    try {
+      const existing = await findExistingMelhorEnvioOrderForInvoice({
+        invoiceKey: invoice.key,
+        recipientZip: addr.zip,
+        recipientDocument: recipientDoc,
+      });
+      if (existing) {
+        meOrderId = existing.id;
+        adoptedGeneratedOrder = existing.alreadyGenerated;
+        await admin
+          .from("orders")
+          .update({
+            melhor_envio_order_id: meOrderId,
+            melhor_envio_status: adoptedGeneratedOrder ? "generated" : "paid",
+            melhor_envio_error: null,
+            tracking_code: existing.tracking,
+          })
+          .eq("id", orderId);
+      }
+    } catch {
+      /* segue fluxo normal de criação */
+    }
+  }
+
+  if (adoptedGeneratedOrder && meOrderId) {
+    try {
+      const labelUrl = await fetchLabelPdfUrlWithRetry(meOrderId);
+      await admin
+        .from("orders")
+        .update({
+          melhor_envio_label_url: labelUrl,
+          melhor_envio_status: "generated",
+          melhor_envio_error: null,
+        })
+        .eq("id", orderId);
+
+      return {
+        labelUrl,
+        trackingCode: null,
+        melhorEnvioOrderId: meOrderId,
+        status: "generated",
+      };
+    } catch (e) {
+      const message = e instanceof MelhorEnvioError ? e.message : "Erro ao gerar etiqueta";
+      const friendlyMessage = formatMelhorEnvioLabelError(message);
+      await admin
+        .from("orders")
+        .update({ melhor_envio_status: "error", melhor_envio_error: friendlyMessage })
+        .eq("id", orderId);
+      throw new MelhorEnvioError(friendlyMessage);
+    }
+  }
+
   const cartPayload = buildCartPayload({
     serviceId,
     shipper,
@@ -297,11 +420,10 @@ export async function generateMelhorEnvioLabelForOrder(orderId: string): Promise
     },
     items,
     variantDims,
-    insuranceValue: Number(order.subtotal ?? 0),
+    insuranceValue: resolveInsuranceValue(order, invoice),
     agencyId,
+    invoiceKey: invoice?.key ?? null,
   });
-
-  let meOrderId = order.melhor_envio_order_id as string | null;
 
   try {
     if (!meOrderId) {
@@ -376,25 +498,20 @@ export async function generateMelhorEnvioLabelForOrder(orderId: string): Promise
     };
   } catch (e) {
     const message = e instanceof MelhorEnvioError ? e.message : "Erro ao gerar etiqueta";
-    const isDocumentError =
-      /from\.(document|company_document)|to\.(document|company_document)|cpf|cnpj|documento/i.test(
-        message
-      );
-
-    const friendlyMessage = isDocumentError
-      ? "Documento do remetente inválido. Configure o CNPJ da loja em Admin → Configurações."
-      : message;
+    const friendlyMessage = formatMelhorEnvioLabelError(message);
 
     const updates: Record<string, unknown> = {
       melhor_envio_status: "error",
       melhor_envio_error: friendlyMessage,
     };
-    if (isDocumentError) {
+
+    if (shouldClearMelhorEnvioIdsOnError(message)) {
       updates.melhor_envio_cart_id = null;
       updates.melhor_envio_order_id = null;
+      updates.melhor_envio_label_url = null;
     }
 
     await admin.from("orders").update(updates).eq("id", orderId);
-    throw e instanceof MelhorEnvioError ? new MelhorEnvioError(friendlyMessage) : new MelhorEnvioError(message);
+    throw new MelhorEnvioError(friendlyMessage);
   }
 }

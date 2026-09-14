@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { syncOrderPaymentAdmin } from "@/actions/admin/orders";
+import { syncOrderPaymentAdmin, confirmOrderPaymentManuallyAdmin } from "@/actions/admin/orders";
 import { retryBlingSync } from "@/actions/bling-sync";
 import { cn } from "@/lib/utils";
 
@@ -81,6 +81,7 @@ export function OrderIntegrationsPanel({
 }: Props) {
   const router = useRouter();
   const [asaasPending, startAsaasTransition] = useTransition();
+  const [manualPending, startManualTransition] = useTransition();
   const [blingPending, startBlingTransition] = useTransition();
 
   const isPaid = paymentStatus === "aprovado";
@@ -104,6 +105,23 @@ export function OrderIntegrationsPanel({
         return;
       }
       toast.success(result.message ?? "Pagamento atualizado");
+      router.refresh();
+    });
+  }
+
+  function handleManualConfirm() {
+    const ok = window.confirm(
+      "Confirmar pagamento manualmente?\n\nUse quando a cliente já pagou (ex.: link Asaas enviado por fora). O estoque será baixado e o pedido irá ao Bling."
+    );
+    if (!ok) return;
+
+    startManualTransition(async () => {
+      const result = await confirmOrderPaymentManuallyAdmin(orderId);
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(result.message ?? "Pagamento confirmado");
       router.refresh();
     });
   }
@@ -173,14 +191,24 @@ export function OrderIntegrationsPanel({
         )}
 
         {!isPaid && (
-          <button
-            type="button"
-            onClick={handleAsaasSync}
-            disabled={asaasPending}
-            className="mt-4 w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm font-medium hover:bg-neutral-50 disabled:opacity-50"
-          >
-            {asaasPending ? "Consultando Asaas…" : "Confirmar pagamento no Asaas"}
-          </button>
+          <div className="mt-4 space-y-2">
+            <button
+              type="button"
+              onClick={handleAsaasSync}
+              disabled={asaasPending || manualPending}
+              className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm font-medium hover:bg-neutral-50 disabled:opacity-50"
+            >
+              {asaasPending ? "Consultando Asaas…" : "Buscar pagamento no Asaas"}
+            </button>
+            <button
+              type="button"
+              onClick={handleManualConfirm}
+              disabled={asaasPending || manualPending}
+              className="w-full rounded-lg bg-iseul-pine px-3 py-2 text-sm font-medium text-white hover:bg-iseul-pine/90 disabled:opacity-50"
+            >
+              {manualPending ? "Confirmando…" : "Confirmar pagamento manualmente"}
+            </button>
+          </div>
         )}
       </IntegrationRow>
 

@@ -12,6 +12,10 @@ import {
   type MelhorEnvioQuoteOption,
 } from "@/lib/melhor-envio";
 import { getAvailableStock } from "@/lib/inventory";
+import {
+  buildLocalMotoboyOption,
+  isCampoGrandeMsDelivery,
+} from "@/lib/local-delivery";
 import { shippingForCep } from "@/lib/utils";
 
 export type ShippingQuoteItem = {
@@ -103,7 +107,8 @@ async function resolveCartSubtotal(items: ShippingQuoteItem[]) {
 export async function quoteShippingForCheckout(
   destinationCep: string,
   items: ShippingQuoteItem[],
-  selectedOptionId?: number | null
+  selectedOptionId?: number | null,
+  destination?: { city?: string; state?: string }
 ): Promise<ShippingQuoteResult | { error: string }> {
   const cep = normalizePostalCode(destinationCep);
   if (cep.length !== 8) return { error: "CEP inválido" };
@@ -119,6 +124,26 @@ export async function quoteShippingForCheckout(
 
   const { resolved, subtotal } = cart;
   const qualifiesForFree = subtotal >= freeThreshold;
+
+  if (
+    isCampoGrandeMsDelivery({
+      cep,
+      city: destination?.city,
+      state: destination?.state,
+    })
+  ) {
+    const motoboy = buildLocalMotoboyOption();
+    return {
+      price: motoboy.price,
+      freeShipping: false,
+      source: "fallback",
+      options: [motoboy],
+      selectedOptionId: motoboy.id,
+      deliveryDays: motoboy.deliveryDays,
+      carrier: motoboy.company,
+      service: motoboy.name,
+    };
+  }
 
   let options: MelhorEnvioQuoteOption[] = [];
   let source: ShippingQuoteResult["source"] = "fallback";

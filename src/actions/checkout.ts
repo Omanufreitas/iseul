@@ -153,7 +153,12 @@ export async function createCheckoutOrder(raw: unknown) {
     }
   }
 
-  const shippingQuote = await quoteShippingForCheckout(address.zip, items, shipping_option_id);
+  const shippingQuote = await quoteShippingForCheckout(
+    address.zip,
+    items,
+    shipping_option_id,
+    { city: address.city, state: address.state }
+  );
   if ("error" in shippingQuote) {
     return { error: shippingQuote.error };
   }
@@ -224,7 +229,10 @@ export async function createCheckoutOrder(raw: unknown) {
 
   if (address.marketing_opt_in) {
     try {
-      await subscribeWaitlist(address.email.trim().toLowerCase(), "checkout");
+      await subscribeWaitlist(address.email.trim().toLowerCase(), "checkout", {
+        name: address.full_name,
+        phone: address.phone,
+      });
     } catch {
       /* não bloqueia checkout */
     }

@@ -24,6 +24,16 @@ export function melhorEnvioServiceRequiresAgency(
   return serviceId === 35;
 }
 
+/** Envio comercial exige NF-e (chave) — Total Express e remetente CNPJ. */
+export function melhorEnvioRequiresCommercialInvoice(
+  serviceId: number,
+  shippingMethod: string,
+  shipperDocument: string
+): boolean {
+  if (melhorEnvioServiceRequiresAgency(serviceId, shippingMethod)) return true;
+  return shipperDocument.replace(/\D/g, "").length === 14;
+}
+
 function pickAgency(
   agencies: MelhorEnvioAgencyRow[],
   originCity: string,

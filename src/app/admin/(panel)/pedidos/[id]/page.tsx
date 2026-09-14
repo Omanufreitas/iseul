@@ -4,6 +4,7 @@ import { OrderAlertsBanner } from "@/components/admin/OrderAlertsBanner";
 import { OrderDetailHeader } from "@/components/admin/OrderDetailHeader";
 import { OrderIntegrationsPanel } from "@/components/admin/OrderIntegrationsPanel";
 import { getOrderById } from "@/lib/admin-orders";
+import { isLocalMotoboyDelivery } from "@/lib/local-delivery";
 import { formatCurrency } from "@/lib/utils";
 
 type Props = { params: Promise<{ id: string }> };
@@ -27,6 +28,10 @@ export default async function AdminOrderDetailPage({ params }: Props) {
   const { order, items } = data;
   const address = order.shipping_address;
   const shippingLabel = shippingMethodLabel(order);
+  const isLocalMotoboy = isLocalMotoboyDelivery(
+    order.shipping_service_id,
+    order.shipping_method ?? shippingLabel
+  );
 
   return (
     <div className="space-y-6">
@@ -160,6 +165,7 @@ export default async function AdminOrderDetailPage({ params }: Props) {
             trackingCode={order.tracking_code}
             notes={order.notes}
             hasShippingAddress={!!address}
+            isLocalMotoboy={isLocalMotoboy}
             melhorEnvioStatus={order.melhor_envio_status}
             melhorEnvioError={order.melhor_envio_error}
             melhorEnvioLabelUrl={order.melhor_envio_label_url}

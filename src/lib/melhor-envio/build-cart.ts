@@ -1,4 +1,5 @@
 import { CONTACT_EMAIL } from "@/lib/site";
+import { LOCAL_MOTOBOY_OPTION_ID } from "@/lib/local-delivery";
 import type { MelhorEnvioAddress, MelhorEnvioCartPayload, ShipperSettings } from "./types";
 
 function onlyDigits(value: string): string {
@@ -46,7 +47,7 @@ function toMeAddress(person: {
 }
 
 export function shipperFromSettings(settings: ShipperSettings): MelhorEnvioAddress {
-  return toMeAddress({
+  const address = toMeAddress({
     name: settings.name,
     phone: settings.phone,
     email: settings.email,
@@ -59,6 +60,13 @@ export function shipperFromSettings(settings: ShipperSettings): MelhorEnvioAddre
     state: settings.state,
     zip: settings.zip,
   });
+
+  const stateRegister = settings.stateRegister?.trim();
+  if (stateRegister) {
+    address.state_register = stateRegister;
+  }
+
+  return address;
 }
 
 type OrderItemRow = {
@@ -95,6 +103,7 @@ export function buildCartPayload(input: {
   variantDims: Map<string, VariantDims>;
   insuranceValue: number;
   agencyId?: number | null;
+  invoiceKey?: string | null;
 }): MelhorEnvioCartPayload {
   const products = input.items.map((item) => ({
     name: item.product_name.slice(0, 128),
@@ -116,6 +125,8 @@ export function buildCartPayload(input: {
     maxHeight = Math.max(maxHeight, dims?.height_cm ?? 3);
   }
 
+  const commercial = !!input.invoiceKey;
+
   return {
     service: input.serviceId,
     ...(input.agencyId ? { agency: input.agencyId } : {}),
@@ -135,8 +146,9 @@ export function buildCartPayload(input: {
       receipt: false,
       own_hand: false,
       reverse: false,
-      non_commercial: false,
+      non_commercial: !commercial,
       ...(input.agencyId ? { agency_id: input.agencyId } : {}),
+      ...(commercial ? { invoice: { key: input.invoiceKey! } } : {}),
     },
   };
 }
@@ -178,6 +190,12 @@ export async function resolveMelhorEnvioServiceId(input: {
   variantDims: Map<string, VariantDims>;
   shippingPrice: number;
 }): Promise<number | null> {
+  const rawStored = Number.parseInt(String(input.storedServiceId ?? ""), 10);
+  const rawAddress = Number.parseInt(String(input.addressOptionId ?? ""), 10);
+  if (rawStored === LOCAL_MOTOBOY_OPTION_ID || rawAddress === LOCAL_MOTOBOY_OPTION_ID) {
+    return null;
+  }
+
   let serviceId = parseMelhorEnvioServiceId(input.storedServiceId);
   if (!Number.isFinite(serviceId)) {
     serviceId = parseMelhorEnvioServiceId(input.addressOptionId);

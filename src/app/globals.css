@@ -113,6 +113,11 @@ button {
     scroll-margin-top: 70px;
   }
 
+  #catalogo.landing-section {
+    padding-top: 44px;
+    padding-bottom: 78px;
+  }
+
   .cab {
     text-align: center;
     max-width: 46ch;

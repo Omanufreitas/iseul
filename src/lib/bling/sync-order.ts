@@ -64,15 +64,21 @@ async function resolveProductSkuCandidates(
   return [...merged];
 }
 
-async function fetchNfeSummary(nfeId: number): Promise<{ numero: string | null; linkDanfe: string | null }> {
-  const result = await blingFetch<{ data?: { numero?: string | number; linkDanfe?: string; linkPDF?: string } }>(
-    `/nfe/${nfeId}`,
-  );
-  if (!result.ok) return { numero: null, linkDanfe: null };
+async function fetchNfeSummary(nfeId: number): Promise<{
+  numero: string | null;
+  linkDanfe: string | null;
+  chaveAcesso: string | null;
+}> {
+  const result = await blingFetch<{
+    data?: { numero?: string | number; linkDanfe?: string; linkPDF?: string; chaveAcesso?: string };
+  }>(`/nfe/${nfeId}`);
+  if (!result.ok) return { numero: null, linkDanfe: null, chaveAcesso: null };
   const data = result.data.data;
+  const chave = String(data?.chaveAcesso ?? "").replace(/\D/g, "");
   return {
     numero: data?.numero != null ? String(data.numero) : null,
     linkDanfe: data?.linkDanfe ?? data?.linkPDF ?? null,
+    chaveAcesso: chave.length === 44 ? chave : null,
   };
 }
 
@@ -96,11 +102,12 @@ async function syncExistingNfeFromBlingPedido(
     .update({
       nfe_number: summary.numero,
       nfe_url: summary.linkDanfe,
+      nfe_key: summary.chaveAcesso,
       bling_sync_error: null,
     })
     .eq("id", orderId);
 
-  return !!(summary.numero || summary.linkDanfe);
+  return !!(summary.numero || summary.linkDanfe || summary.chaveAcesso);
 }
 
 async function tryEmitNfeForOrder(
@@ -120,6 +127,7 @@ async function tryEmitNfeForOrder(
       .update({
         nfe_number: nfe.numero,
         nfe_url: nfe.linkDanfe,
+        nfe_key: nfe.chaveAcesso,
         bling_sync_error: null,
       })
       .eq("id", orderId);

@@ -266,3 +266,50 @@ export async function findConfirmedPaymentForReference(
   if (!checkoutSessionId) return null;
   return pickConfirmedAsaasPayment(await listPaymentsByCheckoutSession(checkoutSessionId));
 }
+
+export async function listCustomersByEmail(email: string): Promise<Array<{ id: string }>> {
+  if (!isAsaasConfigured()) return [];
+  const params = new URLSearchParams({
+    email: email.trim().toLowerCase(),
+    limit: "5",
+  });
+  const result = await asaasFetch<{ data: Array<{ id: string }> }>(`/v3/customers?${params}`);
+  return result.ok ? result.data.data ?? [] : [];
+}
+
+export async function listPaymentsByCustomer(customerId: string): Promise<AsaasPayment[]> {
+  if (!isAsaasConfigured()) return [];
+  const params = new URLSearchParams({ customer: customerId, limit: "30" });
+  const result = await asaasFetch<{ data: AsaasPayment[] }>(`/v3/payments?${params}`);
+  return result.ok ? result.data.data ?? [] : [];
+}
+
+export async function findConfirmedPaymentForOrder(input: {
+  orderId: string;
+  checkoutSessionId?: string | null;
+  total?: number;
+  customerEmail?: string | null;
+}): Promise<AsaasPayment | null> {
+  const byReference = await findConfirmedPaymentForReference(
+    input.orderId,
+    input.checkoutSessionId
+  );
+  if (byReference) return byReference;
+
+  if (!input.customerEmail || input.total == null) return null;
+
+  const customers = await listCustomersByEmail(input.customerEmail);
+  for (const customer of customers) {
+    const payments = await listPaymentsByCustomer(customer.id);
+    const candidates = payments.filter((payment) => {
+      const valueMatch = Math.abs(Number(payment.value ?? 0) - input.total!) < 0.02;
+      const refMatch =
+        !payment.externalReference || payment.externalReference === input.orderId;
+      return valueMatch && refMatch;
+    });
+    const confirmed = pickConfirmedAsaasPayment(candidates);
+    if (confirmed) return confirmed;
+  }
+
+  return null;
+}

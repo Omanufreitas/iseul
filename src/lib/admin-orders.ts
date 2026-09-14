@@ -31,7 +31,15 @@ export type AdminOrderListItem = {
   status: string;
   payment_status: string;
   ordered_at: string;
-  items: { product_id: string | null; product_name: string }[];
+  items: {
+    product_id: string | null;
+    product_name: string;
+    product_brand: string | null;
+    variant_label: string | null;
+    quantity: number;
+    unit_price: number;
+    line_total: number;
+  }[];
 };
 
 type OrderRow = {
@@ -47,7 +55,15 @@ type OrderRow = {
   status: string;
   payment_status: string;
   ordered_at: string;
-  order_items: { product_id: string | null; product_name: string }[] | null;
+  order_items: {
+    product_id: string | null;
+    product_name: string;
+    product_brand: string | null;
+    variant_label: string | null;
+    quantity: number;
+    unit_price: number;
+    line_total: number;
+  }[] | null;
 };
 
 function mapOrderRow(row: OrderRow): AdminOrderListItem {
@@ -64,7 +80,15 @@ function mapOrderRow(row: OrderRow): AdminOrderListItem {
     status: row.status,
     payment_status: row.payment_status,
     ordered_at: row.ordered_at,
-    items: row.order_items ?? [],
+    items: (row.order_items ?? []).map((item) => ({
+      product_id: item.product_id ? String(item.product_id) : null,
+      product_name: item.product_name,
+      product_brand: item.product_brand ?? null,
+      variant_label: item.variant_label ?? null,
+      quantity: Number(item.quantity),
+      unit_price: Number(item.unit_price),
+      line_total: Number(item.line_total),
+    })),
   };
 }
 
@@ -98,7 +122,7 @@ export async function listOrdersAdmin(filters: OrderListFilters = {}): Promise<A
     .from("orders")
     .select(
       `id, order_number, customer_name, customer_email, subtotal, shipping, discount, total, coupon_code, status, payment_status, ordered_at,
-       order_items ( product_id, product_name )`,
+       order_items ( product_id, product_name, product_brand, variant_label, quantity, unit_price, line_total )`,
     )
     .order("ordered_at", { ascending: false })
     .limit(limit);

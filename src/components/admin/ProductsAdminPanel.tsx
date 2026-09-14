@@ -9,6 +9,7 @@ import { deleteProduct, toggleProductActive } from "@/actions/admin/products";
 import { AdminExportButton } from "@/components/admin/AdminExportButton";
 import { BlingProductBadge } from "@/components/admin/BlingProductBadge";
 import { AdminEmptyState } from "@/components/admin/ui/AdminEmptyState";
+import { AdminSelect } from "@/components/admin/ui/AdminSelect";
 import { StatCard } from "@/components/admin/ui/StatCard";
 import { CATEGORIES } from "@/lib/constants";
 import { formatCurrency } from "@/lib/utils";
@@ -110,30 +111,25 @@ export function ProductsAdminPanel({ products }: Props) {
           </label>
           <label className="block">
             <span className="mb-1.5 text-xs font-medium text-neutral-600">Categoria</span>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="w-full rounded-xl border border-iseul-line bg-neutral-50/50 px-3.5 py-2.5 text-sm focus:border-iseul-accent focus:bg-white focus:outline-none focus:ring-2 focus:ring-iseul-dew"
-            >
+            <AdminSelect value={category} onChange={(e) => setCategory(e.target.value)}>
               <option value="all">Todas categorias</option>
               {CATEGORIES.filter((c) => c.slug !== "all").map((c) => (
                 <option key={c.slug} value={c.slug}>
                   {c.label}
                 </option>
               ))}
-            </select>
+            </AdminSelect>
           </label>
           <label className="block">
             <span className="mb-1.5 text-xs font-medium text-neutral-600">Status</span>
-            <select
+            <AdminSelect
               value={status}
               onChange={(e) => setStatus(e.target.value as typeof status)}
-              className="w-full rounded-xl border border-iseul-line bg-neutral-50/50 px-3.5 py-2.5 text-sm focus:border-iseul-accent focus:bg-white focus:outline-none focus:ring-2 focus:ring-iseul-dew"
             >
               <option value="all">Todos status</option>
               <option value="active">Ativos</option>
               <option value="inactive">Inativos</option>
-            </select>
+            </AdminSelect>
           </label>
           {(query || category !== "all" || status !== "all") && (
             <button

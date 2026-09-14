@@ -13,6 +13,7 @@ import { storePurchaseData } from "@/lib/meta-pixel";
 import { formatCurrency, maskCep, maskCpf, maskPhone } from "@/lib/utils";
 import { cardUnitPrice, pixUnitPrice, type CheckoutPaymentMethod } from "@/lib/pricing";
 import { couponDiscountAmount } from "@/lib/coupons";
+import { LOCAL_MOTOBOY_OPTION_ID } from "@/lib/local-delivery";
 import type { ShippingQuoteOption, ShippingQuoteResult } from "@/lib/shipping";
 import type { StoreSettings } from "@/types";
 
@@ -36,6 +37,9 @@ async function fetchCep(cep: string) {
 }
 
 function formatShippingLabel(option: ShippingQuoteOption): string {
+  if (option.id === LOCAL_MOTOBOY_OPTION_ID) {
+    return `${option.company} ${option.name} · 24 horas úteis`;
+  }
   const days =
     option.deliveryDays > 0
       ? ` · ${option.deliveryDays} dia${option.deliveryDays === 1 ? "" : "s"} úteis`
@@ -168,7 +172,12 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
     let cancelled = false;
     setCepLoading(true);
 
-    quoteShipping({ destinationCep: form.zip, items: cartItems })
+    quoteShipping({
+      destinationCep: form.zip,
+      destinationCity: form.city || undefined,
+      destinationState: form.state || undefined,
+      items: cartItems,
+    })
       .then((result) => {
         if (cancelled) return;
         if ("error" in result && result.error) {
@@ -216,7 +225,7 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
     return () => {
       cancelled = true;
     };
-  }, [cepDigits, form.zip, cartItems]);
+  }, [cepDigits, form.zip, form.city, form.state, cartItems]);
 
   function selectShippingOption(optionId: number) {
     const option = shippingOptions.find((o) => o.id === optionId);
@@ -470,39 +479,54 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
 
           {shippingOptions.length > 0 && !cepLoading && (
             <div className="space-y-2">
-              <p className="text-sm font-medium text-iseul-ink">Forma de envio</p>
-              <ul className="space-y-2">
-                {shippingOptions.map((option) => {
-                  const selected = option.id === selectedShippingId;
-                  return (
-                    <li key={option.id}>
-                      <label
-                        className={`flex cursor-pointer items-center justify-between gap-3 rounded-lg border px-4 py-3 text-sm transition ${
-                          selected
-                            ? "border-iseul-accent bg-iseul-paper"
-                            : "border-iseul-line bg-white hover:border-iseul-accent/40"
-                        }`}
-                      >
-                        <span className="flex min-w-0 items-start gap-3">
-                          <input
-                            type="radio"
-                            name="shipping_option"
-                            checked={selected}
-                            onChange={() => selectShippingOption(option.id)}
-                            className="mt-1"
-                          />
-                          <span className="min-w-0">
-                            <span className="block font-medium">{formatShippingLabel(option)}</span>
-                          </span>
-                        </span>
-                        <span className="shrink-0 font-medium">
-                          {option.price === 0 ? "Grátis" : formatCurrency(option.price)}
-                        </span>
-                      </label>
-                    </li>
-                  );
-                })}
-              </ul>
+              {shippingOptions.length === 1 &&
+              shippingOptions[0].id === LOCAL_MOTOBOY_OPTION_ID ? (
+                <div className="rounded-lg border border-iseul-accent/30 bg-iseul-paper px-4 py-3 text-sm">
+                  <p className="font-medium text-iseul-ink">Entrega em Campo Grande</p>
+                  <p className="mt-1 text-iseul-muted">
+                    {formatShippingLabel(shippingOptions[0])} —{" "}
+                    {formatCurrency(shippingOptions[0].price)}
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm font-medium text-iseul-ink">Forma de envio</p>
+                  <ul className="space-y-2">
+                    {shippingOptions.map((option) => {
+                      const selected = option.id === selectedShippingId;
+                      return (
+                        <li key={option.id}>
+                          <label
+                            className={`flex cursor-pointer items-center justify-between gap-3 rounded-lg border px-4 py-3 text-sm transition ${
+                              selected
+                                ? "border-iseul-accent bg-iseul-paper"
+                                : "border-iseul-line bg-white hover:border-iseul-accent/40"
+                            }`}
+                          >
+                            <span className="flex min-w-0 items-start gap-3">
+                              <input
+                                type="radio"
+                                name="shipping_option"
+                                checked={selected}
+                                onChange={() => selectShippingOption(option.id)}
+                                className="mt-1"
+                              />
+                              <span className="min-w-0">
+                                <span className="block font-medium">
+                                  {formatShippingLabel(option)}
+                                </span>
+                              </span>
+                            </span>
+                            <span className="shrink-0 font-medium">
+                              {option.price === 0 ? "Grátis" : formatCurrency(option.price)}
+                            </span>
+                          </label>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </>
+              )}
             </div>
           )}
 

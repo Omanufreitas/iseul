@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { DateRangePicker } from "@/components/admin/dashboard/DateRangePicker";
 import { OrderListActions } from "@/components/admin/OrderListActions";
+import { OrderItemsModal } from "@/components/admin/OrderItemsModal";
 import { AdminExportButton } from "@/components/admin/AdminExportButton";
 import { AdminEmptyState } from "@/components/admin/ui/AdminEmptyState";
 import { AdminSelect } from "@/components/admin/ui/AdminSelect";
@@ -56,11 +57,19 @@ const STATUS_OPTIONS = [
   { value: "cancelado", label: "Cancelado" },
 ];
 
-function formatItemsPreview(items: AdminOrderListItem["items"]): string {
-  if (!items.length) return "—";
-  const names = items.map((i) => i.product_name);
-  if (names.length === 1) return names[0];
-  return `${names[0]} +${names.length - 1}`;
+function formatOrderDate(iso: string): string {
+  const date = new Date(iso);
+  return date.toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function itemUnitsCount(items: AdminOrderListItem["items"]): number {
+  return items.reduce((sum, item) => sum + item.quantity, 0);
 }
 
 export function OrdersAdminPanel({ orders, products, filters }: Props) {
@@ -75,6 +84,7 @@ export function OrdersAdminPanel({ orders, products, filters }: Props) {
   const [orderStatus, setOrderStatus] = useState(filters.orderStatus ?? "");
   const [from, setFrom] = useState(filters.from ?? defaults.from);
   const [to, setTo] = useState(filters.to ?? defaults.to);
+  const [itemsModalOrder, setItemsModalOrder] = useState<AdminOrderListItem | null>(null);
 
   useEffect(() => {
     setQuery(filters.q ?? "");
@@ -178,6 +188,18 @@ export function OrdersAdminPanel({ orders, products, filters }: Props) {
 
   return (
     <div className="space-y-6">
+      <OrderItemsModal
+        open={itemsModalOrder != null}
+        onClose={() => setItemsModalOrder(null)}
+        orderId={itemsModalOrder?.id ?? ""}
+        orderNumber={itemsModalOrder?.order_number ?? 0}
+        customerName={itemsModalOrder?.customer_name ?? ""}
+        items={itemsModalOrder?.items ?? []}
+        subtotal={itemsModalOrder?.subtotal}
+        shipping={itemsModalOrder?.shipping}
+        discount={itemsModalOrder?.discount}
+        total={itemsModalOrder?.total}
+      />
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Pedidos" value={stats.total} icon={ShoppingBag} />
         <StatCard label="Pagos" value={stats.paid} icon={User} />
@@ -370,9 +392,17 @@ export function OrdersAdminPanel({ orders, products, filters }: Props) {
                     <div className="font-mono text-xs text-iseul-muted">#{o.order_number}</div>
                     <div className="mt-1 font-medium">{o.customer_name}</div>
                     <div className="truncate text-xs text-iseul-muted">{o.customer_email}</div>
-                    <div className="mt-2 truncate text-xs text-iseul-accent">
-                      {formatItemsPreview(o.items)}
-                    </div>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        setItemsModalOrder(o);
+                      }}
+                      className="mt-2 inline-flex items-center rounded-full border border-iseul-line/80 bg-white px-2.5 py-1 text-[11px] font-medium text-iseul-accent transition hover:border-iseul-accent2 hover:bg-iseul-dew/40"
+                    >
+                      Ver · {itemUnitsCount(o.items)} un.
+                    </button>
                     {o.coupon_code && (
                       <div className="mt-1 text-xs text-iseul-muted">Cupom: {o.coupon_code}</div>
                     )}
@@ -404,18 +434,18 @@ export function OrdersAdminPanel({ orders, products, filters }: Props) {
 
           <div className="hidden overflow-hidden rounded-2xl border border-iseul-line/80 bg-white shadow-card lg:block">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[1060px] text-left text-sm">
+              <table className="w-full min-w-[920px] text-left text-sm">
                 <thead className="border-b bg-iseul-paper/60 text-xs uppercase tracking-wide text-iseul-muted">
                   <tr>
-                    <th className="px-4 py-3 font-medium">#</th>
-                    <th className="px-4 py-3 font-medium">Cliente</th>
-                    <th className="px-4 py-3 font-medium">Produtos</th>
-                    <th className="px-4 py-3 font-medium">Cupom</th>
-                    <th className="px-4 py-3 font-medium">Total</th>
-                    <th className="px-4 py-3 font-medium">Pagamento</th>
-                    <th className="px-4 py-3 font-medium">Status</th>
-                    <th className="px-4 py-3 font-medium">Data</th>
-                    <th className="min-w-[168px] px-4 py-3 text-right font-medium">Ações</th>
+                    <th className="w-16 px-4 py-3 font-medium">#</th>
+                    <th className="min-w-[180px] px-4 py-3 font-medium">Cliente</th>
+                    <th className="w-24 px-4 py-3 text-center font-medium">Itens</th>
+                    <th className="w-24 px-4 py-3 font-medium">Cupom</th>
+                    <th className="w-28 px-4 py-3 font-medium">Total</th>
+                    <th className="w-28 px-4 py-3 font-medium">Pagamento</th>
+                    <th className="w-36 px-4 py-3 font-medium">Status</th>
+                    <th className="w-32 px-4 py-3 font-medium">Data</th>
+                    <th className="w-44 px-4 py-3 text-right font-medium">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -435,17 +465,23 @@ export function OrdersAdminPanel({ orders, products, filters }: Props) {
                         </Link>
                       </td>
                       <td className="px-4 py-3">
-                        <Link href={`/admin/pedidos/${encodeURIComponent(o.id)}`} className="block">
-                          <div className="font-medium group-hover:text-iseul-accent">{o.customer_name}</div>
-                          <div className="text-xs text-iseul-muted">{o.customer_email}</div>
+                        <Link href={`/admin/pedidos/${encodeURIComponent(o.id)}`} className="block min-w-0">
+                          <div className="truncate font-medium group-hover:text-iseul-accent">
+                            {o.customer_name}
+                          </div>
+                          <div className="truncate text-xs text-iseul-muted">{o.customer_email}</div>
                         </Link>
                       </td>
-                      <td className="max-w-[220px] px-4 py-3">
-                        <div
-                          className="truncate text-xs text-neutral-600"
-                          title={formatItemsPreview(o.items)}
+                      <td className="px-4 py-3 text-center">
+                        <button
+                          type="button"
+                          onClick={() => setItemsModalOrder(o)}
+                          className="inline-flex min-w-[52px] items-center justify-center rounded-full border border-iseul-line/80 bg-white px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-iseul-accent shadow-sm transition hover:border-iseul-accent2 hover:bg-iseul-dew/50"
                         >
-                          {formatItemsPreview(o.items)}
+                          Ver
+                        </button>
+                        <div className="mt-1 text-[10px] text-iseul-muted">
+                          {itemUnitsCount(o.items)} un.
                         </div>
                       </td>
                       <td className="px-4 py-3 font-mono text-xs text-iseul-muted">
@@ -462,9 +498,11 @@ export function OrdersAdminPanel({ orders, products, filters }: Props) {
                           {paymentStatusLabel(payment)}
                         </span>
                       </td>
-                      <td className="px-4 py-3 capitalize">{o.status.replace(/_/g, " ")}</td>
-                      <td className="px-4 py-3 text-xs text-iseul-muted">
-                        {new Date(o.ordered_at).toLocaleString("pt-BR")}
+                      <td className="px-4 py-3 text-xs capitalize text-neutral-700">
+                        {o.status.replace(/_/g, " ")}
+                      </td>
+                      <td className="px-4 py-3 text-xs tabular-nums text-iseul-muted">
+                        {formatOrderDate(o.ordered_at)}
                       </td>
                       <td className="px-4 py-3 text-right whitespace-nowrap">
                         <OrderListActions

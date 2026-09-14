@@ -1,6 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/client";
 import {
-  findConfirmedPaymentForReference,
+  findConfirmedPaymentForOrder,
   getAsaasPayment,
   isConfirmedAsaasPaymentStatus,
 } from "@/lib/asaas";
@@ -179,7 +179,7 @@ export async function syncOrderByReference(orderId: string) {
   const admin = createAdminClient();
   const { data: order } = await admin
     .from("orders")
-    .select("id, payment_status, asaas_checkout_id")
+    .select("id, payment_status, asaas_checkout_id, total, customer_email")
     .eq("id", orderId)
     .maybeSingle();
 
@@ -187,8 +187,37 @@ export async function syncOrderByReference(orderId: string) {
     return { paid: order?.payment_status === "aprovado", alreadyPaid: true };
   }
 
-  const approved = await findConfirmedPaymentForReference(orderId, order.asaas_checkout_id);
+  const approved = await findConfirmedPaymentForOrder({
+    orderId: order.id,
+    checkoutSessionId: order.asaas_checkout_id,
+    total: Number(order.total),
+    customerEmail: order.customer_email,
+  });
   if (!approved) return { paid: false };
   await markOrderPaid(orderId, approved.id);
   return { paid: true };
+}
+
+export async function confirmOrderPaymentManually(orderId: string) {
+  const syncResult = await syncOrderByReference(orderId);
+  if (syncResult.paid) {
+    return { ok: true as const, source: "asaas" as const };
+  }
+
+  const admin = createAdminClient();
+  const { data: order } = await admin
+    .from("orders")
+    .select("id, payment_status")
+    .eq("id", orderId)
+    .maybeSingle();
+
+  if (!order) {
+    return { ok: false as const, error: "Pedido não encontrado." };
+  }
+  if (order.payment_status === "aprovado") {
+    return { ok: true as const, source: "already_paid" as const };
+  }
+
+  await markOrderPaid(orderId, `manual-${orderId}`);
+  return { ok: true as const, source: "manual" as const };
 }

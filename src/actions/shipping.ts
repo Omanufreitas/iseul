@@ -5,6 +5,8 @@ import { quoteShippingForCheckout } from "@/lib/shipping";
 
 const quoteShippingSchema = z.object({
   destinationCep: z.string().min(8),
+  destinationCity: z.string().optional(),
+  destinationState: z.string().optional(),
   items: z
     .array(
       z.object({
@@ -22,7 +24,15 @@ export async function quoteShipping(raw: unknown) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos" };
   }
 
-  const result = await quoteShippingForCheckout(parsed.data.destinationCep, parsed.data.items);
+  const result = await quoteShippingForCheckout(
+    parsed.data.destinationCep,
+    parsed.data.items,
+    undefined,
+    {
+      city: parsed.data.destinationCity,
+      state: parsed.data.destinationState,
+    }
+  );
   if ("error" in result) return result;
   return { quote: result };
 }

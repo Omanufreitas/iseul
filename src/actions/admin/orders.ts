@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/actions/admin/auth";
 import { createAdminClient } from "@/lib/supabase/client";
 import { isMockCatalogEnabled } from "@/lib/config";
-import { syncOrderByReference } from "@/lib/orders/fulfill";
+import { syncOrderByReference, confirmOrderPaymentManually } from "@/lib/orders/fulfill";
 import type { OrderStatus } from "@/types";
 
 export async function updateOrderFulfillment(
@@ -80,9 +80,38 @@ export async function syncOrderPaymentAdmin(orderId: string) {
     }
     return {
       error:
-        "Nenhum pagamento confirmado encontrado no Asaas para este pedido. Verifique o painel Asaas ou o webhook.",
+        "Nenhum pagamento confirmado encontrado no Asaas para este pedido. Verifique o painel Asaas ou confirme manualmente.",
     };
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Erro ao consultar Asaas" };
+  }
+}
+
+export async function confirmOrderPaymentManuallyAdmin(orderId: string) {
+  await requireAdmin();
+  if (isMockCatalogEnabled()) return { error: "Pedidos disponíveis apenas com Supabase." };
+
+  try {
+    const result = await confirmOrderPaymentManually(orderId);
+    revalidatePath("/admin/pedidos");
+    revalidatePath(`/admin/pedidos/${orderId}`);
+    revalidatePath("/admin");
+
+    if (!result.ok) {
+      return { error: result.error };
+    }
+
+    if (result.source === "asaas") {
+      return { success: true, message: "Pagamento encontrado e confirmado no Asaas." };
+    }
+    if (result.source === "already_paid") {
+      return { success: true, message: "Pedido já estava pago." };
+    }
+    return {
+      success: true,
+      message: "Pagamento confirmado manualmente. Estoque atualizado e pedido enviado ao Bling.",
+    };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Erro ao confirmar pagamento" };
   }
 }

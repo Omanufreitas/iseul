@@ -23,6 +23,7 @@ type Props = {
   trackingCode: string | null;
   notes: string | null;
   hasShippingAddress: boolean;
+  isLocalMotoboy: boolean;
   melhorEnvioStatus: string | null;
   melhorEnvioError: string | null;
   melhorEnvioLabelUrl: string | null;
@@ -34,6 +35,7 @@ export function OrderActionsPanel({
   trackingCode,
   notes,
   hasShippingAddress,
+  isLocalMotoboy,
   melhorEnvioStatus,
   melhorEnvioError,
   melhorEnvioLabelUrl,
@@ -116,46 +118,54 @@ export function OrderActionsPanel({
 
         {hasShippingAddress && (
           <div className="rounded-lg border border-neutral-100 bg-neutral-50 p-3">
-            <div className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-              Melhor Envio
-            </div>
-
-            {melhorEnvioError && (
-              <p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                {melhorEnvioError}
+            {isLocalMotoboy ? (
+              <p className="text-sm text-neutral-600">
+                Entrega local por motoboy em Campo Grande — sem etiqueta no Melhor Envio.
               </p>
-            )}
+            ) : (
+              <>
+                <div className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+                  Melhor Envio
+                </div>
 
-            <div className="mt-2">
-              {hasLabel ? (
-                <button
-                  type="button"
-                  disabled={labelPending}
-                  onClick={handlePrintLabel}
-                  className="w-full rounded-lg border border-neutral-300 bg-white px-4 py-2.5 text-sm font-medium hover:bg-neutral-50 disabled:opacity-60"
-                >
-                  {labelPending ? "Abrindo..." : "Imprimir etiqueta"}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  disabled={labelPending || !canGenerateLabel}
-                  onClick={handleGenerateLabel}
-                  className="w-full rounded-lg bg-iseul-pine px-4 py-2.5 text-sm font-medium text-white hover:bg-iseul-pine/90 disabled:opacity-60"
-                >
-                  {labelPending
-                    ? "Gerando..."
-                    : melhorEnvioError
-                      ? "Tentar gerar etiqueta novamente"
-                      : "Gerar etiqueta"}
-                </button>
-              )}
-            </div>
+                {melhorEnvioError && (
+                  <p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                    {melhorEnvioError}
+                  </p>
+                )}
 
-            {!canGenerateLabel && !hasLabel && (
-              <p className="mt-2 text-xs text-neutral-500">
-                Disponível quando o pedido estiver como Pago ou Separando.
-              </p>
+                <div className="mt-2">
+                  {hasLabel ? (
+                    <button
+                      type="button"
+                      disabled={labelPending}
+                      onClick={handlePrintLabel}
+                      className="w-full rounded-lg border border-neutral-300 bg-white px-4 py-2.5 text-sm font-medium hover:bg-neutral-50 disabled:opacity-60"
+                    >
+                      {labelPending ? "Abrindo..." : "Imprimir etiqueta"}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={labelPending || !canGenerateLabel}
+                      onClick={handleGenerateLabel}
+                      className="w-full rounded-lg bg-iseul-pine px-4 py-2.5 text-sm font-medium text-white hover:bg-iseul-pine/90 disabled:opacity-60"
+                    >
+                      {labelPending
+                        ? "Gerando..."
+                        : melhorEnvioError
+                          ? "Tentar gerar etiqueta novamente"
+                          : "Gerar etiqueta"}
+                    </button>
+                  )}
+                </div>
+
+                {!canGenerateLabel && !hasLabel && (
+                  <p className="mt-2 text-xs text-neutral-500">
+                    Disponível quando o pedido estiver como Pago ou Separando.
+                  </p>
+                )}
+              </>
             )}
           </div>
         )}
