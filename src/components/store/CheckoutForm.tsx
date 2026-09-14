@@ -48,7 +48,7 @@ function formatShippingLabel(option: ShippingQuoteOption): string {
 }
 
 export function CheckoutForm({ settings }: { settings: StoreSettings }) {
-  const { items, subtotal, clearCart, replaceItems } = useCart();
+  const { items, subtotal, clearCart, replaceItems, hydrated } = useCart();
   const [pending, startTransition] = useTransition();
   const [shipping, setShipping] = useState<number | null>(null);
   const [shippingOptions, setShippingOptions] = useState<ShippingQuoteOption[]>([]);
@@ -150,14 +150,14 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
   }, [cartSignature, items, replaceItems]);
 
   useEffect(() => {
-    if (checkoutTracked.current || items.length === 0) return;
+    if (!hydrated || checkoutTracked.current || items.length === 0) return;
     checkoutTracked.current = true;
     trackMetaInitiateCheckout({
       contentIds: items.map((item) => item.productId),
       value: subtotal,
       numItems: items.reduce((sum, item) => sum + item.quantity, 0),
     });
-  }, [items, subtotal]);
+  }, [hydrated, items, subtotal]);
 
   useEffect(() => {
     if (cepDigits.length !== 8) {

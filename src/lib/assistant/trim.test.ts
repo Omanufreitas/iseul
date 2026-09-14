@@ -18,6 +18,8 @@ describe("assistant prompt", () => {
     });
     expect(prompt).toContain("Só fale de produtos que estão no catálogo");
     expect(prompt).toContain("assistente virtual da loja Iseul");
+    expect(prompt).toContain("O desconto de Pix que estiver em REGRAS DA LOJA é fato real do checkout");
+    expect(prompt).toContain("Não invente cupom, percentual extra");
     expect(prompt).toContain("Não invente marca, preço, promoção, estoque, desconto, prazo ou ativo.");
     expect(prompt).toContain("contato@iseul.com.br");
   });

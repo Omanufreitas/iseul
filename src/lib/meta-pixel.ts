@@ -19,6 +19,68 @@ export type FbqTrackOptions = {
   eventID?: string;
 };
 
+type PendingFbq = {
+  action: string;
+  event: string;
+  params?: Record<string, unknown>;
+  options?: FbqTrackOptions;
+};
+
+const pending: PendingFbq[] = [];
+let flushTimer: ReturnType<typeof setTimeout> | null = null;
+let lastPageViewPath: string | null = null;
+
+export function isStorefrontPath(pathname: string | null | undefined): boolean {
+  if (!pathname) return false;
+  return !pathname.startsWith("/admin");
+}
+
+function pixelReady(): boolean {
+  return typeof window !== "undefined" && typeof window.fbq === "function";
+}
+
+function invoke(call: PendingFbq): void {
+  if (!pixelReady()) return;
+  if (call.params && call.options?.eventID) {
+    window.fbq(call.action, call.event, call.params, { eventID: call.options.eventID });
+    return;
+  }
+  if (call.params) {
+    window.fbq(call.action, call.event, call.params);
+    return;
+  }
+  window.fbq(call.action, call.event);
+}
+
+export function flushMetaPixelQueue(): void {
+  if (!pixelReady()) return;
+  while (pending.length) {
+    invoke(pending.shift()!);
+  }
+  if (flushTimer) {
+    clearTimeout(flushTimer);
+    flushTimer = null;
+  }
+}
+
+function scheduleFlush(): void {
+  if (flushTimer != null) return;
+  const started = Date.now();
+  const tick = () => {
+    if (pixelReady()) {
+      flushTimer = null;
+      flushMetaPixelQueue();
+      return;
+    }
+    if (Date.now() - started > 15000) {
+      flushTimer = null;
+      return;
+    }
+    flushTimer = setTimeout(tick, 50);
+  };
+  flushTimer = setTimeout(tick, 0);
+}
+
 export function fbq(
   action: string,
   event: string,
@@ -27,16 +89,30 @@ export function fbq(
 ): void {
   if (typeof window === "undefined") return;
   if (!getPixelId()) return;
-  if (typeof window.fbq !== "function") return;
-  if (params && options?.eventID) {
-    window.fbq(action, event, params, { eventID: options.eventID });
+  const call: PendingFbq = { action, event, params, options };
+  if (pixelReady()) {
+    invoke(call);
     return;
   }
-  if (params) {
-    window.fbq(action, event, params);
-    return;
+  pending.push(call);
+  scheduleFlush();
+}
+
+/** PageView em toda rota da loja. Sobrevive a remount do layout e espera o fbq. */
+export function trackStorefrontPageView(pathname: string | null | undefined): void {
+  if (!isStorefrontPath(pathname) || !pathname) return;
+  if (lastPageViewPath === pathname) return;
+  lastPageViewPath = pathname;
+  fbq("track", "PageView");
+}
+
+export function resetMetaPixelForTests(): void {
+  pending.length = 0;
+  lastPageViewPath = null;
+  if (flushTimer) {
+    clearTimeout(flushTimer);
+    flushTimer = null;
   }
-  window.fbq(action, event);
 }
 
 export interface PixelPurchaseData {

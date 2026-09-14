@@ -41,10 +41,15 @@ export function formatCatalogSnapshot(products: Product[]): string {
 }
 
 export function formatStoreFacts(settings: StoreSettings): string {
+  const pixRule =
+    settings.pix_discount_percent > 0
+      ? `No checkout, Pix tem ${settings.pix_discount_percent}% de desconto sobre o preço do produto. Isso já aparece na página do produto e no resumo do checkout. Não é cupom e não pode ser aplicado em cima de outro desconto. Não ofereça percentual diferente, desconto extra nem cupom que não exista.`
+      : "Pix e cartão são formas de pagamento. Só cite desconto de Pix se estiver definido nestas regras.";
+
   return [
     `Frete grátis somente acima de ${formatCurrency(settings.free_shipping_threshold)}, calculado no checkout pelo CEP.`,
     "Pedidos com estoque no Brasil saem em até 24 horas úteis após o pagamento, com rastreio por e-mail.",
-    "Pix e cartão são formas de pagamento. Não existe desconto automático de Pix nas páginas da loja.",
-    "Não invente cupom, percentual de desconto, prazo extra nem frete grátis abaixo do valor mínimo.",
+    pixRule,
+    "Não invente cupom, percentual extra, prazo extra nem frete grátis abaixo do valor mínimo.",
   ].join(" ");
 }

@@ -1,4 +1,4 @@
-import { fbq } from "@/lib/meta-pixel";
+import { fbq, trackStorefrontPageView } from "@/lib/meta-pixel";
 
 export type MetaContentParams = {
   contentIds?: string[];
@@ -37,6 +37,10 @@ function trackMetaStandard(event: string, { eventId, ...params }: MetaContentPar
     return;
   }
   fbq("track", event, payload);
+}
+
+export function trackMetaPageView(pathname: string | null | undefined) {
+  trackStorefrontPageView(pathname);
 }
 
 export function trackMetaViewContent(params: MetaContentParams) {

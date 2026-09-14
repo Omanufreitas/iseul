@@ -2,34 +2,24 @@
 
 import Script from "next/script";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef } from "react";
-import { fbq, getPixelId } from "@/lib/meta-pixel";
-
-function isStorefrontPath(pathname: string) {
-  return !pathname.startsWith("/admin");
-}
+import { useEffect } from "react";
+import { trackMetaPageView } from "@/lib/analytics/meta";
+import { flushMetaPixelQueue, getPixelId, isStorefrontPath } from "@/lib/meta-pixel";
 
 export function MetaPixelScript() {
   const pathname = usePathname();
   const pixelId = getPixelId();
-  const onStorefront = isStorefrontPath(pathname);
-  const skipFirstPageView = useRef(onStorefront);
 
   useEffect(() => {
-    if (!pixelId || !isStorefrontPath(pathname)) return;
-    // O snippet já dispara PageView no primeiro load; aqui só as navegações internas.
-    if (skipFirstPageView.current) {
-      skipFirstPageView.current = false;
-      return;
-    }
-    fbq("track", "PageView");
+    if (!pixelId) return;
+    trackMetaPageView(pathname);
   }, [pathname, pixelId]);
 
   if (!pixelId) return null;
 
   return (
     <>
-      <Script id="meta-pixel" strategy="afterInteractive">
+      <Script id="meta-pixel" strategy="afterInteractive" onReady={flushMetaPixelQueue}>
         {`
           !function(f,b,e,v,n,t,s)
           {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
@@ -40,18 +30,19 @@ export function MetaPixelScript() {
           s.parentNode.insertBefore(t,s)}(window, document,'script',
           'https://connect.facebook.net/en_US/fbevents.js');
           fbq('init', '${pixelId}');
-          ${onStorefront ? "fbq('track', 'PageView');" : ""}
         `}
       </Script>
-      <noscript>
-        <img
-          height="1"
-          width="1"
-          style={{ display: "none" }}
-          src={`https://www.facebook.com/tr?id=${pixelId}&ev=PageView&noscript=1`}
-          alt=""
-        />
-      </noscript>
+      {isStorefrontPath(pathname) ? (
+        <noscript>
+          <img
+            height="1"
+            width="1"
+            style={{ display: "none" }}
+            src={`https://www.facebook.com/tr?id=${pixelId}&ev=PageView&noscript=1`}
+            alt=""
+          />
+        </noscript>
+      ) : null}
     </>
   );
 }

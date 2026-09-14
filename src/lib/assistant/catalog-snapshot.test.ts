@@ -54,7 +54,7 @@ describe("assistant catalog snapshot", () => {
     expect(text).not.toContain("produto inventado");
   });
 
-  it("não ensina desconto de Pix", () => {
+  it("ensina o desconto de Pix do checkout sem tratar como cupom", () => {
     const facts = formatStoreFacts({
       id: 1,
       store_name: "Iseul",
@@ -65,7 +65,8 @@ describe("assistant catalog snapshot", () => {
       trust_rating: 5,
       trust_rating_label: "",
     });
-    expect(facts.toLowerCase()).not.toMatch(/pix.*\d+\s*%/);
-    expect(facts).toContain("Não existe desconto automático de Pix");
+    expect(facts).toMatch(/Pix tem 5%/);
+    expect(facts).toContain("Não é cupom");
+    expect(facts).toContain("Não invente cupom, percentual extra");
   });
 });
