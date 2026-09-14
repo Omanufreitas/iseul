@@ -3,6 +3,7 @@ import { Caveat, Inter, Instrument_Serif } from "next/font/google";
 import { MetaPixelScript } from "@/components/analytics/MetaPixelScript";
 import { AppProviders } from "@/components/providers/AppProviders";
 import { ScrollManager } from "@/components/providers/ScrollManager";
+import { IseulAssistantMount } from "@/components/store/IseulAssistantMount";
 import { SITE_DESCRIPTION, SITE_TITLE, SITE_URL } from "@/lib/site";
 import "./globals.css";
 
@@ -55,6 +56,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AppProviders>
           <ScrollManager />
           <MetaPixelScript />
+          <IseulAssistantMount />
           {children}
         </AppProviders>
       </body>
