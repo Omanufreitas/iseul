@@ -1,13 +1,15 @@
+type FbqFn = ((...args: unknown[]) => void) & {
+  callMethod?: (...args: unknown[]) => void;
+  queue?: unknown[];
+  loaded?: boolean;
+  version?: string;
+  push?: (...args: unknown[]) => void;
+};
+
 declare global {
   interface Window {
-    fbq: ((...args: unknown[]) => void) & {
-      callMethod?: (...args: unknown[]) => void;
-      queue?: unknown[];
-      loaded?: boolean;
-      version?: string;
-      push?: (...args: unknown[]) => void;
-    };
-    _fbq?: typeof window.fbq;
+    fbq: FbqFn;
+    _fbq?: FbqFn;
     __ISEUL_PIXEL_BOOT_PV?: boolean;
   }
 }
@@ -39,13 +41,13 @@ export function ensureMetaPixelStub(): void {
   const pixelId = getPixelId();
   if (!pixelId) return;
 
-  const n = function (...args: unknown[]) {
+  const n: FbqFn = function (...args: unknown[]) {
     if (n.callMethod) {
       n.callMethod(...args);
-    } else {
-      n.queue!.push(args);
+      return;
     }
-  } as typeof window.fbq;
+    n.queue?.push(args);
+  };
   n.queue = [];
   n.loaded = true;
   n.version = "2.0";
