@@ -5,10 +5,53 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { IseulDropIcon } from "@/components/store/landing/IseulDropIcon";
 import { parseAssistantBlocks, productHref, type AssistantBlock } from "@/lib/assistant/format";
+import { prepareChatHistory } from "@/lib/assistant/payload";
 import { cn } from "@/lib/utils";
 
-type AssistantIntent = "products" | "doubt" | "routine";
+const FALLBACK_ERROR = "Não consegui responder agora.";
 
+async function sleep(ms: number) {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function postChat(
+  body: unknown,
+  attempt = 0
+): Promise<{ reply?: string; error?: string }> {
+  try {
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      cache: "no-store",
+      body: JSON.stringify(body),
+    });
+    const raw = await res.text();
+    let data: { reply?: string; error?: string } = {};
+    try {
+      data = raw ? (JSON.parse(raw) as { reply?: string; error?: string }) : {};
+    } catch {
+      if (attempt === 0) {
+        await sleep(500);
+        return postChat(body, 1);
+      }
+      return { error: FALLBACK_ERROR };
+    }
+    if (!res.ok && attempt === 0 && res.status >= 500) {
+      await sleep(500);
+      return postChat(body, 1);
+    }
+    if (data.reply) return { reply: data.reply };
+    return { error: data.error || FALLBACK_ERROR };
+  } catch {
+    if (attempt === 0) {
+      await sleep(500);
+      return postChat(body, 1);
+    }
+    return { error: FALLBACK_ERROR };
+  }
+}
+
+type AssistantIntent = "products" | "doubt" | "routine";
 type ChatRole = "user" | "assistant";
 type ChatMessage = { role: ChatRole; content: string };
 
@@ -88,54 +131,48 @@ export function IseulAssistant() {
     },
   ]);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const inFlight = useRef(false);
   const userTurns = messages.filter((item) => item.role === "user").length;
   const limitReached = userTurns >= MAX_TURNS;
   const onAdmin = pathname.startsWith("/admin");
   const onProduct = pathname.startsWith("/produtos/");
 
   useEffect(() => {
-    if (open) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (!open || pending) return;
+    bottomRef.current?.scrollIntoView({ block: "nearest" });
   }, [messages, open, pending]);
 
   if (!pathname || onAdmin) return null;
 
   async function send(message: string, intent?: AssistantIntent) {
     const text = message.trim();
-    if (!text || pending || limitReached) return;
+    if (!text || inFlight.current || limitReached) return;
+    inFlight.current = true;
+    const previous = messages;
 
-    const nextHistory = [...messages, { role: "user" as const, content: text }];
-    setMessages(nextHistory);
-    setInput("");
     setPending(true);
     setError(null);
+    inputRef.current?.blur();
 
     try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: text,
-          intent,
-          history: nextHistory.slice(-8, -1),
-        }),
+      // iOS Safari abortava o fetch quando o teclado fechava e o layout refluía.
+      await sleep(200);
+      setMessages([...previous, { role: "user" as const, content: text }]);
+      setInput("");
+      const data = await postChat({
+        message: text,
+        intent,
+        history: prepareChatHistory(previous, text),
       });
-      const data = (await res.json()) as { reply?: string; error?: string };
-      if (!res.ok || !data.reply) {
-        setError(data.error ?? "Não consegui responder agora.");
-        setMessages((prev) => [
-          ...prev,
-          { role: "assistant", content: data.error ?? "Não consegui responder agora." },
-        ]);
+      if (!data.reply) {
+        setError(data.error ?? FALLBACK_ERROR);
+        setMessages((prev) => [...prev, { role: "assistant", content: data.error ?? FALLBACK_ERROR }]);
         return;
       }
       setMessages((prev) => [...prev, { role: "assistant", content: data.reply! }]);
-    } catch {
-      setError("Não consegui responder agora.");
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "Não consegui responder agora." },
-      ]);
     } finally {
+      inFlight.current = false;
       setPending(false);
     }
   }
@@ -151,7 +188,7 @@ export function IseulAssistant() {
     >
       {open && (
         <section
-          className="flex h-[min(32rem,calc(100dvh-8rem))] w-[min(100vw-2rem,22rem)] flex-col overflow-hidden rounded-2xl border border-iseul-line bg-[color-mix(in_srgb,var(--paper)_96%,white)] shadow-[0_18px_50px_rgba(28,26,22,.16)]"
+          className="flex h-[min(32rem,calc(100svh-8rem))] w-[min(100vw-2rem,22rem)] flex-col overflow-hidden overscroll-contain rounded-2xl border border-iseul-line bg-[color-mix(in_srgb,var(--paper)_96%,white)] shadow-[0_18px_50px_rgba(28,26,22,.16)]"
           aria-label="Assistente Iseul"
         >
           <header className="flex items-center justify-between border-b border-iseul-line bg-iseul-dew/50 px-4 py-3">
@@ -230,11 +267,14 @@ export function IseulAssistant() {
                 </label>
                 <textarea
                   id="iseul-assistant-input"
+                  ref={inputRef}
                   rows={2}
                   value={input}
                   disabled={pending}
+                  enterKeyHint="send"
                   onChange={(event) => setInput(event.target.value)}
                   onKeyDown={(event) => {
+                    if (event.nativeEvent.isComposing) return;
                     if (event.key === "Enter" && !event.shiftKey) {
                       event.preventDefault();
                       void send(input);

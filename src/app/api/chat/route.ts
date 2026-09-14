@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { consumeAssistantQuota, getClientIp } from "@/lib/assistant/quota";
+import { consumeAssistantQuota, getClientIp, recordAssistantUse } from "@/lib/assistant/quota";
 import { formatCatalogSnapshot, formatStoreFacts } from "@/lib/assistant/catalog-snapshot";
+import { clipChatText } from "@/lib/assistant/payload";
 import { trimAssistantResponse } from "@/lib/assistant/trim";
 import { listProducts, getStoreSettings } from "@/lib/catalog";
 import { getOpenAIChatModel, getOpenAIClient, isOpenAIConfigured } from "@/lib/openai/client";
@@ -12,11 +13,12 @@ import {
 } from "@/lib/prompts/assistant";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
 const historySchema = z.object({
   role: z.enum(["user", "assistant"]),
-  content: z.string().min(1).max(2000),
+  content: z.string().min(1).max(8000),
 });
 
 const schema = z.object({
@@ -31,10 +33,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Assistente indisponível." }, { status: 503 });
     }
 
-    const quota = consumeAssistantQuota(getClientIp(request));
+    const ip = getClientIp(request);
+    const quota = consumeAssistantQuota(ip);
     if (!quota.allowed) {
       return NextResponse.json(
-        { error: "Muitas mensagens por hoje. Tente de novo amanhã ou escreva para contato@iseul.com.br." },
+        {
+          error:
+            "Muitas mensagens por hoje. Tente de novo amanhã ou escreva para contato@iseul.com.br.",
+        },
         { status: 429 }
       );
     }
@@ -45,7 +51,10 @@ export async function POST(request: Request) {
     }
 
     const intent = isAssistantIntent(parsed.data.intent) ? parsed.data.intent : undefined;
-    const history = parsed.data.history ?? [];
+    const history = (parsed.data.history ?? []).map((item) => ({
+      role: item.role,
+      content: clipChatText(item.content),
+    }));
     const [products, settings] = await Promise.all([listProducts(), getStoreSettings()]);
     const catalog = formatCatalogSnapshot(products.filter((product) => product.active));
     const system = [
@@ -75,8 +84,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Não consegui responder agora." }, { status: 502 });
     }
 
-    return NextResponse.json({ reply, remaining: quota.remaining });
-  } catch {
+    recordAssistantUse(ip);
+    return NextResponse.json(
+      { reply, remaining: Math.max(0, quota.remaining - 1) },
+      { headers: { "Cache-Control": "no-store" } }
+    );
+  } catch (error) {
+    console.error("[iseul-assistant]", error);
     return NextResponse.json({ error: "Não consegui responder agora." }, { status: 500 });
   }
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { consumeAssistantQuota, getAssistantDailyLimit, getClientIp } from "./quota";
+import { consumeAssistantQuota, getAssistantDailyLimit, getClientIp, recordAssistantUse } from "./quota";
 
 describe("assistant quota", () => {
   it("bloqueia depois do limite diário", () => {
@@ -8,6 +8,7 @@ describe("assistant quota", () => {
     let last = { allowed: true, remaining: limit };
     for (let i = 0; i < limit; i++) {
       last = consumeAssistantQuota(ip);
+      if (last.allowed) recordAssistantUse(ip);
     }
     expect(last.allowed).toBe(true);
     expect(consumeAssistantQuota(ip).allowed).toBe(false);

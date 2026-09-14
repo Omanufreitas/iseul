@@ -21,14 +21,22 @@ export function consumeAssistantQuota(ip: string): { allowed: boolean; remaining
   const day = todayKey();
   const current = hits.get(ip);
   if (!current || current.day !== day) {
-    hits.set(ip, { day, count: 1 });
-    return { allowed: true, remaining: DAILY_LIMIT - 1 };
+    return { allowed: true, remaining: DAILY_LIMIT };
   }
   if (current.count >= DAILY_LIMIT) {
     return { allowed: false, remaining: 0 };
   }
-  current.count += 1;
   return { allowed: true, remaining: DAILY_LIMIT - current.count };
+}
+
+export function recordAssistantUse(ip: string): void {
+  const day = todayKey();
+  const current = hits.get(ip);
+  if (!current || current.day !== day) {
+    hits.set(ip, { day, count: 1 });
+    return;
+  }
+  current.count += 1;
 }
 
 export function getAssistantDailyLimit(): number {
