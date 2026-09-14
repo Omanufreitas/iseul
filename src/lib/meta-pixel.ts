@@ -8,6 +8,7 @@ declare global {
       push?: (...args: unknown[]) => void;
     };
     _fbq?: typeof window.fbq;
+    __ISEUL_PIXEL_BOOT_PV?: boolean;
   }
 }
 
@@ -15,70 +16,51 @@ export function getPixelId(): string {
   return process.env.NEXT_PUBLIC_META_PIXEL_ID?.trim() ?? "";
 }
 
+export function getMetaPixelSnippet(pixelId: string): string {
+  return `!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','${pixelId}');fbq('track','PageView');window.__ISEUL_PIXEL_BOOT_PV=true;`;
+}
+
 export type FbqTrackOptions = {
   eventID?: string;
 };
 
-type PendingFbq = {
-  action: string;
-  event: string;
-  params?: Record<string, unknown>;
-  options?: FbqTrackOptions;
-};
-
-const pending: PendingFbq[] = [];
-let flushTimer: ReturnType<typeof setTimeout> | null = null;
 let lastPageViewPath: string | null = null;
+let consumedBootPageView = false;
 
 export function isStorefrontPath(pathname: string | null | undefined): boolean {
   if (!pathname) return false;
   return !pathname.startsWith("/admin");
 }
 
-function pixelReady(): boolean {
-  return typeof window !== "undefined" && typeof window.fbq === "function";
-}
+/** Stub oficial do Meta: enfileira em fbq.queue até o fbevents.js processar. */
+export function ensureMetaPixelStub(): void {
+  if (typeof window === "undefined") return;
+  if (typeof window.fbq === "function") return;
+  const pixelId = getPixelId();
+  if (!pixelId) return;
 
-function invoke(call: PendingFbq): void {
-  if (!pixelReady()) return;
-  if (call.params && call.options?.eventID) {
-    window.fbq(call.action, call.event, call.params, { eventID: call.options.eventID });
-    return;
-  }
-  if (call.params) {
-    window.fbq(call.action, call.event, call.params);
-    return;
-  }
-  window.fbq(call.action, call.event);
-}
-
-export function flushMetaPixelQueue(): void {
-  if (!pixelReady()) return;
-  while (pending.length) {
-    invoke(pending.shift()!);
-  }
-  if (flushTimer) {
-    clearTimeout(flushTimer);
-    flushTimer = null;
-  }
-}
-
-function scheduleFlush(): void {
-  if (flushTimer != null) return;
-  const started = Date.now();
-  const tick = () => {
-    if (pixelReady()) {
-      flushTimer = null;
-      flushMetaPixelQueue();
-      return;
+  const n = function (this: typeof window.fbq) {
+    if (n.callMethod) {
+      n.callMethod.apply(n, arguments as unknown as []);
+    } else {
+      n.queue!.push(arguments);
     }
-    if (Date.now() - started > 15000) {
-      flushTimer = null;
-      return;
-    }
-    flushTimer = setTimeout(tick, 50);
-  };
-  flushTimer = setTimeout(tick, 0);
+  } as typeof window.fbq;
+  n.queue = [];
+  n.loaded = true;
+  n.version = "2.0";
+  n.push = n;
+  window.fbq = n;
+  window._fbq = n;
+
+  if (!document.getElementById("facebook-jssdk")) {
+    const script = document.createElement("script");
+    script.id = "facebook-jssdk";
+    script.async = true;
+    script.src = "https://connect.facebook.net/en_US/fbevents.js";
+    document.head.appendChild(script);
+  }
+  n("init", pixelId);
 }
 
 export function fbq(
@@ -89,30 +71,32 @@ export function fbq(
 ): void {
   if (typeof window === "undefined") return;
   if (!getPixelId()) return;
-  const call: PendingFbq = { action, event, params, options };
-  if (pixelReady()) {
-    invoke(call);
-    return;
-  }
-  pending.push(call);
-  scheduleFlush();
+  ensureMetaPixelStub();
+  if (typeof window.fbq !== "function") return;
+
+  const args: unknown[] = [action, event];
+  if (params) args.push(params);
+  if (options?.eventID) args.push({ eventID: options.eventID });
+  window.fbq.apply(window.fbq, args);
 }
 
-/** PageView em toda rota da loja. Sobrevive a remount do layout e espera o fbq. */
+/** SPA: PageView em troca de rota. Hard-load já sai no snippet (beforeInteractive). */
 export function trackStorefrontPageView(pathname: string | null | undefined): void {
   if (!isStorefrontPath(pathname) || !pathname) return;
+  if (typeof window !== "undefined" && window.__ISEUL_PIXEL_BOOT_PV && !consumedBootPageView) {
+    consumedBootPageView = true;
+    window.__ISEUL_PIXEL_BOOT_PV = false;
+    lastPageViewPath = pathname;
+    return;
+  }
   if (lastPageViewPath === pathname) return;
   lastPageViewPath = pathname;
   fbq("track", "PageView");
 }
 
 export function resetMetaPixelForTests(): void {
-  pending.length = 0;
   lastPageViewPath = null;
-  if (flushTimer) {
-    clearTimeout(flushTimer);
-    flushTimer = null;
-  }
+  consumedBootPageView = false;
 }
 
 export interface PixelPurchaseData {

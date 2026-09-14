@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Caveat, Inter, Instrument_Serif } from "next/font/google";
-import { MetaPixelScript } from "@/components/analytics/MetaPixelScript";
+import { MetaPixelRouteTracker } from "@/components/analytics/MetaPixelScript";
 import { AppProviders } from "@/components/providers/AppProviders";
 import { ScrollManager } from "@/components/providers/ScrollManager";
 import { IseulAssistantMount } from "@/components/store/IseulAssistantMount";
+import { getMetaPixelSnippet, getPixelId } from "@/lib/meta-pixel";
 import { SITE_DESCRIPTION, SITE_TITLE, SITE_URL } from "@/lib/site";
 import "./globals.css";
 
@@ -48,14 +50,32 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const pixelId = getPixelId();
+
   return (
     <html lang="pt-BR">
       <body
         className={`${inter.variable} ${instrument.variable} ${caveat.variable} font-sans antialiased`}
       >
+        {pixelId ? (
+          <>
+            <Script id="meta-pixel" strategy="beforeInteractive">
+              {getMetaPixelSnippet(pixelId)}
+            </Script>
+            <noscript>
+              <img
+                height="1"
+                width="1"
+                style={{ display: "none" }}
+                src={`https://www.facebook.com/tr?id=${pixelId}&ev=PageView&noscript=1`}
+                alt=""
+              />
+            </noscript>
+          </>
+        ) : null}
         <AppProviders>
           <ScrollManager />
-          <MetaPixelScript />
+          <MetaPixelRouteTracker />
           <IseulAssistantMount />
           {children}
         </AppProviders>

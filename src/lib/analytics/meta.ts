@@ -20,13 +20,15 @@ function baseContentParams({
 }: MetaContentParams): Record<string, unknown> {
   const params: Record<string, unknown> = { currency };
   if (contentIds?.length) {
-    params.content_ids = contentIds;
+    params.content_ids = contentIds.map((id) => String(id));
     params.content_type = "product";
   }
   if (contentName) params.content_name = contentName;
-  if (value != null && value > 0) params.value = value;
+  if (value != null && Number.isFinite(value) && value > 0) {
+    params.value = Number(value.toFixed(2));
+  }
   if (numItems != null && numItems > 0) params.num_items = numItems;
-  if (orderId) params.order_id = orderId;
+  if (orderId) params.order_id = String(orderId);
   return params;
 }
 
