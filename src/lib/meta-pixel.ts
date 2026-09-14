@@ -39,11 +39,11 @@ export function ensureMetaPixelStub(): void {
   const pixelId = getPixelId();
   if (!pixelId) return;
 
-  const n = function (this: typeof window.fbq) {
+  const n = function (...args: unknown[]) {
     if (n.callMethod) {
-      n.callMethod.apply(n, arguments as unknown as []);
+      n.callMethod(...args);
     } else {
-      n.queue!.push(arguments);
+      n.queue!.push(args);
     }
   } as typeof window.fbq;
   n.queue = [];
@@ -77,7 +77,7 @@ export function fbq(
   const args: unknown[] = [action, event];
   if (params) args.push(params);
   if (options?.eventID) args.push({ eventID: options.eventID });
-  window.fbq.apply(window.fbq, args);
+  window.fbq(...args);
 }
 
 /** SPA: PageView em troca de rota. Hard-load já sai no snippet (beforeInteractive). */

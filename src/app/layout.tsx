@@ -63,6 +63,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               {getMetaPixelSnippet(pixelId)}
             </Script>
             <noscript>
+              {/* Pixel noscript: 1x1 do Meta, não otimizar com next/image */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 height="1"
                 width="1"
