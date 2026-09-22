@@ -1,3 +1,4 @@
+import { mirrorMetaEventToCapi } from "@/lib/analytics/meta-capi-mirror";
 import { fbq, trackStorefrontPageView } from "@/lib/meta-pixel";
 
 export type MetaContentParams = {
@@ -34,11 +35,11 @@ function baseContentParams({
 
 function trackMetaStandard(event: string, { eventId, ...params }: MetaContentParams) {
   const payload = baseContentParams(params);
-  if (eventId) {
-    fbq("track", event, payload, { eventID: eventId });
-    return;
+  const resolvedId = eventId || `${event.toLowerCase()}_${Date.now()}`;
+  fbq("track", event, payload, { eventID: resolvedId });
+  if (event === "ViewContent" || event === "InitiateCheckout" || event === "Purchase") {
+    mirrorMetaEventToCapi(event, resolvedId, params);
   }
-  fbq("track", event, payload);
 }
 
 let lastInitiateCheckoutKey = "";

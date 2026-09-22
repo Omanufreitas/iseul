@@ -5,6 +5,7 @@ import {
   isConfirmedAsaasPaymentStatus,
 } from "@/lib/asaas";
 import { syncOrderToBling } from "@/lib/bling/sync-order";
+import { sendMetaPurchaseFromPaidOrder } from "@/lib/meta-capi";
 
 export async function releaseExpiredReservations() {
   const admin = createAdminClient();
@@ -115,6 +116,12 @@ export async function markOrderPaid(orderId: string, paymentId: string) {
     await syncOrderToBling(orderId);
   } catch (e) {
     console.error("[bling]", e);
+  }
+
+  try {
+    await sendMetaPurchaseFromPaidOrder(orderId);
+  } catch (e) {
+    console.error("[meta-capi]", e);
   }
 
   return { alreadyPaid: false };

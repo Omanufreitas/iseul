@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { FACEBOOK_DOMAIN_VERIFICATION } from "@/lib/site";
 import { buildProductJsonLd, productMetadata } from "@/lib/metadata";
 import type { Product } from "@/types";
 
@@ -34,6 +35,12 @@ const sampleProduct: Product = {
   sort_order: 0,
   skin_types: ["oleosa"],
 };
+
+describe("facebook domain verification", () => {
+  it("mantém a tag do BM iseul.br", () => {
+    expect(FACEBOOK_DOMAIN_VERIFICATION).toBe("jfdasg3ei8a84chggdaln5cweoc4f4");
+  });
+});
 
 describe("productMetadata", () => {
   it("gera canonical e og:image por produto", () => {

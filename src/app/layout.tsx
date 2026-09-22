@@ -6,7 +6,12 @@ import { AppProviders } from "@/components/providers/AppProviders";
 import { ScrollManager } from "@/components/providers/ScrollManager";
 import { IseulAssistantMount } from "@/components/store/IseulAssistantMount";
 import { getMetaPixelSnippet, getPixelId } from "@/lib/meta-pixel";
-import { SITE_DESCRIPTION, SITE_TITLE, SITE_URL } from "@/lib/site";
+import {
+  FACEBOOK_DOMAIN_VERIFICATION,
+  SITE_DESCRIPTION,
+  SITE_TITLE,
+  SITE_URL,
+} from "@/lib/site";
 import "./globals.css";
 
 const inter = Inter({
@@ -46,6 +51,9 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
+  },
+  other: {
+    "facebook-domain-verification": FACEBOOK_DOMAIN_VERIFICATION,
   },
 };
 
