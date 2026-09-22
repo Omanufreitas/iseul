@@ -14,6 +14,7 @@ import { getAvailableStock } from "@/lib/inventory";
 import { quoteShippingForCheckout, shippingPricesMatch } from "@/lib/shipping";
 import { subscribeWaitlist } from "@/lib/waitlist";
 import { couponDiscountAmount } from "@/lib/coupons";
+import { applyOrderDiscountToUnitPrices } from "@/lib/order-discount";
 import {
   asaasBillingTypes,
   cardUnitPrice,
@@ -303,18 +304,15 @@ export async function createCheckoutOrder(raw: unknown) {
     });
   }
 
-  const asaasItems = prepared.map((oi) => {
-    let unitPrice = oi.charge_unit_price;
-    if (discount > 0 && chargeSubtotal > 0) {
-      const ratio = discount / chargeSubtotal;
-      unitPrice = Math.round(oi.charge_unit_price * (1 - ratio) * 100) / 100;
-    }
-    return {
-      title: oi.product_name,
-      quantity: oi.quantity,
-      unit_price: unitPrice,
-    };
-  });
+  const asaasUnitPrices = applyOrderDiscountToUnitPrices(
+    prepared.map((oi) => ({ unit_price: oi.charge_unit_price, quantity: oi.quantity })),
+    discount,
+  );
+  const asaasItems = prepared.map((oi, index) => ({
+    title: oi.product_name,
+    quantity: oi.quantity,
+    unit_price: asaasUnitPrices[index] ?? oi.charge_unit_price,
+  }));
 
   const requestOrigin = await getCheckoutRequestOrigin();
   const checkout = await createStoreAsaasCheckout(

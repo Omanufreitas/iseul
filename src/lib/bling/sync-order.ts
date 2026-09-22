@@ -9,6 +9,11 @@ import {
   isBlingDuplicateOrderNumberError,
 } from "@/lib/bling/resolve-entities";
 import { resolveBlingNaturezaOperacaoIdForCustomer } from "@/lib/bling/resolve-natureza";
+import {
+  applyOrderDiscountToUnitPrices,
+  chargedMerchandiseTotal,
+  itemsMerchandiseTotal,
+} from "@/lib/order-discount";
 
 type BlingSalePayload = {
   contato: { id: number };
@@ -148,7 +153,7 @@ export async function syncOrderToBling(orderId: string): Promise<void> {
   const { data: order } = await admin
     .from("orders")
     .select(
-      `id, order_number, total, shipping, bling_order_id, bling_sync_status, nfe_number,
+      `id, order_number, total, shipping, discount, coupon_code, bling_order_id, bling_sync_status, nfe_number,
        shipping_address, customer_name, customer_email, customer_cpf,
        items:order_items(id, product_id, product_name, quantity, unit_price)`,
     )
@@ -239,10 +244,18 @@ export async function syncOrderToBling(orderId: string): Promise<void> {
     return;
   }
 
+  const listedMerchandise = itemsMerchandiseTotal(items);
+  const paidMerchandise = chargedMerchandiseTotal(Number(order.total), Number(order.shipping));
+  const couponDiscount = Math.max(
+    0,
+    Number(order.discount) || Math.max(0, listedMerchandise - paidMerchandise),
+  );
+  const discountedUnitPrices = applyOrderDiscountToUnitPrices(items, couponDiscount);
+
   const blingItens: BlingSalePayload["itens"] = [];
   const missingSkus: string[] = [];
 
-  for (const item of items) {
+  for (const [index, item] of items.entries()) {
     const candidates = await resolveProductSkuCandidates(admin, item.product_id);
     const productId = candidates.length ? await findBlingProductId(candidates) : null;
 
@@ -254,7 +267,7 @@ export async function syncOrderToBling(orderId: string): Promise<void> {
     blingItens.push({
       produto: { id: productId },
       quantidade: item.quantity,
-      valor: Number(item.unit_price),
+      valor: discountedUnitPrices[index] ?? Number(item.unit_price),
       naturezaOperacao: { id: naturezaOperacaoId },
     });
   }
@@ -278,7 +291,15 @@ export async function syncOrderToBling(orderId: string): Promise<void> {
     contato: { id: contatoId },
     data: new Date().toISOString().slice(0, 10),
     itens: blingItens,
-    observacoes: `Pedido Iseul online${orderNumber ? ` #${orderNumber}` : ""}${shipping > 0 ? `. Frete: R$ ${shipping.toFixed(2)}` : ""}`,
+    observacoes: [
+      `Pedido Iseul online${orderNumber ? ` #${orderNumber}` : ""}`,
+      shipping > 0 ? `Frete: R$ ${shipping.toFixed(2)}` : "",
+      couponDiscount > 0
+        ? `Cupom${order.coupon_code ? ` ${order.coupon_code}` : ""}: -R$ ${couponDiscount.toFixed(2)}`
+        : "",
+    ]
+      .filter(Boolean)
+      .join(". "),
   };
 
   if (addr?.zip && addr?.street && addr?.city && addr?.state) {
