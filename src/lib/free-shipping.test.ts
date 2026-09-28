@@ -31,6 +31,18 @@ describe("applyFreeShipping", () => {
     expect(selected?.price).toBe(0);
     expect(selected?.id).toBe(1);
   });
+
+  it("zera motoboy local acima do threshold", () => {
+    const motoboy: MelhorEnvioQuoteOption = {
+      id: -3,
+      name: "Motoboy",
+      company: "Entrega local",
+      price: 15,
+      deliveryDays: 1,
+    };
+    expect(applyFreeShipping([motoboy], 428, 399)[0]?.price).toBe(0);
+    expect(applyFreeShipping([motoboy], 350, 399)[0]?.price).toBe(15);
+  });
 });
 
 describe("isFreeShippingEligibleOption", () => {

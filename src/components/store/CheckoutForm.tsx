@@ -483,7 +483,9 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
                   <p className="font-medium text-iseul-ink">Entrega em Campo Grande</p>
                   <p className="mt-1 text-iseul-muted">
                     {formatShippingLabel(shippingOptions[0])} —{" "}
-                    {formatCurrency(shippingOptions[0].price)}
+                    {shippingOptions[0].price === 0
+                      ? "Grátis"
+                      : formatCurrency(shippingOptions[0].price)}
                   </p>
                 </div>
               ) : (

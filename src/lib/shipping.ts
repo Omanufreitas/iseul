@@ -133,15 +133,17 @@ export async function quoteShippingForCheckout(
     })
   ) {
     const motoboy = buildLocalMotoboyOption();
+    const options = applyFreeShipping([motoboy], subtotal, freeThreshold);
+    const selected = options[0] ?? motoboy;
     return {
-      price: motoboy.price,
-      freeShipping: false,
+      price: Math.round(selected.price * 100) / 100,
+      freeShipping: qualifiesForFree && selected.price === 0,
       source: "fallback",
-      options: [motoboy],
-      selectedOptionId: motoboy.id,
-      deliveryDays: motoboy.deliveryDays,
-      carrier: motoboy.company,
-      service: motoboy.name,
+      options,
+      selectedOptionId: selected.id,
+      deliveryDays: selected.deliveryDays,
+      carrier: selected.company,
+      service: selected.name,
     };
   }
 
