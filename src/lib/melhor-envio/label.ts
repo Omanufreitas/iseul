@@ -7,6 +7,7 @@ import { resolveMelhorEnvioAgencyId, melhorEnvioRequiresCommercialInvoice } from
 import { resolveOrderNfeInvoice } from "@/lib/bling/nfe-invoice";
 import type { OrderNfeInvoice } from "@/lib/bling/nfe-invoice";
 import { isLocalMotoboyDelivery } from "@/lib/local-delivery";
+import { sendOrderShippedEmail } from "@/lib/email/order-emails";
 import { findExistingMelhorEnvioOrderForInvoice } from "./reuse-order";
 import { MelhorEnvioError, isMelhorEnvioConfigured, melhorEnvioFetch } from "./client";
 import type {
@@ -210,7 +211,7 @@ export async function generateMelhorEnvioLabelForOrder(orderId: string): Promise
   const { data: order, error } = await admin
     .from("orders")
     .select(
-      `id, order_number, subtotal, shipping, shipping_method, shipping_service_id,
+      `id, order_number, status, tracking_code, subtotal, shipping, shipping_method, shipping_service_id,
        shipping_address, customer_cpf, customer_phone, customer_email, customer_name,
        melhor_envio_cart_id, melhor_envio_order_id, melhor_envio_label_url, melhor_envio_status,
        melhor_envio_error,
@@ -480,15 +481,25 @@ export async function generateMelhorEnvioLabelForOrder(orderId: string): Promise
 
     const labelUrl = await fetchLabelPdfUrlWithRetry(meOrderId);
 
-    await admin
-      .from("orders")
-      .update({
-        melhor_envio_label_url: labelUrl,
-        melhor_envio_status: "generated",
-        melhor_envio_error: null,
-        tracking_code: trackingCode,
-      })
-      .eq("id", orderId);
+    const updates: Record<string, unknown> = {
+      melhor_envio_label_url: labelUrl,
+      melhor_envio_status: "generated",
+      melhor_envio_error: null,
+      tracking_code: trackingCode,
+    };
+    if (trackingCode && order.status !== "enviado" && order.status !== "entregue") {
+      updates.status = "enviado";
+    }
+
+    await admin.from("orders").update(updates).eq("id", orderId);
+
+    if (trackingCode && !order.tracking_code) {
+      try {
+        await sendOrderShippedEmail(orderId);
+      } catch (e) {
+        console.error("[email:enviado]", e);
+      }
+    }
 
     return {
       labelUrl,

@@ -169,6 +169,8 @@ export default async function AdminOrderDetailPage({ params }: Props) {
             melhorEnvioStatus={order.melhor_envio_status}
             melhorEnvioError={order.melhor_envio_error}
             melhorEnvioLabelUrl={order.melhor_envio_label_url}
+            confirmationEmailSentAt={order.confirmation_email_sent_at}
+            shippedEmailSentAt={order.shipped_email_sent_at}
           />
 
           <OrderIntegrationsPanel

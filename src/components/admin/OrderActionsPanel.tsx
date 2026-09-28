@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { AdminSelect } from "@/components/admin/ui/AdminSelect";
-import { updateOrderFulfillment } from "@/actions/admin/orders";
+import { resendOrderEmailAdmin, updateOrderFulfillment } from "@/actions/admin/orders";
 import { generateMelhorEnvioLabel, getMelhorEnvioLabelPdfUrl } from "@/actions/melhor-envio";
 import type { OrderStatus } from "@/types";
 
@@ -27,6 +27,8 @@ type Props = {
   melhorEnvioStatus: string | null;
   melhorEnvioError: string | null;
   melhorEnvioLabelUrl: string | null;
+  confirmationEmailSentAt?: string | null;
+  shippedEmailSentAt?: string | null;
 };
 
 export function OrderActionsPanel({
@@ -39,10 +41,13 @@ export function OrderActionsPanel({
   melhorEnvioStatus,
   melhorEnvioError,
   melhorEnvioLabelUrl,
+  confirmationEmailSentAt,
+  shippedEmailSentAt,
 }: Props) {
   const router = useRouter();
   const [savePending, startSaveTransition] = useTransition();
   const [labelPending, startLabelTransition] = useTransition();
+  const [emailPending, startEmailTransition] = useTransition();
   const [status, setStatus] = useState(currentStatus);
   const [tracking, setTracking] = useState(trackingCode ?? "");
   const [internalNotes, setInternalNotes] = useState(notes ?? "");
@@ -80,6 +85,18 @@ export function OrderActionsPanel({
       if ("labelUrl" in result && result.labelUrl) {
         window.open(result.labelUrl, "_blank", "noopener,noreferrer");
       }
+    });
+  }
+
+  function handleSendEmail(kind: "confirmado" | "enviado") {
+    startEmailTransition(async () => {
+      const result = await resendOrderEmailAdmin(orderId, kind);
+      if ("error" in result && result.error) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success("message" in result && result.message ? result.message : "E-mail enviado.");
+      router.refresh();
     });
   }
 
@@ -190,6 +207,34 @@ export function OrderActionsPanel({
             className="w-full resize-none rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:border-iseul-pine focus:outline-none focus:ring-1 focus:ring-iseul-pine"
           />
         </label>
+      </div>
+
+      <div className="mt-4 space-y-2 rounded-lg border border-neutral-100 bg-neutral-50 p-3">
+        <div className="text-xs font-medium uppercase tracking-wide text-neutral-500">E-mail da cliente</div>
+        <button
+          type="button"
+          disabled={emailPending}
+          onClick={() => handleSendEmail("confirmado")}
+          className="w-full rounded-lg border border-neutral-300 bg-white px-4 py-2.5 text-sm font-medium hover:bg-neutral-50 disabled:opacity-60"
+        >
+          {emailPending
+            ? "Enviando..."
+            : confirmationEmailSentAt
+              ? "Reenviar pedido confirmado"
+              : "Enviar pedido confirmado"}
+        </button>
+        <button
+          type="button"
+          disabled={emailPending}
+          onClick={() => handleSendEmail("enviado")}
+          className="w-full rounded-lg border border-neutral-300 bg-white px-4 py-2.5 text-sm font-medium hover:bg-neutral-50 disabled:opacity-60"
+        >
+          {emailPending
+            ? "Enviando..."
+            : shippedEmailSentAt
+              ? "Reenviar pedido enviado"
+              : "Enviar pedido enviado"}
+        </button>
       </div>
 
       <button

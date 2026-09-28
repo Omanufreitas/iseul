@@ -218,6 +218,8 @@ export async function getOrderById(id: string): Promise<AdminOrderDetail | null>
       customer_cpf: order.customer_cpf,
       ordered_at: order.ordered_at,
       paid_at: order.paid_at,
+      confirmation_email_sent_at: order.confirmation_email_sent_at ?? null,
+      shipped_email_sent_at: order.shipped_email_sent_at ?? null,
     },
     items: (items ?? []).map((item) => ({
       id: String(item.id),

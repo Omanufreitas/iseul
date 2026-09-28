@@ -5,6 +5,7 @@ import { requireAdmin } from "@/actions/admin/auth";
 import { createAdminClient } from "@/lib/supabase/client";
 import { isMockCatalogEnabled } from "@/lib/config";
 import { syncOrderByReference, confirmOrderPaymentManually } from "@/lib/orders/fulfill";
+import { sendOrderConfirmedEmail, sendOrderShippedEmail } from "@/lib/email/order-emails";
 import type { OrderStatus } from "@/types";
 
 export async function updateOrderFulfillment(
@@ -19,6 +20,8 @@ export async function updateOrderFulfillment(
   if (isMockCatalogEnabled()) return { error: "Pedidos disponíveis apenas com Supabase." };
 
   const admin = createAdminClient();
+  const { data: current } = await admin.from("orders").select("status").eq("id", orderId).maybeSingle();
+
   const updates: Record<string, string | null> = {
     status: input.status,
     tracking_code: input.tracking_code?.trim() || null,
@@ -31,6 +34,14 @@ export async function updateOrderFulfillment(
   const { error } = await admin.from("orders").update(updates).eq("id", orderId);
 
   if (error) return { error: error.message };
+
+  if (input.status === "enviado" && current?.status !== "enviado") {
+    try {
+      await sendOrderShippedEmail(orderId);
+    } catch (e) {
+      console.error("[email:enviado]", e);
+    }
+  }
 
   if (input.status === "cancelado") {
     await admin.from("stock_reservations").delete().eq("order_id", orderId);
@@ -114,4 +125,24 @@ export async function confirmOrderPaymentManuallyAdmin(orderId: string) {
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Erro ao confirmar pagamento" };
   }
+}
+
+export async function resendOrderEmailAdmin(orderId: string, kind: "confirmado" | "enviado") {
+  await requireAdmin();
+  if (isMockCatalogEnabled()) return { error: "Pedidos disponíveis apenas com Supabase." };
+
+  const result =
+    kind === "confirmado"
+      ? await sendOrderConfirmedEmail(orderId, { force: true })
+      : await sendOrderShippedEmail(orderId, { force: true });
+
+  if (!result.ok) {
+    return { error: result.error || "Não foi possível enviar o e-mail." };
+  }
+
+  revalidatePath(`/admin/pedidos/${orderId}`);
+  return {
+    success: true,
+    message: kind === "confirmado" ? "E-mail de pedido confirmado enviado." : "E-mail de pedido enviado disparado.",
+  };
 }
