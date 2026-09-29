@@ -1,8 +1,9 @@
 const BRANDS = [
-  { src: "/brands/brendon1.svg", alt: "Beauty of Joseon" },
   { src: "/brands/brendon2.svg", alt: "Celimax" },
   { src: "/brands/brendon3.svg", alt: "COSRX" },
   { src: "/brands/brendon4.svg", alt: "House of Hur" },
+  { src: "/brands/laneige.png", alt: "Laneige" },
+  { src: "/brands/purito-seoul.png", alt: "Purito Seoul" },
   { src: "/brands/brendon5.svg", alt: "K-Secret" },
   { src: "/brands/brendon6.svg", alt: "Medicube" },
   { src: "/brands/brendon7.svg", alt: "Numbuzin" },
@@ -19,7 +20,7 @@ function BrandLogo({ src, alt }: { src: string; alt: string }) {
       loading="lazy"
       decoding="async"
       draggable={false}
-      className="brand-marquee-logo h-9 w-auto max-w-[148px] shrink-0 object-contain object-center opacity-[0.72] transition-opacity duration-300 hover:opacity-100 sm:h-10 sm:max-w-[168px]"
+      className="brand-marquee-logo h-10 w-auto max-w-[160px] shrink-0 object-contain object-center opacity-[0.72] transition-opacity duration-300 hover:opacity-100 sm:h-11 sm:max-w-[180px]"
     />
   );
 }

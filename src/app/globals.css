@@ -235,7 +235,7 @@ button {
       gap: 1.25rem 2rem;
     }
 
-    .brand-marquee-track .brand-marquee-logo:nth-child(n + 9) {
+    .brand-marquee-track .brand-marquee-logo:nth-child(n + 10) {
       display: none;
     }
 
