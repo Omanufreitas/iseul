@@ -9,6 +9,11 @@ import type { OrderNfeInvoice } from "@/lib/bling/nfe-invoice";
 import { isLocalMotoboyDelivery } from "@/lib/local-delivery";
 import { sendOrderShippedEmail } from "@/lib/email/order-emails";
 import { findExistingMelhorEnvioOrderForInvoice } from "./reuse-order";
+import {
+  fetchMelhorEnvioTrackingCodeWithRetry,
+  isMelhorEnvioProtocolCode,
+  resolveCarrierTrackingCode,
+} from "./tracking";
 import { MelhorEnvioError, isMelhorEnvioConfigured, melhorEnvioFetch } from "./client";
 import type {
   MelhorEnvioCartResponse,
@@ -202,6 +207,57 @@ export type GenerateLabelResult = {
   status: "generated";
 };
 
+async function persistCarrierTrackingForOrder(
+  orderId: string,
+  trackingCode: string,
+  order: { status: string; tracking_code: string | null; shipped_email_sent_at?: string | null }
+): Promise<void> {
+  const admin = createAdminClient();
+  const updates: Record<string, unknown> = { tracking_code: trackingCode };
+
+  if (order.status !== "enviado" && order.status !== "entregue") {
+    updates.status = "enviado";
+  }
+
+  await admin.from("orders").update(updates).eq("id", orderId);
+
+  const hadValidTracking =
+    !!order.tracking_code?.trim() && !isMelhorEnvioProtocolCode(order.tracking_code);
+  const shouldSendEmail = !order.shipped_email_sent_at && !hadValidTracking;
+
+  if (shouldSendEmail) {
+    try {
+      await sendOrderShippedEmail(orderId);
+    } catch (e) {
+      console.error("[email:enviado]", e);
+    }
+  }
+}
+
+async function syncMelhorEnvioTrackingForOrder(
+  orderId: string,
+  meOrderId: string,
+  order: { status: string; tracking_code: string | null; shipped_email_sent_at?: string | null }
+): Promise<string | null> {
+  const current = order.tracking_code?.trim() ?? "";
+  if (current && !isMelhorEnvioProtocolCode(current)) {
+    return current;
+  }
+
+  const trackingCode = await fetchMelhorEnvioTrackingCodeWithRetry(meOrderId);
+  if (!trackingCode) {
+    // ORD é protocolo do Melhor Envio — nunca fica gravado como rastreio.
+    if (isMelhorEnvioProtocolCode(current)) {
+      const admin = createAdminClient();
+      await admin.from("orders").update({ tracking_code: null }).eq("id", orderId);
+    }
+    return null;
+  }
+
+  await persistCarrierTrackingForOrder(orderId, trackingCode, order);
+  return trackingCode;
+}
+
 export async function generateMelhorEnvioLabelForOrder(orderId: string): Promise<GenerateLabelResult> {
   if (!isMelhorEnvioConfigured()) {
     throw new MelhorEnvioError("MELHOR_ENVIO_TOKEN não configurado");
@@ -211,7 +267,7 @@ export async function generateMelhorEnvioLabelForOrder(orderId: string): Promise
   const { data: order, error } = await admin
     .from("orders")
     .select(
-      `id, order_number, status, tracking_code, subtotal, shipping, shipping_method, shipping_service_id,
+      `id, order_number, status, tracking_code, shipped_email_sent_at, subtotal, shipping, shipping_method, shipping_service_id,
        shipping_address, customer_cpf, customer_phone, customer_email, customer_name,
        melhor_envio_cart_id, melhor_envio_order_id, melhor_envio_label_url, melhor_envio_status,
        melhor_envio_error,
@@ -251,9 +307,16 @@ export async function generateMelhorEnvioLabelForOrder(orderId: string): Promise
     if (labelUrl !== order.melhor_envio_label_url) {
       await admin.from("orders").update({ melhor_envio_label_url: labelUrl }).eq("id", orderId);
     }
+
+    const trackingCode = await syncMelhorEnvioTrackingForOrder(orderId, order.melhor_envio_order_id, {
+      status: order.status,
+      tracking_code: order.tracking_code,
+      shipped_email_sent_at: order.shipped_email_sent_at,
+    });
+
     return {
       labelUrl,
-      trackingCode: null,
+      trackingCode,
       melhorEnvioOrderId: order.melhor_envio_order_id,
       status: "generated",
     };
@@ -365,7 +428,7 @@ export async function generateMelhorEnvioLabelForOrder(orderId: string): Promise
             melhor_envio_order_id: meOrderId,
             melhor_envio_status: adoptedGeneratedOrder ? "generated" : "paid",
             melhor_envio_error: null,
-            tracking_code: existing.tracking,
+            tracking_code: resolveCarrierTrackingCode(existing),
           })
           .eq("id", orderId);
       }
@@ -471,35 +534,22 @@ export async function generateMelhorEnvioLabelForOrder(orderId: string): Promise
       json: { orders: [meOrderId] },
     });
 
-    let trackingCode: string | null = null;
-    try {
-      const details = await melhorEnvioFetch<MelhorEnvioOrderDetails>(`/me/orders/${meOrderId}`);
-      trackingCode = details.tracking ?? details.protocol ?? null;
-    } catch {
-      /* rastreio pode vir depois */
-    }
-
     const labelUrl = await fetchLabelPdfUrlWithRetry(meOrderId);
 
-    const updates: Record<string, unknown> = {
-      melhor_envio_label_url: labelUrl,
-      melhor_envio_status: "generated",
-      melhor_envio_error: null,
-      tracking_code: trackingCode,
-    };
-    if (trackingCode && order.status !== "enviado" && order.status !== "entregue") {
-      updates.status = "enviado";
-    }
+    await admin
+      .from("orders")
+      .update({
+        melhor_envio_label_url: labelUrl,
+        melhor_envio_status: "generated",
+        melhor_envio_error: null,
+      })
+      .eq("id", orderId);
 
-    await admin.from("orders").update(updates).eq("id", orderId);
-
-    if (trackingCode && !order.tracking_code) {
-      try {
-        await sendOrderShippedEmail(orderId);
-      } catch (e) {
-        console.error("[email:enviado]", e);
-      }
-    }
+    const trackingCode = await syncMelhorEnvioTrackingForOrder(orderId, meOrderId, {
+      status: order.status,
+      tracking_code: order.tracking_code,
+      shipped_email_sent_at: order.shipped_email_sent_at,
+    });
 
     return {
       labelUrl,

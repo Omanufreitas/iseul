@@ -3,6 +3,7 @@ import { SITE_URL } from "@/lib/site";
 import { productImagesFromRow } from "@/lib/product-image";
 import {
   absoluteAssetUrl,
+  carrierTrackingCode,
   firstName,
   formatAddress,
   formatBrl,
@@ -196,7 +197,9 @@ export async function sendOrderShippedEmail(
     shippingMethod: loaded.order.shipping_method,
     address: loaded.order.shipping_address,
   });
-  const codigo = loaded.order.tracking_code?.trim() || "Código em atualização";
+  const tracking = carrierTrackingCode(loaded.order.tracking_code);
+  const codigo = tracking || "Código em atualização";
+  const rastreioUrl = tracking ? trackingUrl(tracking) : null;
 
   const html = renderPedidoEnviadoHtml({
     numero: String(loaded.order.order_number),
@@ -204,7 +207,10 @@ export async function sendOrderShippedEmail(
     frete: { transportadora },
     rastreio: {
       codigo,
-      url: loaded.order.tracking_code?.trim() ? trackingUrl(loaded.order.tracking_code) : SITE_URL,
+      url: rastreioUrl || SITE_URL,
+      instrucao: tracking
+        ? null
+        : "O código da transportadora ainda está sendo gerado. Assim que sair, você recebe outro e-mail com o link de rastreio.",
     },
     endereco,
     itens: loaded.items.map((item) => ({

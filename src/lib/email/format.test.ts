@@ -4,6 +4,7 @@ import {
   firstName,
   formatAddress,
   formatBrl,
+  carrierTrackingCode,
   paymentMethodLabel,
   shippingLabel,
   trackingUrl,
@@ -39,6 +40,9 @@ describe("order email format", () => {
     });
     expect(shippingLabel({ shippingMethod: "Total Express" })).toBe("Total Express");
     expect(trackingUrl("AB123456789BR")).toBe("https://www.melhorrastreio.com.br/rastreio/AB123456789BR");
+    expect(trackingUrl("ORD-202609144664151")).toBeNull();
+    expect(carrierTrackingCode("ORD-202609144664151")).toBeNull();
+    expect(carrierTrackingCode("TXAQ577791866tx")).toBe("TXAQ577791866tx");
   });
 
   it("escapa HTML", () => {

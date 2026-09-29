@@ -59,8 +59,22 @@ export function formatAddress(address: Record<string, string> | null | undefined
   };
 }
 
-export function trackingUrl(code: string): string {
-  return `https://www.melhorrastreio.com.br/rastreio/${encodeURIComponent(code.trim())}`;
+/** Protocolo interno do Melhor Envio (ORD-...) — não rastreia em transportadora. */
+export function isMelhorEnvioProtocolCode(code: string | null | undefined): boolean {
+  return (code?.trim().toUpperCase() ?? "").startsWith("ORD-");
+}
+
+/** Só código de transportadora. ORD e vazio viram null. */
+export function carrierTrackingCode(code: string | null | undefined): string | null {
+  const value = code?.trim() ?? "";
+  if (!value || isMelhorEnvioProtocolCode(value)) return null;
+  return value;
+}
+
+export function trackingUrl(code: string): string | null {
+  const tracking = carrierTrackingCode(code);
+  if (!tracking) return null;
+  return `https://www.melhorrastreio.com.br/rastreio/${encodeURIComponent(tracking)}`;
 }
 
 export function absoluteAssetUrl(url: string | null | undefined, siteUrl: string): string | null {

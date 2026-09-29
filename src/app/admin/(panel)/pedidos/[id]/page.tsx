@@ -145,12 +145,18 @@ export default async function AdminOrderDetailPage({ params }: Props) {
                       : ""}
                   </p>
                 )}
-                {order.tracking_code && (
+                {order.tracking_code && !order.tracking_code.toUpperCase().startsWith("ORD-") && (
                   <p className="mt-2 text-sm text-neutral-600">
                     Rastreio:{" "}
                     <span className="font-mono font-medium text-iseul-ink">
                       {order.tracking_code}
                     </span>
+                  </p>
+                )}
+                {order.tracking_code?.toUpperCase().startsWith("ORD-") && (
+                  <p className="mt-2 text-sm text-amber-700">
+                    Protocolo Melhor Envio (não é rastreio):{" "}
+                    <span className="font-mono">{order.tracking_code}</span>
                   </p>
                 )}
               </div>

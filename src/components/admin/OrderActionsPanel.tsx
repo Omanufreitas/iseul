@@ -192,9 +192,12 @@ export function OrderActionsPanel({
           <input
             value={tracking}
             onChange={(e) => setTracking(e.target.value.toUpperCase())}
-            placeholder="BR123456789BR"
+            placeholder="TXAQ123... ou AP123...BR"
             className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 font-mono text-sm focus:border-iseul-pine focus:outline-none focus:ring-1 focus:ring-iseul-pine"
           />
+          <p className="mt-1 text-xs text-neutral-500">
+            Use o código da transportadora. ORD-... do Melhor Envio não é rastreio.
+          </p>
         </label>
 
         <label className="block text-sm">

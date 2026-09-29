@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/client";
 import { isMockCatalogEnabled } from "@/lib/config";
 import { syncOrderByReference, confirmOrderPaymentManually } from "@/lib/orders/fulfill";
 import { sendOrderConfirmedEmail, sendOrderShippedEmail } from "@/lib/email/order-emails";
+import { isMelhorEnvioProtocolCode } from "@/lib/melhor-envio/tracking";
 import type { OrderStatus } from "@/types";
 
 export async function updateOrderFulfillment(
@@ -19,12 +20,20 @@ export async function updateOrderFulfillment(
   await requireAdmin();
   if (isMockCatalogEnabled()) return { error: "Pedidos disponíveis apenas com Supabase." };
 
+  const rawTracking = input.tracking_code?.trim() || null;
+  if (isMelhorEnvioProtocolCode(rawTracking)) {
+    return {
+      error:
+        "ORD-... é o protocolo interno do Melhor Envio, não o código de rastreio. Use o código da transportadora (ex.: TXAQ... ou AP...BR).",
+    };
+  }
+
   const admin = createAdminClient();
   const { data: current } = await admin.from("orders").select("status").eq("id", orderId).maybeSingle();
 
   const updates: Record<string, string | null> = {
     status: input.status,
-    tracking_code: input.tracking_code?.trim() || null,
+    tracking_code: rawTracking,
     notes: input.notes?.trim() || null,
   };
   if (input.status === "cancelado") {
