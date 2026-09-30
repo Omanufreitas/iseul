@@ -4,7 +4,7 @@ import { Caveat, Inter, Instrument_Serif } from "next/font/google";
 import { MetaPixelRouteTracker } from "@/components/analytics/MetaPixelScript";
 import { AppProviders } from "@/components/providers/AppProviders";
 import { ScrollManager } from "@/components/providers/ScrollManager";
-import { IseulAssistantMount } from "@/components/store/IseulAssistantMount";
+import { RotinaQuiz } from "@/components/store/RotinaQuiz";
 import { getMetaPixelSnippet, getPixelId } from "@/lib/meta-pixel";
 import {
   FACEBOOK_DOMAIN_VERIFICATION,
@@ -86,7 +86,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AppProviders>
           <ScrollManager />
           <MetaPixelRouteTracker />
-          <IseulAssistantMount />
+          <RotinaQuiz />
           {children}
         </AppProviders>
       </body>

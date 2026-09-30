@@ -33,6 +33,13 @@ export function LandingRoutineSection() {
           <p>
             Rotina coreana não é ter dez frascos. É ter o passo certo no lugar certo.
           </p>
+          <button
+            type="button"
+            data-iseul-rotina
+            className="mt-6 rounded-full bg-[#F4F0E9] px-5 py-2.5 text-sm font-medium text-iseul-pine transition hover:bg-white"
+          >
+            Montar minha rotina
+          </button>
         </div>
 
         <ol className="m-0 grid list-none grid-cols-4 gap-px border border-white/[0.13] bg-white/[0.13] p-0 max-[820px]:grid-cols-2 max-[460px]:grid-cols-1">
