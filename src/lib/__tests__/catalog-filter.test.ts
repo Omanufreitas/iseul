@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  HOME_BESTSELLERS_LIMIT,
   buildCatalogSearchParams,
   filterAndSortProducts,
+  homeBestsellers,
   normalizeSearchText,
   parseCatalogSearchParams,
   productMatchesQuery,
@@ -93,5 +95,24 @@ describe("catalog-filter", () => {
     const built = buildCatalogSearchParams(parsed);
     expect(built.get("q")).toBe("retinal");
     expect(built.get("marca")).toBe("Celimax");
+  });
+
+  it("prioriza featured na home e limita a 12", () => {
+    const list = Array.from({ length: 15 }, (_, i) =>
+      product({
+        id: String(i),
+        slug: `p-${i}`,
+        name: `P ${i}`,
+        featured: i < 5,
+        sold_count: 15 - i,
+        active: true,
+      })
+    );
+    const home = homeBestsellers(list, HOME_BESTSELLERS_LIMIT);
+    expect(home).toHaveLength(5);
+    expect(home.every((p) => p.featured)).toBe(true);
+
+    const noneFeatured = list.map((p) => ({ ...p, featured: false }));
+    expect(homeBestsellers(noneFeatured, 12)).toHaveLength(12);
   });
 });

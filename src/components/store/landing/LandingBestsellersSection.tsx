@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ProductCard } from "@/components/store/ProductCard";
-import { topSoldProducts } from "@/lib/catalog-filter";
+import { HOME_BESTSELLERS_LIMIT, homeBestsellers } from "@/lib/catalog-filter";
 import type { Product } from "@/types";
 
 type Props = {
@@ -10,7 +10,7 @@ type Props = {
 export function LandingBestsellersSection({ products }: Props) {
   if (products.length === 0) return null;
 
-  const bestsellers = topSoldProducts(products, 8);
+  const bestsellers = homeBestsellers(products, HOME_BESTSELLERS_LIMIT);
   const total = products.length;
 
   return (

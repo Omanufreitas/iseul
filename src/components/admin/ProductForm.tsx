@@ -9,6 +9,7 @@ import { saveProduct } from "@/actions/admin/products";
 import { uploadProductImage } from "@/actions/admin/upload-product-image";
 import { DeleteProductButton } from "@/components/admin/DeleteProductButton";
 import { CATEGORIES, SKIN_TYPES } from "@/lib/constants";
+import { HOME_BESTSELLERS_LIMIT } from "@/lib/catalog-filter";
 import type { ProductCategory } from "@/lib/categories";
 import {
   BLING_DEFAULT_NCM,
@@ -30,9 +31,15 @@ import type { Product } from "@/types";
 type Props = {
   product?: Product;
   categories?: ProductCategory[];
+  /** Quantos outros produtos já estão em “Mais vendidos” (exclui o atual). */
+  otherFeaturedCount?: number;
 };
 
-export function ProductForm({ product, categories = [] }: Props) {
+export function ProductForm({
+  product,
+  categories = [],
+  otherFeaturedCount = 0,
+}: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const initialImages = product
@@ -56,6 +63,7 @@ export function ProductForm({ product, categories = [] }: Props) {
   const [creatingCategory, setCreatingCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [skinTypes, setSkinTypes] = useState<string[]>(product?.skin_types ?? []);
+  const [featured, setFeatured] = useState(Boolean(product?.featured));
   const categoryOptions =
     categories.length > 0
       ? categories
@@ -85,12 +93,30 @@ export function ProductForm({ product, categories = [] }: Props) {
     setCreatingCategory(false);
     setNewCategoryName("");
     setSkinTypes(product?.skin_types ?? []);
+    setFeatured(Boolean(product?.featured));
   }, [
     product?.id,
     product?.image_url,
     product?.image_urls?.join("|"),
     product?.variants?.map((v) => v.id).join("|"),
+    product?.featured,
   ]);
+
+  const featuredSlotsUsed = otherFeaturedCount + (featured ? 1 : 0);
+
+  function toggleFeatured() {
+    if (featured) {
+      setFeatured(false);
+      return;
+    }
+    if (otherFeaturedCount >= HOME_BESTSELLERS_LIMIT) {
+      toast.error(
+        `Já tem ${HOME_BESTSELLERS_LIMIT} selecionados para os mais vendidos. Desative um antes de ativar outro.`
+      );
+      return;
+    }
+    setFeatured(true);
+  }
 
   useEffect(() => {
     return () => {
@@ -248,7 +274,7 @@ export function ProductForm({ product, categories = [] }: Props) {
         review_count: Number(fd.get("review_count") || 0),
         stock: Number(fd.get("stock") || 0),
         active: fd.get("active") === "on",
-        featured: fd.get("featured") === "on",
+        featured,
         variants: variants.filter((v) => v.label.trim()),
       };
 
@@ -503,6 +529,38 @@ export function ProductForm({ product, categories = [] }: Props) {
         </div>
 
         <div className="space-y-4 lg:sticky lg:top-6 lg:self-start">
+          <div className="rounded-2xl border border-iseul-line bg-white p-4 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-iseul-ink">Mais vendidos na home</p>
+                <p className="mt-0.5 text-xs leading-relaxed text-iseul-muted">
+                  Aparece no bloco da página inicial. Máximo {HOME_BESTSELLERS_LIMIT} produtos.
+                </p>
+                <p className="mt-1.5 text-[11px] font-medium tabular-nums text-iseul-muted">
+                  {featuredSlotsUsed}/{HOME_BESTSELLERS_LIMIT} selecionados
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={featured}
+                aria-label="Mais vendidos na home"
+                onClick={toggleFeatured}
+                className={[
+                  "relative h-7 w-12 shrink-0 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-iseul-sage/40",
+                  featured ? "bg-iseul-sage" : "bg-neutral-200",
+                ].join(" ")}
+              >
+                <span
+                  className={[
+                    "absolute top-0.5 left-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform",
+                    featured ? "translate-x-5" : "translate-x-0",
+                  ].join(" ")}
+                />
+              </button>
+            </div>
+          </div>
+
           <div className="overflow-hidden rounded-2xl border border-iseul-line bg-iseul-paper shadow-sm">
             <div className="border-b border-iseul-line/80 bg-white px-4 py-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-iseul-muted">Preview na loja</p>
@@ -556,10 +614,6 @@ export function ProductForm({ product, categories = [] }: Props) {
             <label className="flex items-center gap-2 text-sm">
               <input name="active" type="checkbox" defaultChecked={product?.active ?? true} />
               Ativo na loja
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input name="featured" type="checkbox" defaultChecked={product?.featured ?? false} />
-              Produto em destaque
             </label>
           </div>
 

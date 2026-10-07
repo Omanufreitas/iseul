@@ -4,6 +4,9 @@ export type CatalogSortKey = "sold" | "new" | "price_asc" | "price_desc";
 
 export const CATALOG_PAGE_SIZE = 16;
 
+/** Quantos produtos entram no bloco “Mais vendidos” da home. */
+export const HOME_BESTSELLERS_LIMIT = 12;
+
 export const CATALOG_SORT_OPTIONS: { value: CatalogSortKey; label: string }[] = [
   { value: "sold", label: "Mais vendidos" },
   { value: "new", label: "Novidades" },
@@ -157,4 +160,29 @@ export function topSoldProducts(products: Product[], limit = 8): Product[] {
   return [...products]
     .sort((a, b) => b.sold_count - a.sold_count || b.review_count - a.review_count)
     .slice(0, limit);
+}
+
+/**
+ * Produtos escolhidos no admin (`featured`) para a home.
+ * Se ninguém estiver marcado, cai no ranking por vendas.
+ */
+export function homeBestsellers(
+  products: Product[],
+  limit = HOME_BESTSELLERS_LIMIT
+): Product[] {
+  const picked = products
+    .filter((p) => p.featured && p.active)
+    .sort(
+      (a, b) =>
+        a.sort_order - b.sort_order ||
+        b.sold_count - a.sold_count ||
+        b.review_count - a.review_count
+    )
+    .slice(0, limit);
+
+  if (picked.length > 0) return picked;
+  return topSoldProducts(
+    products.filter((p) => p.active),
+    limit
+  );
 }

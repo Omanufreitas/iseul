@@ -20,8 +20,24 @@ import { slugify } from "@/lib/utils";
 import { ensureProductCategory } from "@/lib/categories";
 import { isMockCatalogEnabled } from "@/lib/config";
 import { syncProductToBling } from "@/lib/bling/sync-product";
+import { HOME_BESTSELLERS_LIMIT } from "@/lib/catalog-filter";
+import { listProducts } from "@/lib/catalog";
 import type { Product } from "@/types";
 import type { z } from "zod";
+
+export async function countHomeBestsellers(excludeId?: string): Promise<number> {
+  const products = await listProducts({ includeInactive: true });
+  return products.filter((p) => p.featured && p.id !== excludeId).length;
+}
+
+async function assertHomeBestsellersSlot(wantFeatured: boolean, excludeId?: string) {
+  if (!wantFeatured) return null;
+  const count = await countHomeBestsellers(excludeId);
+  if (count >= HOME_BESTSELLERS_LIMIT) {
+    return `Já tem ${HOME_BESTSELLERS_LIMIT} produtos selecionados para os mais vendidos na home. Desative um antes de ativar outro.`;
+  }
+  return null;
+}
 
 type ProductFormData = z.infer<typeof productFormSchema>;
 
@@ -156,6 +172,12 @@ export async function saveProduct(raw: unknown, id?: string) {
   if ("error" in parsed) return parsed;
 
   const existing = id ? await getProductById(id) : null;
+  const wasFeatured = Boolean(existing?.featured);
+  const wantFeatured = Boolean(parsed.data.featured);
+  if (wantFeatured && !wasFeatured) {
+    const limitError = await assertHomeBestsellersSlot(true, id);
+    if (limitError) return { error: limitError };
+  }
 
   if (isMockCatalogEnabled()) {
     try {

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ProductForm } from "@/components/admin/ProductForm";
+import { countHomeBestsellers } from "@/actions/admin/products";
 import { getProductById } from "@/lib/catalog";
 import { listProductCategories } from "@/lib/categories";
 
@@ -8,9 +9,11 @@ type Props = { params: Promise<{ id: string }> };
 
 export default async function EditProductPage({ params }: Props) {
   const { id } = await params;
-  const [product, categories] = await Promise.all([
-    getProductById(decodeURIComponent(id)),
+  const decodedId = decodeURIComponent(id);
+  const [product, categories, otherFeaturedCount] = await Promise.all([
+    getProductById(decodedId),
     listProductCategories(),
+    countHomeBestsellers(decodedId),
   ]);
   if (!product) notFound();
 
@@ -23,7 +26,11 @@ export default async function EditProductPage({ params }: Props) {
         <h1 className="mt-2 text-2xl font-semibold">Editar produto</h1>
         <p className="mt-1 text-sm text-neutral-500">{product.name}</p>
       </div>
-      <ProductForm product={product} categories={categories} />
+      <ProductForm
+        product={product}
+        categories={categories}
+        otherFeaturedCount={otherFeaturedCount}
+      />
     </div>
   );
 }
