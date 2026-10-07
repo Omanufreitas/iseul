@@ -208,7 +208,7 @@ export function CatalogBrowser({
             </div>
 
             <div
-              className="-mx-0.5 mb-3 flex flex-nowrap gap-2 overflow-x-auto px-0.5 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              className="mb-4 flex flex-wrap justify-center gap-2"
               role="group"
               aria-label="Categorias"
             >
@@ -225,7 +225,7 @@ export function CatalogBrowser({
                     aria-pressed={active}
                     onClick={() => setCategoria(c.slug)}
                     className={[
-                      "inline-flex shrink-0 items-center gap-2 rounded-full border px-3.5 py-2 text-[13px] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-iseul-sage/40",
+                      "inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-[13px] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-iseul-sage/40",
                       active
                         ? "border-iseul-sage bg-iseul-sage text-white shadow-sm"
                         : "border-iseul-line/90 bg-white text-iseul-muted hover:border-iseul-sage/50 hover:text-iseul-ink",
@@ -245,8 +245,8 @@ export function CatalogBrowser({
               })}
             </div>
 
-            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
-              <div className="relative w-full sm:w-auto sm:min-w-[160px]">
+            <div className="flex flex-col items-stretch gap-2 border-t border-iseul-line/70 pt-3.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-center">
+              <div className="relative w-full sm:w-auto sm:min-w-[168px]">
                 <label htmlFor="catalog-brand" className="sr-only">
                   Filtrar por marca
                 </label>
@@ -254,7 +254,7 @@ export function CatalogBrowser({
                   id="catalog-brand"
                   value={marca}
                   onChange={(e) => setMarca(e.target.value)}
-                  className="w-full appearance-none rounded-full border border-iseul-line/90 bg-white py-2.5 pl-4 pr-10 text-[13px] text-iseul-ink shadow-sm transition focus:border-iseul-sage focus:outline-none focus:ring-2 focus:ring-iseul-sage/25"
+                  className="w-full appearance-none rounded-xl border border-iseul-line/80 bg-iseul-areia/60 py-2.5 pl-3.5 pr-10 text-[13px] text-iseul-ink transition focus:border-iseul-sage focus:bg-white focus:outline-none focus:ring-2 focus:ring-iseul-sage/25"
                 >
                   <option value="all">Todas as marcas</option>
                   {brands.map((b) => (
@@ -264,12 +264,12 @@ export function CatalogBrowser({
                   ))}
                 </select>
                 <ChevronDown
-                  className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-iseul-muted"
+                  className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-iseul-muted"
                   aria-hidden
                 />
               </div>
 
-              <div className="relative w-full sm:w-auto sm:min-w-[170px]">
+              <div className="relative w-full sm:w-auto sm:min-w-[168px]">
                 <label htmlFor="catalog-skin" className="sr-only">
                   Filtrar por tipo de pele
                 </label>
@@ -277,7 +277,7 @@ export function CatalogBrowser({
                   id="catalog-skin"
                   value={pele}
                   onChange={(e) => setPele(e.target.value)}
-                  className="w-full appearance-none rounded-full border border-iseul-line/90 bg-white py-2.5 pl-4 pr-10 text-[13px] text-iseul-ink shadow-sm transition focus:border-iseul-sage focus:outline-none focus:ring-2 focus:ring-iseul-sage/25"
+                  className="w-full appearance-none rounded-xl border border-iseul-line/80 bg-iseul-areia/60 py-2.5 pl-3.5 pr-10 text-[13px] text-iseul-ink transition focus:border-iseul-sage focus:bg-white focus:outline-none focus:ring-2 focus:ring-iseul-sage/25"
                 >
                   <option value="all">Tipo de pele</option>
                   {SKIN_TYPES.map((skin) => (
@@ -287,7 +287,7 @@ export function CatalogBrowser({
                   ))}
                 </select>
                 <ChevronDown
-                  className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-iseul-muted"
+                  className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-iseul-muted"
                   aria-hidden
                 />
               </div>
@@ -300,7 +300,7 @@ export function CatalogBrowser({
                   id="catalog-sort"
                   value={ordem}
                   onChange={(e) => setOrdem(e.target.value as CatalogSortKey)}
-                  className="w-full appearance-none rounded-full border border-iseul-line/90 bg-white py-2.5 pl-4 pr-10 text-[13px] text-iseul-ink shadow-sm transition focus:border-iseul-sage focus:outline-none focus:ring-2 focus:ring-iseul-sage/25"
+                  className="w-full appearance-none rounded-xl border border-iseul-line/80 bg-iseul-areia/60 py-2.5 pl-3.5 pr-10 text-[13px] text-iseul-ink transition focus:border-iseul-sage focus:bg-white focus:outline-none focus:ring-2 focus:ring-iseul-sage/25"
                 >
                   {CATALOG_SORT_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value}>
@@ -309,7 +309,7 @@ export function CatalogBrowser({
                   ))}
                 </select>
                 <ChevronDown
-                  className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-iseul-muted"
+                  className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-iseul-muted"
                   aria-hidden
                 />
               </div>
