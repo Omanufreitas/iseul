@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Search, X } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
@@ -16,11 +17,16 @@ type Props = {
 export function HeaderProductSearch({ products }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [query, setQuery] = useState("");
   const [debounced, setDebounced] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const lastTracked = useRef("");
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const t = window.setTimeout(() => setDebounced(query), 200);
@@ -142,49 +148,52 @@ export function HeaderProductSearch({ products }: Props) {
         </div>
       )}
 
-      {/* Mobile full overlay */}
-      {open && (
-        <div className="fixed inset-0 z-[60] flex flex-col bg-[color-mix(in_srgb,#FAF8F4_98%,transparent)] backdrop-blur-md lg:hidden">
-          <div className="flex items-center gap-2 border-b border-iseul-line px-4 py-3">
-            <form onSubmit={onSubmit} className="relative flex-1">
-              <label htmlFor="header-search-input-mobile" className="sr-only">
-                Buscar produto, marca ou ativo
-              </label>
-              <Search
-                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-iseul-muted"
-                aria-hidden
+      {/* Mobile full overlay — portal escapes header backdrop-filter stacking */}
+      {mounted &&
+        open &&
+        createPortal(
+          <div className="fixed inset-0 z-[97] flex flex-col bg-iseul-paper lg:hidden">
+            <div className="flex items-center gap-2 border-b border-iseul-line px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+              <form onSubmit={onSubmit} className="relative flex-1">
+                <label htmlFor="header-search-input-mobile" className="sr-only">
+                  Buscar produto, marca ou ativo
+                </label>
+                <Search
+                  className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-iseul-muted"
+                  aria-hidden
+                />
+                <input
+                  id="header-search-input-mobile"
+                  type="search"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Buscar produto, marca ou ativo…"
+                  className="w-full rounded-full border border-iseul-line bg-white py-2.5 pl-9 pr-3 text-[14px] text-iseul-ink focus:border-iseul-sage focus:outline-none focus:ring-2 focus:ring-iseul-sage/25"
+                  autoComplete="off"
+                  // eslint-disable-next-line jsx-a11y/no-autofocus -- intentional when overlay opens
+                  autoFocus
+                />
+              </form>
+              <button
+                type="button"
+                aria-label="Fechar busca"
+                onClick={close}
+                className="grid h-10 w-10 place-items-center rounded-full text-iseul-muted transition hover:bg-iseul-areia"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))]">
+              <SuggestionsList
+                query={debounced}
+                suggestions={suggestions}
+                onPick={close}
+                onSeeAll={goToCatalogSearch}
               />
-              <input
-                id="header-search-input-mobile"
-                type="search"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Buscar produto, marca ou ativo…"
-                className="w-full rounded-full border border-iseul-line bg-white py-2.5 pl-9 pr-3 text-[14px] text-iseul-ink focus:border-iseul-sage focus:outline-none focus:ring-2 focus:ring-iseul-sage/25"
-                autoComplete="off"
-                // eslint-disable-next-line jsx-a11y/no-autofocus -- intentional when overlay opens
-                autoFocus
-              />
-            </form>
-            <button
-              type="button"
-              aria-label="Fechar busca"
-              onClick={close}
-              className="grid h-10 w-10 place-items-center rounded-full text-iseul-muted transition hover:bg-iseul-areia"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto">
-            <SuggestionsList
-              query={debounced}
-              suggestions={suggestions}
-              onPick={close}
-              onSeeAll={goToCatalogSearch}
-            />
-          </div>
-        </div>
-      )}
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
