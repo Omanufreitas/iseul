@@ -58,7 +58,7 @@ export function ProductDetailInfo({ product, settings }: Props) {
             <dt className="text-iseul-muted">Categoria</dt>
             <dd>
               <Link
-                href="/#catalogo"
+                href="/produtos"
                 className="font-medium text-iseul-accent hover:text-iseul-ink"
               >
                 {product.category_label}

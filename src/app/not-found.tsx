@@ -21,7 +21,7 @@ export default async function NotFound() {
           explorando nossos produtos.
         </p>
         <Link
-          href="/#catalogo"
+          href="/produtos"
           className="mt-8 rounded-full bg-iseul-ink px-8 py-3.5 text-sm font-medium text-iseul-paper transition-colors hover:bg-iseul-accent"
         >
           Ir para o catálogo

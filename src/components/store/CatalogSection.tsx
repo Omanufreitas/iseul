@@ -154,7 +154,7 @@ export function RoutineSection() {
               <h3 className="mt-1.5 text-[15px] font-semibold">{s.title}</h3>
               <p className="mt-1.5 text-[13.5px] leading-relaxed text-iseul-muted">{s.text}</p>
               <Link
-                href="/#catalogo"
+                href="/produtos"
                 className="mt-3 inline-block text-[12.5px] text-iseul-accent transition-colors hover:text-iseul-ink"
               >
                 {s.cta}

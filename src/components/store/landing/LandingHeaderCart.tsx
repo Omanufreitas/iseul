@@ -3,9 +3,11 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useCart } from "@/context/cart-context";
+import { HeaderProductSearch } from "@/components/store/catalog/HeaderProductSearch";
+import type { Product } from "@/types";
 
 const NAV_LINKS = [
-  { href: "/#catalogo", label: "Produtos" },
+  { href: "/produtos", label: "Produtos" },
   { href: "/#rotina", label: "A rotina" },
   { href: "/#sobre", label: "Sobre" },
   { href: "/trocas", label: "Políticas" },
@@ -30,7 +32,7 @@ function CartButton({ count, onClick }: { count: number; onClick: () => void }) 
   );
 }
 
-export function LandingHeaderCart() {
+export function LandingHeaderCart({ products = [] }: { products?: Product[] }) {
   const { count, openCart } = useCart();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -68,6 +70,8 @@ export function LandingHeaderCart() {
             </Link>
           ))}
         </div>
+
+        {products.length > 0 ? <HeaderProductSearch products={products} /> : null}
 
         <button
           type="button"

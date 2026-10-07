@@ -19,7 +19,7 @@ export function LandingHero() {
           úteis.
         </p>
         <div className="acoes flex flex-wrap justify-center gap-2.5">
-          <Link className="btn" href="#catalogo">
+          <Link className="btn" href="/produtos">
             Ver os produtos
           </Link>
           <Link className="btn ghost" href="#rotina">

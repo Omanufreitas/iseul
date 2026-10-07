@@ -95,7 +95,7 @@ export function CartDrawer({ settings }: { settings: StoreSettings }) {
                   Sua sacola está vazia.
                   <div className="mt-5">
                     <Link
-                      href="/#catalogo"
+                      href="/produtos"
                       onClick={closeCart}
                       className="inline-block rounded-full border border-iseul-line bg-iseul-card px-4 py-2 text-[13px]"
                     >

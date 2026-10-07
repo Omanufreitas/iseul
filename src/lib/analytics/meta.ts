@@ -77,3 +77,11 @@ export function trackMetaInitiateCheckout(params: MetaContentParams) {
 export function trackMetaPurchase(params: MetaContentParams) {
   trackMetaStandard("Purchase", params);
 }
+
+/** Busca no catálogo (Pixel Search). */
+export function trackMetaSearch(searchString: string) {
+  const q = searchString.trim();
+  if (!q) return;
+  const eventId = `search_${Date.now()}`;
+  fbq("track", "Search", { search_string: q, content_category: "product" }, { eventID: eventId });
+}

@@ -1,25 +1,5 @@
-const STEPS = [
-  {
-    n: "01",
-    title: "Limpar",
-    text: "Retira filtro solar e oleosidade sem agredir a barreira.",
-  },
-  {
-    n: "02",
-    title: "Tratar",
-    text: "Sérum ou ampola. É aqui que os ativos trabalham.",
-  },
-  {
-    n: "03",
-    title: "Selar",
-    text: "Creme ou bálsamo. Segura a água que você acabou de entregar.",
-  },
-  {
-    n: "04",
-    title: "Proteger",
-    text: "Filtro solar, todo dia. Sem ele, os passos 2 e 3 se perdem.",
-  },
-] as const;
+import Link from "next/link";
+import { ROUTINE_STEPS } from "@/lib/constants";
 
 export function LandingRoutineSection() {
   return (
@@ -43,11 +23,21 @@ export function LandingRoutineSection() {
         </div>
 
         <ol className="m-0 grid list-none grid-cols-4 gap-px border border-white/[0.13] bg-white/[0.13] p-0 max-[820px]:grid-cols-2 max-[460px]:grid-cols-1">
-          {STEPS.map((step) => (
+          {ROUTINE_STEPS.map((step) => (
             <li key={step.n} className="reveal bg-iseul-pine px-[22px] py-[30px]">
-              <span className="n mb-3.5 block font-serif text-[19px] text-[#9DBAA9]">{step.n}</span>
-              <h3 className="mb-2 mt-0 text-base font-medium text-[#F4F0E9]">{step.title}</h3>
-              <p className="m-0 text-[13.5px] leading-[1.55] text-[#B6AFA3]">{step.text}</p>
+              <Link
+                href={`/produtos?categoria=${step.category}`}
+                className="block no-underline transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9DBAA9]/ring-offset-2 focus-visible:ring-offset-iseul-pine"
+              >
+                <span className="n mb-3.5 block font-serif text-[19px] text-[#9DBAA9]">
+                  {step.n}
+                </span>
+                <h3 className="mb-2 mt-0 text-base font-medium text-[#F4F0E9]">{step.title}</h3>
+                <p className="m-0 text-[13.5px] leading-[1.55] text-[#B6AFA3]">{step.text}</p>
+                <span className="mt-4 inline-block text-[12px] font-medium tracking-wide text-[#9DBAA9]">
+                  {step.cta} →
+                </span>
+              </Link>
             </li>
           ))}
         </ol>

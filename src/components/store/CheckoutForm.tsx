@@ -252,7 +252,7 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
         {cartIssues.length > 0 && (
           <p className="mt-4 text-sm text-red-600">{cartIssues[0]}</p>
         )}
-        <Link href="/#catalogo" className="mt-6 inline-block text-iseul-accent underline">
+        <Link href="/produtos" className="mt-6 inline-block text-iseul-accent underline">
           Voltar ao catálogo
         </Link>
       </div>

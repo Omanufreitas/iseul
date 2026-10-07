@@ -15,12 +15,15 @@ export function ProductCard({
   allProducts,
   index = 0,
   visible = false,
+  compact = false,
 }: {
   product: Product;
   allProducts: Product[];
   index?: number;
   /** Sem animação de entrada — catálogo na landing precisa aparecer sempre */
   visible?: boolean;
+  /** Cards menores para grade densa do catálogo */
+  compact?: boolean;
 }) {
   const { addItem } = useCart();
   const router = useRouter();
@@ -82,19 +85,24 @@ export function ProductCard({
         href={`/produtos/${product.slug}`}
         className="relative aspect-square overflow-hidden bg-iseul-paper2"
       >
-        <div className="absolute left-2.5 top-2.5 z-10 flex flex-col items-start gap-1.5">
+        <div
+          className={[
+            "absolute z-10 flex flex-col items-start gap-1",
+            compact ? "left-2 top-2" : "left-2.5 top-2.5 gap-1.5",
+          ].join(" ")}
+        >
           {product.stock <= 0 && (
-            <span className="inline-flex w-fit rounded-full bg-neutral-700 px-2 py-1 text-[10.5px] font-semibold uppercase tracking-wide text-white">
+            <span className="inline-flex w-fit rounded-full bg-neutral-700 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white">
               Esgotado
             </span>
           )}
           {discount > 0 && (
-            <span className="inline-flex w-fit rounded-full bg-iseul-sale px-2 py-1 text-[10.5px] font-semibold uppercase tracking-wide text-white">
+            <span className="inline-flex w-fit rounded-full bg-iseul-sale px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white">
               -{discount}%
             </span>
           )}
           {hot.has(product.id) && (
-            <span className="inline-flex w-fit rounded-full bg-iseul-accent px-2 py-1 text-[10.5px] font-semibold uppercase tracking-wide text-white">
+            <span className="inline-flex w-fit rounded-full bg-iseul-accent px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white">
               Mais vendido
             </span>
           )}
@@ -119,41 +127,66 @@ export function ProductCard({
           />
         </m.div>
       </Link>
-      <m.div className="flex flex-1 flex-col gap-1.5 p-4">
-        <div className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-iseul-accent2">
+      <m.div
+        className={[
+          "flex flex-1 flex-col",
+          compact ? "gap-1 p-3" : "gap-1.5 p-4",
+        ].join(" ")}
+      >
+        <div
+          className={[
+            "font-semibold uppercase tracking-[0.14em] text-iseul-accent2",
+            compact ? "text-[9.5px]" : "text-[10.5px]",
+          ].join(" ")}
+        >
           {product.brand}
         </div>
         <Link
           href={`/produtos/${product.slug}`}
-          className="min-h-[39px] text-sm leading-snug transition-colors duration-200 hover:text-iseul-accent"
+          className={[
+            "leading-snug transition-colors duration-200 hover:text-iseul-accent",
+            compact ? "min-h-[34px] text-[13px]" : "min-h-[39px] text-sm",
+          ].join(" ")}
         >
           {product.name}
         </Link>
-        <div className="flex items-center gap-2 text-[11.5px] text-iseul-muted">
-          {product.rating ? (
-            <>
-              <span className="text-iseul-gold tracking-tight">{stars(product.rating)}</span>
-              <span>{product.review_count}</span>
-            </>
-          ) : (
-            <span className="text-[#A49B8D]">Novo no catálogo</span>
-          )}
-        </div>
-        <div className="mt-auto flex items-end justify-between gap-2 pt-2">
+        {!compact && (
+          <div className="flex items-center gap-2 text-[11.5px] text-iseul-muted">
+            {product.rating ? (
+              <>
+                <span className="text-iseul-gold tracking-tight">{stars(product.rating)}</span>
+                <span>{product.review_count}</span>
+              </>
+            ) : (
+              <span className="text-[#A49B8D]">Novo no catálogo</span>
+            )}
+          </div>
+        )}
+        <div className="mt-auto flex items-end justify-between gap-2 pt-1.5">
           <div>
             {product.compare_at_price && product.compare_at_price > product.price && (
-              <div className="text-xs text-iseul-muted line-through">
+              <div className={compact ? "text-[11px] text-iseul-muted line-through" : "text-xs text-iseul-muted line-through"}>
                 {formatCurrency(product.compare_at_price)}
               </div>
             )}
-            <div className="font-serif text-lg sm:text-[22px] leading-none">{formatCurrency(product.price)}</div>
+            <div
+              className={[
+                "font-serif leading-none",
+                compact ? "text-base sm:text-lg" : "text-lg sm:text-[22px]",
+              ].join(" ")}
+            >
+              {formatCurrency(product.price)}
+            </div>
           </div>
           <m.button
             type="button"
             onClick={handleAdd}
             disabled={product.stock <= 0}
             whileTap={reduce ? undefined : { scale: 0.96 }}
-            className="whitespace-nowrap rounded-full border border-iseul-ink px-3.5 py-2 text-[12.5px] font-medium transition-colors duration-200 hover:bg-iseul-ink hover:text-iseul-paper disabled:cursor-not-allowed disabled:border-iseul-line disabled:text-iseul-muted disabled:hover:bg-transparent"
+            className={[
+              "whitespace-nowrap rounded-full border border-iseul-ink font-medium transition-colors duration-200 hover:bg-iseul-ink hover:text-iseul-paper disabled:cursor-not-allowed disabled:border-iseul-line disabled:text-iseul-muted disabled:hover:bg-transparent",
+              compact ? "px-2.5 py-1.5 text-[11.5px]" : "px-3.5 py-2 text-[12.5px]",
+            ].join(" ")}
           >
             {product.stock <= 0 ? "Esgotado" : "Adicionar"}
           </m.button>

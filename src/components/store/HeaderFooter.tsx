@@ -3,14 +3,15 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
+import { HeaderProductSearch } from "@/components/store/catalog/HeaderProductSearch";
 import { useCart } from "@/context/cart-context";
 import { useClientReady } from "@/hooks/use-client-ready";
 import { backdropFade, slideDown, slideFromRight } from "@/lib/motion";
 import { cn, formatCurrency } from "@/lib/utils";
-import type { StoreSettings } from "@/types";
+import type { Product, StoreSettings } from "@/types";
 
 const NAV_LINKS = [
-  { href: "/#catalogo", label: "Catálogo" },
+  { href: "/produtos", label: "Produtos" },
   { href: "/#rotina", label: "Rotina" },
   { href: "/#sobre", label: "Sobre" },
 ] as const;
@@ -59,7 +60,13 @@ function CartButton({ reduce }: { reduce: boolean | null }) {
   );
 }
 
-export function StoreHeader({ settings }: { settings: StoreSettings }) {
+export function StoreHeader({
+  settings,
+  products = [],
+}: {
+  settings: StoreSettings;
+  products?: Product[];
+}) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const reduce = useReducedMotion();
@@ -118,6 +125,7 @@ export function StoreHeader({ settings }: { settings: StoreSettings }) {
           </nav>
 
           <div className="ml-auto flex items-center gap-2 md:ml-0">
+            {products.length > 0 ? <HeaderProductSearch products={products} /> : null}
             <button
               type="button"
               aria-label={menuOpen ? "Fechar menu" : "Abrir menu"}
@@ -204,7 +212,7 @@ export function StoreFooter({ settings }: { settings: StoreSettings }) {
             <h5 className="mb-3 text-xs font-semibold uppercase tracking-widest text-iseul-paper">
               Loja
             </h5>
-            <Link href="/#catalogo" className="block py-1 transition-colors hover:text-iseul-paper">
+            <Link href="/produtos" className="block py-1 transition-colors hover:text-iseul-paper">
               Catálogo
             </Link>
             <Link href="/#rotina" className="block py-1 transition-colors hover:text-iseul-paper">

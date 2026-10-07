@@ -5,6 +5,7 @@ import { PaymentMethodsBar } from "@/components/store/landing/PaymentMethodsBar"
 import { SiteLockBadge } from "@/components/store/landing/SiteLockBadge";
 import { CONTACT_EMAIL, LEGAL_LINE, SITE_URL } from "@/lib/site";
 import { INSTAGRAM_HANDLE, INSTAGRAM_URL } from "@/lib/constants";
+import type { Product } from "@/types";
 
 function IseulLogo({ dark = false }: { dark?: boolean }) {
   const ink = dark ? "#FAF8F4" : "#1C1A16";
@@ -38,14 +39,14 @@ export function LandingAnnounceBar({ text }: { text: string }) {
   );
 }
 
-export function LandingHeader() {
+export function LandingHeader({ products = [] }: { products?: Product[] }) {
   return (
     <header className="sticky top-0 z-40 border-b border-iseul-line bg-[color-mix(in_srgb,#FAF8F4_90%,transparent)] backdrop-blur-[12px]">
       <div className="wrap hd flex h-16 items-center gap-[22px]">
         <Link href="/#topo" className="marca block w-[118px]" aria-label="Iseul, página inicial">
           <IseulLogo />
         </Link>
-        <LandingHeaderCart />
+        <LandingHeaderCart products={products} />
       </div>
     </header>
   );
