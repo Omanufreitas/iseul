@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ChevronDown, ListFilter, Search, X } from "lucide-react";
+import { ChevronDown, Search, X } from "lucide-react";
 import { ProductCard } from "@/components/store/ProductCard";
 import { trackMetaSearch } from "@/lib/analytics/meta";
 import { SKIN_TYPES } from "@/lib/constants";
@@ -65,7 +65,6 @@ export function CatalogBrowser({
   const [pele, setPele] = useState(initial.pele);
   const [ordem, setOrdem] = useState<CatalogSortKey>(initial.ordem);
   const [visibleCount, setVisibleCount] = useState(CATALOG_PAGE_SIZE);
-  const [filtersOpen, setFiltersOpen] = useState(false);
   const skipUrlWrite = useRef(false);
   const lastTrackedQuery = useRef("");
 
@@ -146,10 +145,6 @@ export function CatalogBrowser({
   const remaining = Math.max(0, filtered.length - visible.length);
   const hasActiveFilters = catalogFiltersActive(filters);
 
-  useEffect(() => {
-    if (hasActiveFilters) setFiltersOpen(true);
-  }, [hasActiveFilters]);
-
   const clearFilters = useCallback(() => {
     setQInput("");
     setQ("");
@@ -217,42 +212,18 @@ export function CatalogBrowser({
                 <span className="font-medium text-iseul-ink">{filtered.length}</span>{" "}
                 {filtered.length === 1 ? "produto" : "produtos"}
               </p>
-              <div className="flex items-center gap-2">
-                {hasActiveFilters ? (
-                  <button
-                    type="button"
-                    onClick={clearFilters}
-                    className="rounded-full border border-iseul-line bg-white px-3 py-1.5 text-[12.5px] font-medium text-iseul-ink transition hover:border-iseul-sage"
-                  >
-                    Limpar
-                  </button>
-                ) : null}
+              {hasActiveFilters ? (
                 <button
                   type="button"
-                  aria-expanded={filtersOpen}
-                  aria-controls="catalog-filters-panel"
-                  onClick={() => setFiltersOpen((v) => !v)}
-                  className={[
-                    "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12.5px] font-medium transition",
-                    filtersOpen || hasActiveFilters
-                      ? "border-iseul-sage bg-iseul-sage text-white"
-                      : "border-iseul-line bg-white text-iseul-ink hover:border-iseul-sage",
-                  ].join(" ")}
+                  onClick={clearFilters}
+                  className="rounded-full border border-iseul-line bg-white px-3 py-1.5 text-[12.5px] font-medium text-iseul-ink transition hover:border-iseul-sage"
                 >
-                  <ListFilter className="h-3.5 w-3.5" aria-hidden />
-                  Filtros
+                  Limpar
                 </button>
-              </div>
+              ) : null}
             </div>
 
-            <div
-              id="catalog-filters-panel"
-              className={[
-                "space-y-4",
-                filtersOpen ? "block" : "hidden",
-                "lg:block",
-              ].join(" ")}
-            >
+            <div className="space-y-4">
               <div
                 className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] lg:flex-wrap lg:justify-center lg:overflow-visible lg:pb-0 [&::-webkit-scrollbar]:hidden"
                 role="group"
