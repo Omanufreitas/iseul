@@ -98,4 +98,12 @@ export const productFormSchema = z.object({
   featured: z.boolean().optional(),
   variants: z.array(productVariantSchema).optional(),
   skin_types: z.array(z.string()).optional(),
+  skin_type_catalog: z
+    .array(
+      z.object({
+        slug: z.string().min(1),
+        label: z.string().min(1),
+      })
+    )
+    .optional(),
 });

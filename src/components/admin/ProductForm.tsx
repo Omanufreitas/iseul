@@ -9,6 +9,7 @@ import { saveProduct } from "@/actions/admin/products";
 import { uploadProductImage } from "@/actions/admin/upload-product-image";
 import { DeleteProductButton } from "@/components/admin/DeleteProductButton";
 import { CATEGORIES, SKIN_TYPES } from "@/lib/constants";
+import { fallbackSkinTypes, type SkinTypeOption } from "@/lib/skin-types";
 import { HOME_BESTSELLERS_LIMIT } from "@/lib/catalog-filter";
 import type { ProductCategory } from "@/lib/categories";
 import {
@@ -31,13 +32,30 @@ import type { Product } from "@/types";
 type Props = {
   product?: Product;
   categories?: ProductCategory[];
+  skinTypeOptions?: SkinTypeOption[];
   /** Quantos outros produtos já estão em “Mais vendidos” (exclui o atual). */
   otherFeaturedCount?: number;
 };
 
+function buildSkinOptions(catalog: SkinTypeOption[], selected: string[]): SkinTypeOption[] {
+  const source = catalog.length ? catalog : fallbackSkinTypes();
+  const bySlug = new Map(source.map((skin) => [skin.slug, skin]));
+  let order = source.reduce((max, skin) => Math.max(max, skin.sort_order), 0);
+  for (const slug of selected) {
+    if (!slug || bySlug.has(slug)) continue;
+    order += 1;
+    const known = SKIN_TYPES.find((skin) => skin.slug === slug);
+    bySlug.set(slug, { slug, label: known?.label ?? slug, sort_order: order });
+  }
+  return [...bySlug.values()].sort(
+    (a, b) => a.sort_order - b.sort_order || a.label.localeCompare(b.label, "pt-BR")
+  );
+}
+
 export function ProductForm({
   product,
   categories = [],
+  skinTypeOptions = [],
   otherFeaturedCount = 0,
 }: Props) {
   const router = useRouter();
@@ -63,6 +81,12 @@ export function ProductForm({
   const [creatingCategory, setCreatingCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [skinTypes, setSkinTypes] = useState<string[]>(product?.skin_types ?? []);
+  const [skinOptions, setSkinOptions] = useState<SkinTypeOption[]>(() =>
+    buildSkinOptions(skinTypeOptions, product?.skin_types ?? [])
+  );
+  const [creatingSkin, setCreatingSkin] = useState(false);
+  const [newSkinName, setNewSkinName] = useState("");
+  const [editingSkinSlug, setEditingSkinSlug] = useState("");
   const [featured, setFeatured] = useState(Boolean(product?.featured));
   const categoryOptions =
     categories.length > 0
@@ -93,6 +117,10 @@ export function ProductForm({
     setCreatingCategory(false);
     setNewCategoryName("");
     setSkinTypes(product?.skin_types ?? []);
+    setSkinOptions(buildSkinOptions(skinTypeOptions, product?.skin_types ?? []));
+    setCreatingSkin(false);
+    setNewSkinName("");
+    setEditingSkinSlug("");
     setFeatured(Boolean(product?.featured));
   }, [
     product?.id,
@@ -251,6 +279,40 @@ export function ProductForm({
         return;
       }
 
+      let resolvedSkinTypes = skinTypes;
+      let resolvedSkinOptions = skinOptions;
+
+      if (creatingSkin) {
+        const label = newSkinName.trim();
+        if (!label) {
+          toast.error("Informe o nome do novo tipo de pele.");
+          return;
+        }
+        const slug = slugify(label);
+        if (!slug) {
+          toast.error("Informe o nome do novo tipo de pele.");
+          return;
+        }
+        const existing = resolvedSkinOptions.find((skin) => skin.slug === slug);
+        resolvedSkinOptions = existing
+          ? resolvedSkinOptions.map((skin) => (skin.slug === slug ? { ...skin, label } : skin))
+          : [
+              ...resolvedSkinOptions,
+              {
+                slug,
+                label,
+                sort_order:
+                  resolvedSkinOptions.reduce((max, skin) => Math.max(max, skin.sort_order), 0) + 1,
+              },
+            ];
+        if (!resolvedSkinTypes.includes(slug)) resolvedSkinTypes = [...resolvedSkinTypes, slug];
+      }
+
+      if (resolvedSkinOptions.some((skin) => !skin.label.trim())) {
+        toast.error("Informe o nome do tipo de pele.");
+        return;
+      }
+
       const payload = {
         name: String(fd.get("name")),
         full_name: String(fd.get("full_name") || fd.get("name")),
@@ -262,7 +324,11 @@ export function ProductForm({
         brand: String(fd.get("brand") || ""),
         category_slug: resolvedCategorySlug,
         category_label: resolvedCategoryLabel || category?.label || resolvedCategorySlug,
-        skin_types: skinTypes,
+        skin_types: resolvedSkinTypes,
+        skin_type_catalog: resolvedSkinOptions.map((skin) => ({
+          slug: skin.slug,
+          label: skin.label.trim(),
+        })),
         price: Number(fd.get("price")),
         compare_at_price: fd.get("compare_at_price") ? Number(fd.get("compare_at_price")) : null,
         pitch: String(fd.get("pitch") || ""),
@@ -283,6 +349,11 @@ export function ProductForm({
         toast.error(result.error);
         return;
       }
+      setSkinOptions(resolvedSkinOptions);
+      setSkinTypes(resolvedSkinTypes);
+      setCreatingSkin(false);
+      setNewSkinName("");
+      setEditingSkinSlug("");
       toast.success(product ? "Produto atualizado" : "Produto criado");
       if ("blingWarning" in result && result.blingWarning) {
         toast.warning(`Salvo na loja, mas Bling: ${result.blingWarning}`);
@@ -393,8 +464,79 @@ export function ProductForm({
               />
             </Field>
             <Field label="Tipo de pele" className="md:col-span-2">
+              {!creatingSkin ? (
+                <AdminSelect
+                  value={editingSkinSlug}
+                  onChange={(e) => {
+                    if (e.target.value === "__new__") {
+                      setCreatingSkin(true);
+                      setEditingSkinSlug("");
+                      return;
+                    }
+                    setEditingSkinSlug(e.target.value);
+                  }}
+                >
+                  <option value="">Selecione para editar</option>
+                  {skinOptions.map((skin) => (
+                    <option key={skin.slug} value={skin.slug}>
+                      {skin.label}
+                    </option>
+                  ))}
+                  <option value="__new__">+ Adicionar tipo de pele</option>
+                </AdminSelect>
+              ) : (
+                <div className="space-y-2">
+                  <input
+                    value={newSkinName}
+                    onChange={(e) => setNewSkinName(e.target.value)}
+                    placeholder="Ex.: Pele acneica"
+                    className={inputClass}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCreatingSkin(false);
+                      setNewSkinName("");
+                    }}
+                    className="text-xs text-neutral-500 hover:text-neutral-900"
+                  >
+                    Usar tipo existente
+                  </button>
+                </div>
+              )}
+            </Field>
+            <Field label="Nome do tipo de pele (editável)" className="md:col-span-2">
+              <input
+                value={
+                  creatingSkin
+                    ? newSkinName
+                    : (skinOptions.find((skin) => skin.slug === editingSkinSlug)?.label ?? "")
+                }
+                onChange={(e) => {
+                  const next = e.target.value;
+                  if (creatingSkin) {
+                    setNewSkinName(next);
+                    return;
+                  }
+                  if (!editingSkinSlug) return;
+                  setSkinOptions((prev) =>
+                    prev.map((skin) =>
+                      skin.slug === editingSkinSlug ? { ...skin, label: next } : skin
+                    )
+                  );
+                }}
+                placeholder={
+                  creatingSkin || editingSkinSlug
+                    ? "Ex.: Pele oleosa"
+                    : "Selecione um tipo acima para renomear"
+                }
+                disabled={!creatingSkin && !editingSkinSlug}
+                className={inputClass}
+              />
+            </Field>
+            <Field label="Marque os tipos deste produto" className="md:col-span-2">
               <div className="flex flex-wrap gap-2">
-                {SKIN_TYPES.map((skin) => {
+                {skinOptions.map((skin) => {
                   const checked = skinTypes.includes(skin.slug);
                   return (
                     <label
@@ -413,7 +555,7 @@ export function ProductForm({
                         }}
                         className="rounded border-neutral-300"
                       />
-                      {skin.label}
+                      {skin.label || skin.slug}
                     </label>
                   );
                 })}

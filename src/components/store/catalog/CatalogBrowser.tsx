@@ -12,8 +12,8 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, Search, X } from "lucide-react";
 import { ProductCard } from "@/components/store/ProductCard";
 import { trackMetaSearch } from "@/lib/analytics/meta";
-import { SKIN_TYPES } from "@/lib/constants";
 import type { ProductCategory } from "@/lib/categories";
+import { fallbackSkinTypes, type SkinTypeOption } from "@/lib/skin-types";
 import {
   CATALOG_PAGE_SIZE,
   CATALOG_SORT_OPTIONS,
@@ -30,6 +30,7 @@ import type { Product } from "@/types";
 type Props = {
   products: Product[];
   categories: ProductCategory[];
+  skinTypes?: SkinTypeOption[];
   /** Título / eyebrow da seção */
   heading?: { eyebrow: string; title: ReactNode; subtitle?: string };
   sectionId?: string;
@@ -38,6 +39,7 @@ type Props = {
 export function CatalogBrowser({
   products,
   categories,
+  skinTypes = [],
   heading = {
     eyebrow: "produtos",
     title: (
@@ -120,6 +122,20 @@ export function CatalogBrowser({
   }, [q, categoria, marca, pele, ordem]);
 
   const brands = useMemo(() => uniqueBrands(products), [products]);
+
+  const skinOptions = useMemo(() => {
+    const fromCatalog = skinTypes.length ? skinTypes : fallbackSkinTypes();
+    const known = new Set(fromCatalog.map((skin) => skin.slug));
+    const extra: SkinTypeOption[] = [];
+    for (const product of products) {
+      for (const slug of product.skin_types ?? []) {
+        if (!slug || known.has(slug)) continue;
+        known.add(slug);
+        extra.push({ slug, label: slug, sort_order: 1000 + extra.length });
+      }
+    }
+    return [...fromCatalog, ...extra];
+  }, [products, skinTypes]);
 
   const categoryChips = useMemo(() => {
     const fromDb = categories.length
@@ -297,7 +313,7 @@ export function CatalogBrowser({
                     className="w-full appearance-none truncate rounded-xl border border-iseul-line/80 bg-iseul-areia/60 py-2 pl-2 pr-6 text-[11px] text-iseul-ink transition focus:border-iseul-sage focus:bg-white focus:outline-none focus:ring-2 focus:ring-iseul-sage/25 sm:py-2.5 sm:pl-3.5 sm:pr-10 sm:text-[13px]"
                   >
                     <option value="all">Pele</option>
-                    {SKIN_TYPES.map((skin) => (
+                    {skinOptions.map((skin) => (
                       <option key={skin.slug} value={skin.slug}>
                         {skin.label}
                       </option>

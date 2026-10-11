@@ -18,6 +18,7 @@ import {
 import { productFormSchema } from "@/lib/validations";
 import { slugify } from "@/lib/utils";
 import { ensureProductCategory } from "@/lib/categories";
+import { syncSkinTypes } from "@/lib/skin-types";
 import { isMockCatalogEnabled } from "@/lib/config";
 import { syncProductToBling } from "@/lib/bling/sync-product";
 import { HOME_BESTSELLERS_LIMIT } from "@/lib/catalog-filter";
@@ -194,6 +195,8 @@ export async function saveProduct(raw: unknown, id?: string) {
   let savedId = id;
 
   await ensureProductCategory(parsed.data.category_slug, parsed.data.category_label);
+  const skinSync = await syncSkinTypes(parsed.data.skin_type_catalog ?? []);
+  if (skinSync.error) return { error: skinSync.error };
 
   if (id) {
     const { error } = await admin.from("products").update(payload).eq("id", id);

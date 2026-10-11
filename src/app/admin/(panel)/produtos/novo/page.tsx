@@ -2,10 +2,12 @@ import Link from "next/link";
 import { ProductForm } from "@/components/admin/ProductForm";
 import { countHomeBestsellers } from "@/actions/admin/products";
 import { listProductCategories } from "@/lib/categories";
+import { listSkinTypes } from "@/lib/skin-types";
 
 export default async function NewProductPage() {
-  const [categories, otherFeaturedCount] = await Promise.all([
+  const [categories, skinTypeOptions, otherFeaturedCount] = await Promise.all([
     listProductCategories(),
+    listSkinTypes(),
     countHomeBestsellers(),
   ]);
 
@@ -18,7 +20,11 @@ export default async function NewProductPage() {
         <h1 className="mt-2 text-2xl font-semibold">Novo produto</h1>
         <p className="mt-1 text-sm text-neutral-500">Cadastre um item no catálogo Iseul</p>
       </div>
-      <ProductForm categories={categories} otherFeaturedCount={otherFeaturedCount} />
+      <ProductForm
+        categories={categories}
+        skinTypeOptions={skinTypeOptions}
+        otherFeaturedCount={otherFeaturedCount}
+      />
     </div>
   );
 }

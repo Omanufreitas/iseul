@@ -6,6 +6,7 @@ import { BrandMarquee } from "@/components/store/landing/BrandMarquee";
 import { LandingAnnounceBar, LandingPageMotion } from "@/components/store/landing/LandingPageMotion";
 import { listProducts, getStoreSettings } from "@/lib/catalog";
 import { listProductCategories } from "@/lib/categories";
+import { listSkinTypes } from "@/lib/skin-types";
 import { buildAnnounceBarText } from "@/lib/store-announcement";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 import type { Metadata } from "next";
@@ -18,10 +19,11 @@ export const metadata: Metadata = {
 };
 
 export default async function ProductsIndexPage() {
-  const [products, settings, categories] = await Promise.all([
+  const [products, settings, categories, skinTypes] = await Promise.all([
     listProducts(),
     getStoreSettings(),
     listProductCategories(),
+    listSkinTypes(),
   ]);
 
   return (
@@ -41,6 +43,7 @@ export default async function ProductsIndexPage() {
           <CatalogBrowser
             products={products}
             categories={categories}
+            skinTypes={skinTypes}
             heading={{
               eyebrow: "catálogo",
               title: (
