@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { AdminSelect } from "@/components/admin/ui/AdminSelect";
 import { saveProduct } from "@/actions/admin/products";
+import { countProductsWithSkinType, deleteSkinType } from "@/actions/admin/skin-types";
 import { uploadProductImage } from "@/actions/admin/upload-product-image";
 import { DeleteProductButton } from "@/components/admin/DeleteProductButton";
 import { CATEGORIES, SKIN_TYPES } from "@/lib/constants";
@@ -45,10 +46,21 @@ function buildSkinOptions(catalog: SkinTypeOption[], selected: string[]): SkinTy
     if (!slug || bySlug.has(slug)) continue;
     order += 1;
     const known = SKIN_TYPES.find((skin) => skin.slug === slug);
-    bySlug.set(slug, { slug, label: known?.label ?? slug, sort_order: order });
+    bySlug.set(slug, {
+      slug,
+      label: known?.label ?? slug,
+      description: "",
+      sort_order: order,
+    });
   }
   return [...bySlug.values()].sort(
     (a, b) => a.sort_order - b.sort_order || a.label.localeCompare(b.label, "pt-BR")
+  );
+}
+
+function skinBaseline(options: SkinTypeOption[]) {
+  return new Map(
+    options.map((skin) => [skin.slug, { label: skin.label, description: skin.description ?? "" }])
   );
 }
 
@@ -59,7 +71,8 @@ export function ProductForm({
   otherFeaturedCount = 0,
 }: Props) {
   const router = useRouter();
-  const [pending, startTransition] = useTransition();
+  const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const initialImages = product
     ? product.image_urls.length > 0
       ? product.image_urls
@@ -86,7 +99,10 @@ export function ProductForm({
   );
   const [creatingSkin, setCreatingSkin] = useState(false);
   const [newSkinName, setNewSkinName] = useState("");
+  const [newSkinDescription, setNewSkinDescription] = useState("");
   const [editingSkinSlug, setEditingSkinSlug] = useState("");
+  const [deletingSkin, setDeletingSkin] = useState(false);
+  const skinBaselineRef = useRef(skinBaseline(buildSkinOptions(skinTypeOptions, product?.skin_types ?? [])));
   const [featured, setFeatured] = useState(Boolean(product?.featured));
   const categoryOptions =
     categories.length > 0
@@ -116,10 +132,13 @@ export function ProductForm({
     setCategorySlug(product?.category_slug ?? "serum");
     setCreatingCategory(false);
     setNewCategoryName("");
+    const nextSkins = buildSkinOptions(skinTypeOptions, product?.skin_types ?? []);
     setSkinTypes(product?.skin_types ?? []);
-    setSkinOptions(buildSkinOptions(skinTypeOptions, product?.skin_types ?? []));
+    setSkinOptions(nextSkins);
+    skinBaselineRef.current = skinBaseline(nextSkins);
     setCreatingSkin(false);
     setNewSkinName("");
+    setNewSkinDescription("");
     setEditingSkinSlug("");
     setFeatured(Boolean(product?.featured));
   }, [
@@ -254,8 +273,13 @@ export function ProductForm({
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (savingRef.current) return;
+    const form = e.currentTarget;
+    const clientSaveId = crypto.randomUUID();
+    savingRef.current = true;
+    setSaving(true);
 
-    startTransition(async () => {
+    void (async () => {
       const remoteImages = imageUrls.filter(
         (url) => url.trim() && !url.startsWith("blob:")
       );
@@ -265,7 +289,7 @@ export function ProductForm({
         return;
       }
 
-      const fd = new FormData(e.currentTarget);
+      const fd = new FormData(form);
       const resolvedCategorySlug = creatingCategory
         ? slugify(newCategoryName.trim())
         : categorySlug;
@@ -293,14 +317,18 @@ export function ProductForm({
           toast.error("Informe o nome do novo tipo de pele.");
           return;
         }
+        const description = newSkinDescription.trim();
         const existing = resolvedSkinOptions.find((skin) => skin.slug === slug);
         resolvedSkinOptions = existing
-          ? resolvedSkinOptions.map((skin) => (skin.slug === slug ? { ...skin, label } : skin))
+          ? resolvedSkinOptions.map((skin) =>
+              skin.slug === slug ? { ...skin, label, description } : skin
+            )
           : [
               ...resolvedSkinOptions,
               {
                 slug,
                 label,
+                description,
                 sort_order:
                   resolvedSkinOptions.reduce((max, skin) => Math.max(max, skin.sort_order), 0) + 1,
               },
@@ -312,6 +340,21 @@ export function ProductForm({
         toast.error("Informe o nome do tipo de pele.");
         return;
       }
+
+      const skinTypeCatalog = resolvedSkinOptions
+        .filter((skin) => {
+          const previous = skinBaselineRef.current.get(skin.slug);
+          if (!previous) return true;
+          return (
+            previous.label !== skin.label.trim() ||
+            previous.description !== (skin.description ?? "").trim()
+          );
+        })
+        .map((skin) => ({
+          slug: skin.slug,
+          label: skin.label.trim(),
+          description: (skin.description ?? "").trim(),
+        }));
 
       const payload = {
         name: String(fd.get("name")),
@@ -325,10 +368,8 @@ export function ProductForm({
         category_slug: resolvedCategorySlug,
         category_label: resolvedCategoryLabel || category?.label || resolvedCategorySlug,
         skin_types: resolvedSkinTypes,
-        skin_type_catalog: resolvedSkinOptions.map((skin) => ({
-          slug: skin.slug,
-          label: skin.label.trim(),
-        })),
+        skin_type_catalog: skinTypeCatalog,
+        client_save_id: clientSaveId,
         price: Number(fd.get("price")),
         compare_at_price: fd.get("compare_at_price") ? Number(fd.get("compare_at_price")) : null,
         pitch: String(fd.get("pitch") || ""),
@@ -345,14 +386,25 @@ export function ProductForm({
       };
 
       const result = await saveProduct(payload, product?.id);
-      if ("error" in result && result.error) {
-        toast.error(result.error);
+      if (
+        !result ||
+        !("success" in result) ||
+        !result.success ||
+        result.clientSaveId !== clientSaveId
+      ) {
+        toast.error(
+          result && "error" in result && result.error
+            ? result.error
+            : "Não foi possível confirmar o salvamento. Abra o produto de novo e tente outra vez."
+        );
         return;
       }
       setSkinOptions(resolvedSkinOptions);
       setSkinTypes(resolvedSkinTypes);
+      skinBaselineRef.current = skinBaseline(resolvedSkinOptions);
       setCreatingSkin(false);
       setNewSkinName("");
+      setNewSkinDescription("");
       setEditingSkinSlug("");
       toast.success(product ? "Produto atualizado" : "Produto criado");
       if ("blingWarning" in result && result.blingWarning) {
@@ -364,7 +416,54 @@ export function ProductForm({
       } else {
         router.push("/admin/produtos");
       }
+    })().catch((error: unknown) => {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível confirmar o salvamento. Tente de novo."
+      );
+    }).finally(() => {
+      savingRef.current = false;
+      setSaving(false);
     });
+  }
+
+  async function handleDeleteSkin() {
+    const skin = skinOptions.find((item) => item.slug === editingSkinSlug);
+    if (!skin || deletingSkin) return;
+    setDeletingSkin(true);
+    try {
+      const usage = await countProductsWithSkinType(skin.slug);
+      if ("error" in usage && usage.error) {
+        toast.error(usage.error);
+        return;
+      }
+      const count = "count" in usage ? usage.count : 0;
+      const warning =
+        count === 0
+          ? `Nenhum produto usa "${skin.label}". Apagar esse tipo?`
+          : `${count} produto${count === 1 ? "" : "s"} usa${count === 1 ? "" : "m"} "${skin.label}". Apagar tira esse tipo deles.`;
+      if (!window.confirm(warning)) return;
+      const result = await deleteSkinType(skin.slug);
+      if ("error" in result && result.error) {
+        toast.error(result.error);
+        return;
+      }
+      setSkinOptions((prev) => prev.filter((item) => item.slug !== skin.slug));
+      setSkinTypes((prev) => prev.filter((slug) => slug !== skin.slug));
+      skinBaselineRef.current.delete(skin.slug);
+      setEditingSkinSlug("");
+      toast.success(
+        "removedFrom" in result && result.removedFrom
+          ? `Tipo apagado. Saiu de ${result.removedFrom} produto${result.removedFrom === 1 ? "" : "s"}.`
+          : "Tipo de pele apagado"
+      );
+      router.refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível apagar o tipo de pele.");
+    } finally {
+      setDeletingSkin(false);
+    }
   }
 
   return (
@@ -497,6 +596,7 @@ export function ProductForm({
                     onClick={() => {
                       setCreatingSkin(false);
                       setNewSkinName("");
+                      setNewSkinDescription("");
                     }}
                     className="text-xs text-neutral-500 hover:text-neutral-900"
                   >
@@ -506,29 +606,70 @@ export function ProductForm({
               )}
             </Field>
             <Field label="Nome do tipo de pele (editável)" className="md:col-span-2">
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <input
+                  value={
+                    creatingSkin
+                      ? newSkinName
+                      : (skinOptions.find((skin) => skin.slug === editingSkinSlug)?.label ?? "")
+                  }
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    if (creatingSkin) {
+                      setNewSkinName(next);
+                      return;
+                    }
+                    if (!editingSkinSlug) return;
+                    setSkinOptions((prev) =>
+                      prev.map((skin) =>
+                        skin.slug === editingSkinSlug ? { ...skin, label: next } : skin
+                      )
+                    );
+                  }}
+                  placeholder={
+                    creatingSkin || editingSkinSlug
+                      ? "Ex.: Pele oleosa"
+                      : "Selecione um tipo acima para renomear"
+                  }
+                  disabled={!creatingSkin && !editingSkinSlug}
+                  className={inputClass}
+                />
+                {!creatingSkin && editingSkinSlug ? (
+                  <button
+                    type="button"
+                    onClick={() => void handleDeleteSkin()}
+                    disabled={deletingSkin}
+                    className="shrink-0 rounded-lg border border-red-200 px-3 py-2 text-sm text-red-700 hover:bg-red-50 disabled:opacity-60"
+                  >
+                    {deletingSkin ? "Apagando..." : "Apagar tipo"}
+                  </button>
+                ) : null}
+              </div>
+            </Field>
+            <Field label="Descrição do tipo de pele" className="md:col-span-2">
               <input
                 value={
                   creatingSkin
-                    ? newSkinName
-                    : (skinOptions.find((skin) => skin.slug === editingSkinSlug)?.label ?? "")
+                    ? newSkinDescription
+                    : (skinOptions.find((skin) => skin.slug === editingSkinSlug)?.description ?? "")
                 }
                 onChange={(e) => {
                   const next = e.target.value;
                   if (creatingSkin) {
-                    setNewSkinName(next);
+                    setNewSkinDescription(next);
                     return;
                   }
                   if (!editingSkinSlug) return;
                   setSkinOptions((prev) =>
                     prev.map((skin) =>
-                      skin.slug === editingSkinSlug ? { ...skin, label: next } : skin
+                      skin.slug === editingSkinSlug ? { ...skin, description: next } : skin
                     )
                   );
                 }}
                 placeholder={
                   creatingSkin || editingSkinSlug
-                    ? "Ex.: Pele oleosa"
-                    : "Selecione um tipo acima para renomear"
+                    ? "Ex.: excesso de brilho e oleosidade"
+                    : "Selecione um tipo acima para descrever"
                 }
                 disabled={!creatingSkin && !editingSkinSlug}
                 className={inputClass}
@@ -653,7 +794,7 @@ export function ProductForm({
             <ProductImageGallery
               images={imageUrls}
               uploading={uploadingImage}
-              disabled={pending}
+              disabled={saving}
               selectedIndex={selectedIndex}
               onSelect={setSelectedIndex}
               onAddFiles={(files) => void handleAddFiles(files)}
@@ -785,10 +926,10 @@ export function ProductForm({
           </Link>
           <button
             type="submit"
-            disabled={pending || uploadingImage}
+            disabled={saving || uploadingImage}
             className="rounded-lg bg-iseul-accent px-6 py-2.5 text-sm font-medium text-white disabled:opacity-60"
           >
-            {pending ? "Salvando..." : uploadingImage ? "Enviando foto…" : product ? "Salvar alterações" : "Criar produto"}
+            {saving ? "Salvando..." : uploadingImage ? "Enviando foto…" : product ? "Salvar alterações" : "Criar produto"}
           </button>
         </div>
       </div>

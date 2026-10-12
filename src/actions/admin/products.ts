@@ -184,7 +184,7 @@ export async function saveProduct(raw: unknown, id?: string) {
     try {
       const saved = upsertMockProduct(toProductPayload(parsed.data, existing), id);
       revalidateAll();
-      return { success: true, id: saved.id };
+      return { success: true, id: saved.id, clientSaveId: parsed.data.client_save_id };
     } catch (e) {
       return { error: e instanceof Error ? e.message : "Erro ao salvar produto" };
     }
@@ -199,8 +199,26 @@ export async function saveProduct(raw: unknown, id?: string) {
   if (skinSync.error) return { error: skinSync.error };
 
   if (id) {
-    const { error } = await admin.from("products").update(payload).eq("id", id);
+    const { data: updated, error } = await admin
+      .from("products")
+      .update(payload)
+      .eq("id", id)
+      .select("id, name, category_slug, skin_types")
+      .maybeSingle();
     if (error) return { error: error.message };
+    if (!updated) return { error: "O produto não foi encontrado para salvar. Abra a ficha de novo." };
+    const wantedSkins = [...(payload.skin_types ?? [])].map(String).sort().join("|");
+    const savedSkins = (Array.isArray(updated.skin_types) ? updated.skin_types : [])
+      .map(String)
+      .sort()
+      .join("|");
+    if (
+      String(updated.name) !== payload.name ||
+      String(updated.category_slug) !== payload.category_slug ||
+      savedSkins !== wantedSkins
+    ) {
+      return { error: "O salvamento não confirmou no banco. Tente de novo." };
+    }
   } else {
     const { data: inserted, error } = await admin
       .from("products")
@@ -226,7 +244,7 @@ export async function saveProduct(raw: unknown, id?: string) {
   }
 
   revalidateAll(savedId);
-  return { success: true, id: savedId, blingWarning };
+  return { success: true, id: savedId, clientSaveId: parsed.data.client_save_id, blingWarning };
 }
 
 export async function deleteProduct(id: string) {

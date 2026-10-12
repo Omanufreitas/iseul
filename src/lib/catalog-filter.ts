@@ -103,9 +103,7 @@ export function filterAndSortProducts(
   }
 
   if (filters.pele && filters.pele !== "all") {
-    list = list.filter(
-      (p) => p.skin_types.includes(filters.pele) || p.skin_types.includes("todos")
-    );
+    list = list.filter((p) => p.skin_types.includes(filters.pele));
   }
 
   if (filters.q.trim()) {

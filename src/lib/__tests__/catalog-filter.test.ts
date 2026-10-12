@@ -39,7 +39,7 @@ function product(partial: Partial<Product> & Pick<Product, "id" | "name" | "slug
     active: true,
     featured: false,
     sort_order: 0,
-    skin_types: ["todos"],
+    skin_types: [],
     ...partial,
   };
 }
@@ -95,6 +95,21 @@ describe("catalog-filter", () => {
     const built = buildCatalogSearchParams(parsed);
     expect(built.get("q")).toBe("retinal");
     expect(built.get("marca")).toBe("Celimax");
+  });
+
+  it("não trata o slug todos como todos os filtros", () => {
+    const list = [
+      product({ id: "1", slug: "a", name: "A", skin_types: ["todos"] }),
+      product({ id: "2", slug: "b", name: "B", skin_types: ["oleosa"] }),
+    ];
+    const filtered = filterAndSortProducts(list, {
+      q: "",
+      categoria: "all",
+      marca: "all",
+      pele: "oleosa",
+      ordem: "sold",
+    });
+    expect(filtered.map((p) => p.id)).toEqual(["2"]);
   });
 
   it("prioriza featured na home e limita a 12", () => {

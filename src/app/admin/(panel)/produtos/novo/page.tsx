@@ -1,4 +1,6 @@
 import Link from "next/link";
+
+export const dynamic = "force-dynamic";
 import { ProductForm } from "@/components/admin/ProductForm";
 import { countHomeBestsellers } from "@/actions/admin/products";
 import { listProductCategories } from "@/lib/categories";

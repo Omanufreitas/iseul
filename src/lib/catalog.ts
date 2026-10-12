@@ -35,11 +35,7 @@ export async function listProducts(options?: {
       list = list.filter((p) => p.category_slug === options.category);
     }
     if (options?.skinType && options.skinType !== "all") {
-      list = list.filter(
-        (p) =>
-          p.skin_types?.includes(options.skinType!) ||
-          p.skin_types?.includes("todos")
-      );
+      list = list.filter((p) => p.skin_types?.includes(options.skinType!));
     }
     return sortProducts(list, options?.sort ?? "sold");
   }
@@ -60,10 +56,7 @@ export async function listProducts(options?: {
 
   let products = data.map((row) => mapDbProduct(row));
   if (options?.skinType && options.skinType !== "all") {
-    products = products.filter(
-      (p) =>
-        p.skin_types.includes(options.skinType!) || p.skin_types.includes("todos")
-    );
+    products = products.filter((p) => p.skin_types.includes(options.skinType!));
   }
   return attachVariantFlags(sortProducts(products, options?.sort ?? "sold"));
 }

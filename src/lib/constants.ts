@@ -17,7 +17,6 @@ export const SKIN_TYPES = [
   { slug: "mista", label: "Pele mista" },
   { slug: "normal", label: "Pele normal" },
   { slug: "sensivel", label: "Pele sensível" },
-  { slug: "todos", label: "Todos os tipos de pele" },
 ] as const;
 
 export type SkinTypeSlug = (typeof SKIN_TYPES)[number]["slug"];

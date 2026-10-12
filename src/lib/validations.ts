@@ -103,7 +103,9 @@ export const productFormSchema = z.object({
       z.object({
         slug: z.string().min(1),
         label: z.string().min(1),
+        description: z.string().optional(),
       })
     )
     .optional(),
+  client_save_id: z.string().optional(),
 });

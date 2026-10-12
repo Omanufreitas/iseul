@@ -14,6 +14,7 @@ import { ProductCard } from "@/components/store/ProductCard";
 import { trackMetaSearch } from "@/lib/analytics/meta";
 import type { ProductCategory } from "@/lib/categories";
 import { fallbackSkinTypes, type SkinTypeOption } from "@/lib/skin-types";
+import { SkinTypeFilter } from "@/components/store/catalog/SkinTypeFilter";
 import {
   CATALOG_PAGE_SIZE,
   CATALOG_SORT_OPTIONS,
@@ -124,18 +125,37 @@ export function CatalogBrowser({
   const brands = useMemo(() => uniqueBrands(products), [products]);
 
   const skinOptions = useMemo(() => {
-    const fromCatalog = skinTypes.length ? skinTypes : fallbackSkinTypes();
-    const known = new Set(fromCatalog.map((skin) => skin.slug));
-    const extra: SkinTypeOption[] = [];
+    const fromCatalog = (skinTypes.length ? skinTypes : fallbackSkinTypes()).filter(
+      (skin) => skin.slug !== "todos"
+    );
+    const bySlug = new Map(fromCatalog.map((skin) => [skin.slug, skin]));
+    const used = new Set<string>();
     for (const product of products) {
       for (const slug of product.skin_types ?? []) {
-        if (!slug || known.has(slug)) continue;
-        known.add(slug);
-        extra.push({ slug, label: slug, sort_order: 1000 + extra.length });
+        if (!slug || slug === "todos") continue;
+        used.add(slug);
       }
     }
-    return [...fromCatalog, ...extra];
+    return [...used]
+      .map(
+        (slug) =>
+          bySlug.get(slug) ?? {
+            slug,
+            label: slug,
+            description: "",
+            sort_order: 1000,
+          }
+      )
+      .sort(
+        (a, b) => a.sort_order - b.sort_order || a.label.localeCompare(b.label, "pt-BR")
+      );
   }, [products, skinTypes]);
+
+  useEffect(() => {
+    if (pele !== "all" && !skinOptions.some((skin) => skin.slug === pele)) {
+      setPele("all");
+    }
+  }, [pele, skinOptions]);
 
   const categoryChips = useMemo(() => {
     const fromDb = categories.length
@@ -302,28 +322,11 @@ export function CatalogBrowser({
                   />
                 </div>
 
-                <div className="relative min-w-0 flex-1 sm:w-auto sm:min-w-[168px] sm:flex-none">
-                  <label htmlFor="catalog-skin" className="sr-only">
-                    Filtrar por tipo de pele
-                  </label>
-                  <select
-                    id="catalog-skin"
-                    value={pele}
-                    onChange={(e) => setPele(e.target.value)}
-                    className="w-full appearance-none truncate rounded-xl border border-iseul-line/80 bg-iseul-areia/60 py-2 pl-2 pr-6 text-[11px] text-iseul-ink transition focus:border-iseul-sage focus:bg-white focus:outline-none focus:ring-2 focus:ring-iseul-sage/25 sm:py-2.5 sm:pl-3.5 sm:pr-10 sm:text-[13px]"
-                  >
-                    <option value="all">Pele</option>
-                    {skinOptions.map((skin) => (
-                      <option key={skin.slug} value={skin.slug}>
-                        {skin.label}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown
-                    className="pointer-events-none absolute right-1.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-iseul-muted sm:right-3 sm:h-4 sm:w-4"
-                    aria-hidden
-                  />
-                </div>
+                <SkinTypeFilter
+                  value={skinOptions.some((skin) => skin.slug === pele) ? pele : "all"}
+                  options={skinOptions}
+                  onChange={setPele}
+                />
 
                 <div className="relative min-w-0 flex-1 sm:w-auto sm:min-w-[158px] sm:flex-none">
                   <label htmlFor="catalog-sort" className="sr-only">
