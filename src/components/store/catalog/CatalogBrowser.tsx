@@ -14,7 +14,6 @@ import { ProductCard } from "@/components/store/ProductCard";
 import { trackMetaSearch } from "@/lib/analytics/meta";
 import type { ProductCategory } from "@/lib/categories";
 import { fallbackSkinTypes, type SkinTypeOption } from "@/lib/skin-types";
-import { SkinTypeFilter } from "@/components/store/catalog/SkinTypeFilter";
 import {
   CATALOG_PAGE_SIZE,
   CATALOG_SORT_OPTIONS,
@@ -322,11 +321,28 @@ export function CatalogBrowser({
                   />
                 </div>
 
-                <SkinTypeFilter
-                  value={skinOptions.some((skin) => skin.slug === pele) ? pele : "all"}
-                  options={skinOptions}
-                  onChange={setPele}
-                />
+                <div className="relative min-w-0 flex-1 sm:w-auto sm:min-w-[168px] sm:flex-none">
+                  <label htmlFor="catalog-skin" className="sr-only">
+                    Filtrar por tipo de pele
+                  </label>
+                  <select
+                    id="catalog-skin"
+                    value={skinOptions.some((skin) => skin.slug === pele) ? pele : "all"}
+                    onChange={(e) => setPele(e.target.value)}
+                    className="w-full appearance-none truncate rounded-xl border border-iseul-line/80 bg-iseul-areia/60 py-2 pl-2 pr-6 text-[11px] text-iseul-ink transition focus:border-iseul-sage focus:bg-white focus:outline-none focus:ring-2 focus:ring-iseul-sage/25 sm:py-2.5 sm:pl-3.5 sm:pr-10 sm:text-[13px]"
+                  >
+                    <option value="all">Pele</option>
+                    {skinOptions.map((skin) => (
+                      <option key={skin.slug} value={skin.slug}>
+                        {skin.label}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown
+                    className="pointer-events-none absolute right-1.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-iseul-muted sm:right-3 sm:h-4 sm:w-4"
+                    aria-hidden
+                  />
+                </div>
 
                 <div className="relative min-w-0 flex-1 sm:w-auto sm:min-w-[158px] sm:flex-none">
                   <label htmlFor="catalog-sort" className="sr-only">
