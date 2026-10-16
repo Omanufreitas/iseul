@@ -14,6 +14,8 @@ import { formatCurrency, maskCep, maskCpf, maskPhone } from "@/lib/utils";
 import { cardUnitPrice, pixUnitPrice, type CheckoutPaymentMethod } from "@/lib/pricing";
 import { couponDiscountAmount } from "@/lib/coupons";
 import { LOCAL_MOTOBOY_OPTION_ID } from "@/lib/local-delivery";
+import type { AbandonedCheckoutRecovery } from "@/lib/abandoned-cart/recovery";
+import { SITE_URL } from "@/lib/site";
 import type { ShippingQuoteOption, ShippingQuoteResult } from "@/lib/shipping";
 import type { StoreSettings } from "@/types";
 
@@ -47,7 +49,13 @@ function formatShippingLabel(option: ShippingQuoteOption): string {
   return `${option.company} ${option.name}${days}`;
 }
 
-export function CheckoutForm({ settings }: { settings: StoreSettings }) {
+export function CheckoutForm({
+  settings,
+  recovery = null,
+}: {
+  settings: StoreSettings;
+  recovery?: AbandonedCheckoutRecovery | null;
+}) {
   const { items, subtotal, clearCart, replaceItems, hydrated } = useCart();
   const [pending, startTransition] = useTransition();
   const [shipping, setShipping] = useState<number | null>(null);
@@ -67,6 +75,10 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
   const [cartIssues, setCartIssues] = useState<string[]>([]);
   const [cartValidated, setCartValidated] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<CheckoutPaymentMethod>("pix");
+  const [aceitaWhatsapp, setAceitaWhatsapp] = useState(false);
+  const [checkoutId, setCheckoutId] = useState<string | null>(recovery?.id ?? null);
+  const [recovering, setRecovering] = useState(Boolean(recovery));
+  const recoveryCoupon = useRef(recovery?.couponCode ?? null);
   const lastLookupCep = useRef("");
   const [form, setForm] = useState({
     full_name: "",
@@ -84,6 +96,37 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
     marketing_opt_in: true,
   });
   const lastValidatedCart = useRef("");
+
+  useEffect(() => {
+    if (!recovery || !hydrated) return;
+    if (recovery.items.length) replaceItems(recovery.items);
+    setForm((current) => ({
+      ...current,
+      full_name: recovery.nome || current.full_name,
+      email: recovery.email || current.email,
+      phone: recovery.phone ? maskPhone(recovery.phone) : current.phone,
+    }));
+    setAceitaWhatsapp(recovery.aceitaWhatsapp);
+    setCheckoutId(recovery.id);
+    if (recovery.couponCode) setCouponInput(recovery.couponCode);
+    setRecovering(false);
+  }, [recovery, hydrated, replaceItems]);
+
+  useEffect(() => {
+    const code = recoveryCoupon.current;
+    if (!code || subtotal <= 0) return;
+    recoveryCoupon.current = null;
+    validateCouponCode(code, subtotal, form.email.trim() || null).then((result) => {
+      if ("discount" in result && result.discount != null && result.code && result.name) {
+        setAppliedCoupon({
+          code: result.code,
+          name: result.name,
+          discount: result.discount,
+          discount_percent: result.discount_percent ?? 0,
+        });
+      }
+    });
+  }, [subtotal, form.email]);
 
   const cepDigits = form.zip.replace(/\D/g, "");
   const cartItems = useMemo(
@@ -245,6 +288,14 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
     );
   }
 
+  if (recovering) {
+    return (
+      <div className="mx-auto max-w-lg py-20 text-center">
+        <h1 className="font-serif text-3xl">Recuperando sua sacola</h1>
+      </div>
+    );
+  }
+
   if (items.length === 0) {
     return (
       <div className="mx-auto max-w-lg py-20 text-center">
@@ -279,6 +330,41 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
     }
 
     startTransition(async () => {
+      try {
+        const saved = await fetch("/api/checkout/iniciado", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            id: checkoutId,
+            nome: form.full_name,
+            telefone: form.phone,
+            email: form.email,
+            aceita_whatsapp: aceitaWhatsapp,
+            total,
+            itens: items.map((item) => ({
+              nome: item.name,
+              quantidade: item.quantity,
+              preco: item.price,
+              slug: item.slug,
+              productId: item.productId,
+              variantId: item.variantId ?? null,
+              variantLabel: item.variantLabel ?? null,
+              brand: item.brand,
+              listPrice: item.listPrice,
+              image_url: item.image_url,
+              image_fallback_url: item.image_fallback_url,
+              url: `${SITE_URL}/produtos/${item.slug}`,
+            })),
+          }),
+        });
+        if (saved.ok) {
+          const body = (await saved.json()) as { id?: string };
+          if (body.id) setCheckoutId(body.id);
+        }
+      } catch {
+        /* o pagamento segue mesmo se o registro do carrinho falhar */
+      }
+
       const result = await createCheckoutOrder({
         items: cartItems,
         address: form,
@@ -439,6 +525,20 @@ export function CheckoutForm({ settings }: { settings: StoreSettings }) {
               Quero receber ofertas e novidades por e-mail
               <span className="mt-0.5 block text-xs text-iseul-muted">
                 Salvamos seu nome e e-mail para enviar promoções da Iseul.
+              </span>
+            </span>
+          </label>
+          <label className="flex items-start gap-3 rounded-lg border border-iseul-line/80 bg-iseul-paper px-3 py-3 text-sm">
+            <input
+              type="checkbox"
+              checked={aceitaWhatsapp}
+              onChange={(e) => setAceitaWhatsapp(e.target.checked)}
+              className="mt-1"
+            />
+            <span>
+              Aceito receber mensagens da Iseul pelo WhatsApp sobre meu pedido
+              <span className="mt-0.5 block text-xs text-iseul-muted">
+                Só quem marca esta opção pode receber um aviso se o pedido não for concluído.
               </span>
             </span>
           </label>

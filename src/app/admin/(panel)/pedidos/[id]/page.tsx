@@ -5,6 +5,7 @@ import { OrderDetailHeader } from "@/components/admin/OrderDetailHeader";
 import { OrderIntegrationsPanel } from "@/components/admin/OrderIntegrationsPanel";
 import { getOrderById } from "@/lib/admin-orders";
 import { isLocalMotoboyDelivery } from "@/lib/local-delivery";
+import { isTotalExpressShipment } from "@/lib/total-express/shipment";
 import { formatCurrency } from "@/lib/utils";
 
 type Props = { params: Promise<{ id: string }> };
@@ -31,6 +32,10 @@ export default async function AdminOrderDetailPage({ params }: Props) {
   const isLocalMotoboy = isLocalMotoboyDelivery(
     order.shipping_service_id,
     order.shipping_method ?? shippingLabel
+  );
+  const isTotalExpress = isTotalExpressShipment(
+    order.shipping_method ?? shippingLabel,
+    address?.shipping_carrier
   );
 
   return (
@@ -172,6 +177,7 @@ export default async function AdminOrderDetailPage({ params }: Props) {
             notes={order.notes}
             hasShippingAddress={!!address}
             isLocalMotoboy={isLocalMotoboy}
+            isTotalExpress={isTotalExpress}
             melhorEnvioStatus={order.melhor_envio_status}
             melhorEnvioError={order.melhor_envio_error}
             melhorEnvioLabelUrl={order.melhor_envio_label_url}

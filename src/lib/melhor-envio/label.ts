@@ -7,6 +7,8 @@ import { resolveMelhorEnvioAgencyId, melhorEnvioRequiresCommercialInvoice } from
 import { resolveOrderNfeInvoice } from "@/lib/bling/nfe-invoice";
 import type { OrderNfeInvoice } from "@/lib/bling/nfe-invoice";
 import { isLocalMotoboyDelivery } from "@/lib/local-delivery";
+import { generateTotalExpressLabelForOrder } from "@/lib/total-express/label";
+import { isTotalExpressShipment } from "@/lib/total-express/shipment";
 import { sendOrderShippedEmail } from "@/lib/email/order-emails";
 import { findExistingMelhorEnvioOrderForInvoice } from "./reuse-order";
 import {
@@ -103,11 +105,14 @@ export async function getMelhorEnvioLabelPdfUrlForOrder(orderId: string): Promis
   const admin = createAdminClient();
   const { data: order, error } = await admin
     .from("orders")
-    .select("melhor_envio_order_id, melhor_envio_status")
+    .select("melhor_envio_order_id, melhor_envio_status, melhor_envio_label_url")
     .eq("id", orderId)
     .maybeSingle();
 
   if (error || !order) throw new MelhorEnvioError("Pedido não encontrado");
+  if (order.melhor_envio_status === "total_express") {
+    return order.melhor_envio_label_url || `/admin/etiqueta/${orderId}`;
+  }
   if (!order.melhor_envio_order_id) {
     throw new MelhorEnvioError("Etiqueta ainda não foi gerada para este pedido");
   }
@@ -203,8 +208,9 @@ function validateShipper(shipper: ShipperSettings): string | null {
 export type GenerateLabelResult = {
   labelUrl: string;
   trackingCode: string | null;
-  melhorEnvioOrderId: string;
+  melhorEnvioOrderId: string | null;
   status: "generated";
+  message?: string;
 };
 
 async function persistCarrierTrackingForOrder(
@@ -259,10 +265,6 @@ async function syncMelhorEnvioTrackingForOrder(
 }
 
 export async function generateMelhorEnvioLabelForOrder(orderId: string): Promise<GenerateLabelResult> {
-  if (!isMelhorEnvioConfigured()) {
-    throw new MelhorEnvioError("MELHOR_ENVIO_TOKEN não configurado");
-  }
-
   const admin = createAdminClient();
   const { data: order, error } = await admin
     .from("orders")
@@ -284,7 +286,28 @@ export async function generateMelhorEnvioLabelForOrder(orderId: string): Promise
     );
   }
 
-  if (shouldResetMelhorEnvioAttempt(order.melhor_envio_status)) {
+  const shippingLabel =
+    order.shipping_method ??
+    [
+      (order.shipping_address as { shipping_carrier?: string } | null)?.shipping_carrier,
+      (order.shipping_address as { shipping_service?: string } | null)?.shipping_service,
+    ]
+      .filter(Boolean)
+      .join(" ");
+  const totalExpress = isTotalExpressShipment(
+    shippingLabel,
+    (order.shipping_address as { shipping_carrier?: string } | null)?.shipping_carrier
+  );
+  const alreadyPurchasedOnMelhorEnvio = Boolean(order.melhor_envio_order_id);
+  if (totalExpress && !alreadyPurchasedOnMelhorEnvio) {
+    return generateTotalExpressLabelForOrder(orderId);
+  }
+
+  if (!isMelhorEnvioConfigured()) {
+    throw new MelhorEnvioError("MELHOR_ENVIO_TOKEN não configurado");
+  }
+
+  if (shouldResetMelhorEnvioAttempt(order.melhor_envio_status) && !(totalExpress && alreadyPurchasedOnMelhorEnvio)) {
     await admin
       .from("orders")
       .update({
@@ -359,10 +382,6 @@ export async function generateMelhorEnvioLabelForOrder(orderId: string): Promise
       });
     }
   }
-
-  const shippingLabel =
-    order.shipping_method ??
-    [addr.shipping_carrier, addr.shipping_service].filter(Boolean).join(" ");
 
   const serviceId = await resolveMelhorEnvioServiceId({
     storedServiceId: order.shipping_service_id,

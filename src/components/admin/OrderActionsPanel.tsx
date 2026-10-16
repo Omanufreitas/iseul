@@ -24,6 +24,7 @@ type Props = {
   notes: string | null;
   hasShippingAddress: boolean;
   isLocalMotoboy: boolean;
+  isTotalExpress: boolean;
   melhorEnvioStatus: string | null;
   melhorEnvioError: string | null;
   melhorEnvioLabelUrl: string | null;
@@ -38,6 +39,7 @@ export function OrderActionsPanel({
   notes,
   hasShippingAddress,
   isLocalMotoboy,
+  isTotalExpress,
   melhorEnvioStatus,
   melhorEnvioError,
   melhorEnvioLabelUrl,
@@ -52,7 +54,9 @@ export function OrderActionsPanel({
   const [tracking, setTracking] = useState(trackingCode ?? "");
   const [internalNotes, setInternalNotes] = useState(notes ?? "");
 
-  const hasLabel = melhorEnvioStatus === "generated" || !!melhorEnvioLabelUrl;
+  const hasLabel =
+    melhorEnvioStatus === "generated" || melhorEnvioStatus === "total_express" || !!melhorEnvioLabelUrl;
+  const totalExpressContract = isTotalExpress && melhorEnvioStatus !== "generated";
   const canGenerateLabel = ["pago", "separando"].includes(status);
 
   function handleSubmit(e: React.FormEvent) {
@@ -80,7 +84,13 @@ export function OrderActionsPanel({
         router.refresh();
         return;
       }
-      toast.success("Etiqueta gerada");
+      toast.success(
+        "message" in result && result.message
+          ? result.message
+          : totalExpressContract
+            ? "Envio registrado na Total Express. O valor entra na fatura mensal."
+            : "Etiqueta gerada"
+      );
       router.refresh();
       if ("labelUrl" in result && result.labelUrl) {
         window.open(result.labelUrl, "_blank", "noopener,noreferrer");
@@ -142,8 +152,13 @@ export function OrderActionsPanel({
             ) : (
               <>
                 <div className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-                  Melhor Envio
+                  {totalExpressContract ? "Total Express" : "Melhor Envio"}
                 </div>
+                {totalExpressContract && (
+                  <p className="mt-2 text-sm text-neutral-600">
+                    Contrato mensal. Registrar aqui não debita saldo do Melhor Envio.
+                  </p>
+                )}
 
                 {melhorEnvioError && (
                   <p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -171,8 +186,10 @@ export function OrderActionsPanel({
                       {labelPending
                         ? "Gerando..."
                         : melhorEnvioError
-                          ? "Tentar gerar etiqueta novamente"
-                          : "Gerar etiqueta"}
+                          ? "Tentar novamente"
+                          : totalExpressContract
+                            ? "Registrar na Total Express"
+                            : "Gerar etiqueta"}
                     </button>
                   )}
                 </div>

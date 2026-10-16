@@ -1,6 +1,7 @@
 import { isAsaasConfigured, isSupabaseConfigured } from "@/lib/config";
 import { isTransactionalEmailConfigured } from "@/lib/email/mailer";
 import { isBlingConfigured } from "@/lib/bling/client";
+import { isTotalExpressConfigured } from "@/lib/total-express/config";
 import {
   getBlingAccessToken,
   getBlingTokenExpiry,
@@ -68,6 +69,12 @@ export async function IntegrationsPanel({ blingMessage }: Props) {
           <span>E-mail (Zoho)</span>
           <span className={isTransactionalEmailConfigured() ? "text-green-700" : "text-amber-700"}>
             {isTransactionalEmailConfigured() ? "Configurado" : "Pendente — SMTP_PASS"}
+          </span>
+        </li>
+        <li className="flex items-center justify-between gap-3 rounded-xl bg-white/80 px-3 py-2.5">
+          <span>Total Express</span>
+          <span className={isTotalExpressConfigured() ? "text-green-700" : "text-amber-700"}>
+            {isTotalExpressConfigured() ? "Contrato configurado" : "Pendente"}
           </span>
         </li>
         <li className="flex items-center justify-between gap-3 rounded-xl bg-white/80 px-3 py-2.5">

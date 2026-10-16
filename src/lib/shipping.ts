@@ -16,6 +16,8 @@ import {
   buildLocalMotoboyOption,
   isCampoGrandeMsDelivery,
 } from "@/lib/local-delivery";
+import { isTotalExpressConfigured } from "@/lib/total-express/config";
+import { quoteTotalExpress } from "@/lib/total-express/quote";
 import { shippingForCep } from "@/lib/utils";
 
 export type ShippingQuoteItem = {
@@ -51,9 +53,26 @@ function buildMelhorEnvioProducts(
   }));
 }
 
-function buildFallbackOptions(cep: string, subtotal: number, freeThreshold: number): MelhorEnvioQuoteOption[] {
-  const paidPac = shippingForCep(cep, subtotal, freeThreshold);
-  const pacPrice = subtotal >= freeThreshold ? 0 : paidPac;
+function withTotalExpressContract(
+  options: MelhorEnvioQuoteOption[],
+  quote: { price: number; deliveryDays: number }
+): MelhorEnvioQuoteOption[] {
+  const patched = {
+    name: "Expresso",
+    company: "Total Express",
+    price: quote.price,
+    deliveryDays: quote.deliveryDays,
+  };
+  const index = options.findIndex((option) => /total/i.test(option.company));
+  if (index >= 0) {
+    return options.map((option, i) => (i === index ? { ...option, ...patched } : option));
+  }
+  return [...options, { id: 35, ...patched }];
+}
+
+function buildFallbackOptions(cep: string): MelhorEnvioQuoteOption[] {
+  const paidPac = shippingForCep(cep, 0, 1);
+  const pacPrice = paidPac;
   const sedexPrice = Math.round((paidPac + 15) * 100) / 100;
   return [
     { id: 1, name: "PAC", company: "Correios", price: pacPrice, deliveryDays: 8 },
@@ -124,14 +143,13 @@ export async function quoteShippingForCheckout(
 
   const { resolved, subtotal } = cart;
   const qualifiesForFree = subtotal >= freeThreshold;
+  const localDelivery = isCampoGrandeMsDelivery({
+    cep,
+    city: destination?.city,
+    state: destination?.state,
+  });
 
-  if (
-    isCampoGrandeMsDelivery({
-      cep,
-      city: destination?.city,
-      state: destination?.state,
-    })
-  ) {
+  if (!qualifiesForFree && localDelivery) {
     const motoboy = buildLocalMotoboyOption();
     const options = applyFreeShipping([motoboy], subtotal, freeThreshold);
     const selected = options[0] ?? motoboy;
@@ -159,10 +177,31 @@ export async function quoteShippingForCheckout(
   }
 
   if (options.length === 0) {
-    options = buildFallbackOptions(cep, subtotal, freeThreshold);
+    options = buildFallbackOptions(cep);
+  }
+
+  if (isTotalExpressConfigured()) {
+    const products = buildMelhorEnvioProducts(resolved);
+    const contract = await quoteTotalExpress({
+      destinationCep: cep,
+      weightKg: products.reduce((sum, product) => sum + product.weight * product.quantity, 0),
+      declaredValue: products.reduce(
+        (sum, product) => sum + product.insurance_value * product.quantity,
+        0
+      ),
+      heightCm: products.reduce((max, product) => Math.max(max, product.height), 0),
+      widthCm: products.reduce((max, product) => Math.max(max, product.width), 0),
+      lengthCm: products.reduce((max, product) => Math.max(max, product.length), 0),
+    });
+    if (contract) options = withTotalExpressContract(options, contract);
   }
 
   options = applyFreeShipping(options, subtotal, freeThreshold);
+
+  if (localDelivery) {
+    const motoboy = buildLocalMotoboyOption();
+    options = [motoboy, ...options.filter((option) => option.id !== motoboy.id)];
+  }
 
   const selected =
     (selectedOptionId != null ? options.find((o) => o.id === selectedOptionId) : null) ??

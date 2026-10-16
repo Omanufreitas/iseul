@@ -73,7 +73,8 @@ export function OrderDetailHeader({
   melhorEnvioLabelUrl,
 }: Props) {
   const isPaid = paymentStatus === "aprovado";
-  const hasLabel = melhorEnvioStatus === "generated" || !!melhorEnvioLabelUrl;
+  const hasLabel =
+    melhorEnvioStatus === "generated" || melhorEnvioStatus === "total_express" || !!melhorEnvioLabelUrl;
   const isCancelled = status === "cancelado";
   const currentRank = STATUS_RANK[status];
 
@@ -87,9 +88,12 @@ export function OrderDetailHeader({
       ? { label: "NF-e com erro", state: "error" }
       : { label: "NF-e pendente", state: "neutral" };
 
-  const labelBadge: { label: string; state: BadgeState } = hasLabel
-    ? { label: "Etiqueta gerada", state: "done" }
-    : { label: "Sem etiqueta", state: "neutral" };
+  const labelBadge: { label: string; state: BadgeState } =
+    melhorEnvioStatus === "total_express"
+      ? { label: "Total Express", state: "done" }
+      : hasLabel
+        ? { label: "Etiqueta gerada", state: "done" }
+        : { label: "Sem etiqueta", state: "neutral" };
 
   const opsBadge: { label: string; state: BadgeState } = isCancelled
     ? { label: "Cancelado", state: "error" }

@@ -7,14 +7,21 @@ export type OrderNfeInvoice = {
   number: string | null;
   /** valorNota da NF-e no Bling (subtotal + frete declarado na nota). */
   declaredValue: number | null;
+  series: string | null;
+  /** Data de emissão no formato YYYY-MM-DD. */
+  issuedOn: string | null;
+  productValue: number | null;
 };
 
 type NfeRow = {
   numero?: string | number;
+  serie?: string | number;
+  dataEmissao?: string;
   chaveAcesso?: string;
   linkDanfe?: string;
   linkPDF?: string;
   valorNota?: number | string;
+  valorProdutos?: number | string;
 };
 
 function parseDeclaredValue(value: unknown): number | null {
@@ -22,13 +29,35 @@ function parseDeclaredValue(value: unknown): number | null {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
+export function parseNfeIssuedOn(value: unknown): string | null {
+  const raw = String(value ?? "").trim();
+  const iso = raw.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (iso) return iso[1];
+  const br = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (br) return `${br[3]}-${br[2]}-${br[1]}`;
+  return null;
+}
+
+export function nfeIdentityFromKey(key: string): { series: string; number: string } | null {
+  const digits = key.replace(/\D/g, "");
+  if (digits.length !== 44) return null;
+  return {
+    series: String(Number(digits.slice(22, 25))),
+    number: String(Number(digits.slice(25, 34))),
+  };
+}
+
 function pickNfeInvoice(data: NfeRow | undefined | null): OrderNfeInvoice | null {
   const key = String(data?.chaveAcesso ?? "").replace(/\D/g, "");
   if (key.length !== 44) return null;
+  const fromKey = nfeIdentityFromKey(key);
   return {
     key,
-    number: data?.numero != null ? String(data.numero) : null,
+    number: data?.numero != null ? String(data.numero) : (fromKey?.number ?? null),
     declaredValue: parseDeclaredValue(data?.valorNota),
+    series: data?.serie != null ? String(data.serie) : (fromKey?.series ?? null),
+    issuedOn: parseNfeIssuedOn(data?.dataEmissao),
+    productValue: parseDeclaredValue(data?.valorProdutos),
   };
 }
 
@@ -62,18 +91,23 @@ export async function resolveOrderNfeInvoice(orderId: string): Promise<OrderNfeI
 
   const storedKey = String(order.nfe_key ?? "").replace(/\D/g, "");
   if (storedKey.length === 44) {
+    const fromKey = nfeIdentityFromKey(storedKey);
     const pedidoVendaId = order.bling_order_id
       ? Number.parseInt(String(order.bling_order_id), 10)
       : NaN;
-    let declaredValue: number | null = null;
+    let fresh: OrderNfeInvoice | null = null;
     if (Number.isFinite(pedidoVendaId)) {
       const nfeId = await fetchNfeIdFromPedido(pedidoVendaId);
-      if (nfeId) {
-        const fresh = await fetchNfeInvoiceById(nfeId);
-        declaredValue = fresh?.declaredValue ?? null;
-      }
+      if (nfeId) fresh = await fetchNfeInvoiceById(nfeId);
     }
-    return { key: storedKey, number: order.nfe_number ?? null, declaredValue };
+    return {
+      key: storedKey,
+      number: fresh?.number ?? order.nfe_number ?? fromKey?.number ?? null,
+      declaredValue: fresh?.declaredValue ?? null,
+      series: fresh?.series ?? fromKey?.series ?? null,
+      issuedOn: fresh?.issuedOn ?? null,
+      productValue: fresh?.productValue ?? null,
+    };
   }
 
   const pedidoVendaId = order.bling_order_id ? Number.parseInt(String(order.bling_order_id), 10) : NaN;

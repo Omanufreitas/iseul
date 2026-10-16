@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/actions/admin/auth";
-import { isMelhorEnvioConfigured } from "@/lib/melhor-envio/client";
 import {
   generateMelhorEnvioLabelForOrder,
   getMelhorEnvioLabelPdfUrlForOrder,
@@ -10,9 +9,6 @@ import {
 
 export async function generateMelhorEnvioLabel(orderId: string) {
   await requireAdmin();
-  if (!isMelhorEnvioConfigured()) {
-    return { error: "Configure MELHOR_ENVIO_TOKEN na Vercel" };
-  }
   if (!orderId) return { error: "Pedido inválido" };
 
   try {
@@ -24,6 +20,7 @@ export async function generateMelhorEnvioLabel(orderId: string) {
       labelUrl: result.labelUrl,
       trackingCode: result.trackingCode,
       melhorEnvioOrderId: result.melhorEnvioOrderId,
+      message: result.message,
     };
   } catch (e) {
     const message = e instanceof Error ? e.message : "Erro ao gerar etiqueta";
@@ -35,9 +32,6 @@ export async function generateMelhorEnvioLabel(orderId: string) {
 
 export async function getMelhorEnvioLabelPdfUrl(orderId: string) {
   await requireAdmin();
-  if (!isMelhorEnvioConfigured()) {
-    return { error: "Configure MELHOR_ENVIO_TOKEN na Vercel" };
-  }
   if (!orderId) return { error: "Pedido inválido" };
 
   try {

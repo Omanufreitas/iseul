@@ -24,32 +24,22 @@ export function isTotalExpressShippingOption(option: MelhorEnvioQuoteOption): bo
   return shippingLabel(option).includes("total");
 }
 
-/** Transportadoras elegíveis para frete grátis (economia; nunca SEDEX). */
+/** Frete grátis é só o contrato da Total Express. */
 export function isFreeShippingEligibleOption(option: MelhorEnvioQuoteOption): boolean {
-  return (
-    isPacShippingOption(option) ||
-    isMiniEnviosShippingOption(option) ||
-    isTotalExpressShippingOption(option)
-  );
+  return isTotalExpressShippingOption(option);
 }
 
-/** Zera todas as opções econômicas elegíveis; SEDEX continua pago. */
+/** Acima do mínimo, só a Total Express fica grátis. PAC, SEDEX e as demais continuam na lista, pagas. */
 export function applyFreeShipping(
   options: MelhorEnvioQuoteOption[],
   subtotal: number,
   freeThreshold: number
 ): MelhorEnvioQuoteOption[] {
   if (subtotal < freeThreshold || options.length === 0) return options;
+  if (!options.some(isTotalExpressShippingOption)) return options;
 
-  const hasEligible = options.some(isFreeShippingEligibleOption);
-  if (!hasEligible) {
-    const fallback = options.find((o) => !isSedexOption(o));
-    if (!fallback) return options;
-    return options.map((opt) => (opt.id === fallback.id ? { ...opt, price: 0 } : opt));
-  }
-
-  return options.map((opt) =>
-    isFreeShippingEligibleOption(opt) ? { ...opt, price: 0 } : opt
+  return options.map((option) =>
+    isTotalExpressShippingOption(option) ? { ...option, price: 0 } : option
   );
 }
 
